@@ -111,6 +111,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   function taking one descriptor object. Latent — no runtime caller, and the
   tests only asserted `typeof`.
 
+### File lock could be stolen from its holder (ENH-380)
+
+Found while QA-ing the roster serialisation above, not by reading the code.
+
+- **Reproduced**: eight concurrent writers to the roster produced **seven rows**.
+  Every worker reported success and no lock error, so the lock *was* being
+  taken — and an update was still lost.
+- **Root cause**: `lock()` creates the lock file with
+  `writeFileSync(path, data, { flag: 'wx' })`, which is create-then-write. A
+  competing process can read it in that window and see **zero bytes**.
+  `JSON.parse('')` throws, the old code classified that as a *corrupt* lock,
+  deleted it, and entered the critical section alongside the live holder.
+- **A/B against main**, three trials each, eight concurrent writers:
+  main `7/8, 6/8, 7/8` — fixed `8/8, 8/8, 8/8`.
+- **Fix**: staleness is judged from the lock file's mtime, which needs no
+  parsing and is set at creation. A lock mid-creation is milliseconds old, so it
+  is waited on with the existing backoff; only a lock older than
+  `LOCK_STALE_MS` is removed. A genuinely corrupt lock still recovers, on the
+  same schedule as an abandoned one. The waiter now also honours the caller's
+  timeout rather than looping to the retry cap.
+- **Blast radius**: this is a pre-existing defect in a core primitive, so every
+  `lockedUpdate` consumer was exposed — including `loop-breaker`'s cross-process
+  counters, the ones ENH-378 had just repaired.
+- New regression test spawns real concurrent processes, since a single-process
+  test cannot open the window (`test/regression/v2132-lock-mutual-exclusion.test.js`,
+  4 TC).
+
 ### Compatibility
 
 - **Recommended CC runtime raised to v2.1.220.** The cycle-#30 analysis
