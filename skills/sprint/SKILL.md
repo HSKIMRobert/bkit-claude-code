@@ -420,10 +420,10 @@ Every mutation (including no-op) emits an `audit-logger` entry:
 
 | Command | Scope | Persistence | Use When |
 |---------|-------|------------|----------|
-| `/sprint phase --to ... --approve` | Single transition | Single-use (state 무변경) | 1회 boundary 우회 (#95) |
-| `/sprint trust --to <L>` ✦ | Sprint 전체 (this sprint only) | Persistent (sprint.autoRun.trustLevelAtStart) | 본 sprint 정책 영구 변경 |
-| `/bkit:control level <N>` | Global (all sprints + PDCA) | Persistent (~/.bkit/state/control.json) | 전역 automation 정책 변경 |
-| `--trustLevel <L>` (per-call) | Single call | Volatile (state 무변경) | 1회 debug override |
+| `/sprint phase --to ... --approve` | Single transition | Single-use (no state change) | One-time boundary override (#95) |
+| `/sprint trust --to <L>` ✦ | Whole sprint (this sprint only) | Persistent (sprint.autoRun.trustLevelAtStart) | Permanent policy change for this sprint |
+| `/bkit:control level <N>` | Global (all sprints + PDCA) | Persistent (~/.bkit/state/control.json) | Global automation policy change |
+| `--trustLevel <L>` (per-call) | Single call | Volatile (no state change) | One-time debug override |
 
 ### 10.2 Trust Level Acceptance
 

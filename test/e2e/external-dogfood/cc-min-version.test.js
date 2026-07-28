@@ -244,7 +244,9 @@ test('TC-F13-4 timeout >200ms → silent skip + null version', () => {
     const elapsed = Date.now() - start;
     assert.equal(result.version, null, 'version should be null on timeout');
     assert.equal(result.isOldVersion, false, 'isOldVersion false when version unknown');
-    // Allow some slack (250ms upper bound); execSync timeout is 200ms hard cap.
+    // execSync timeout is a 1000ms hard cap (v2.1.32, ENH-375 — the former
+    // 200ms could never beat a ~305ms native-binary spawn). The bound below
+    // still proves detection aborts rather than waiting out the 2s shim.
     assert.ok(elapsed < 1500, `elapsed should be much less than the 2-second shim sleep (got ${elapsed}ms)`);
   });
 });

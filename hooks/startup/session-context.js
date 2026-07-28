@@ -41,7 +41,7 @@ const { FABLE_MODEL_FLOOR } = require('../../lib/infra/cc-version-checker');
 //
 // Performance budget:
 //   - Strategy 0 (ENH-375): `~/.local/bin/claude` symlink read — no subprocess
-//   - child_process.execSync timeout 1500ms hard cap (fallback only)
+//   - child_process.execSync timeout 1000ms hard cap (fallback only)
 //   - .bkit/runtime/cc-version.json cache 1h TTL on success
 //   - failed detections cached for 60s only, so a transient failure retries
 //     instead of pinning "unknown" for an hour (ENH-375)
@@ -65,10 +65,11 @@ const CC_VERSION_FAILURE_CACHE_TTL_MS = 60 * 1000; // 1 minute
 // ENH-375: raised from 200ms. Claude Code ships as a ~264 MB native binary and
 // `claude --version` measured 302–327 ms on the reference machine (5/5 runs),
 // so the old cap could never succeed — detection failed 100% of the time and
-// the CC-version advisory never rendered. This path is now only a fallback
-// (Strategy 0 reads the installer symlink for free), so a generous cap costs
-// nothing in the common case.
-const CC_VERSION_DETECT_TIMEOUT_MS = 1500;
+// the CC-version advisory never rendered. 1000 ms leaves roughly 3x headroom for
+// a slower machine while still aborting well before a hung binary becomes
+// noticeable at session start. This path is only a fallback anyway: Strategy 0
+// resolves the version for free on a native install.
+const CC_VERSION_DETECT_TIMEOUT_MS = 1000;
 
 /**
  * Compare two semver-ish strings (returns true if a < b).
@@ -96,7 +97,7 @@ function ccVersionLt(a, b) {
  * failed detections expire after 60s so they retry (ENH-375).
  * Opt-out: BKIT_DISABLE_CC_VERSION_DETECTION=1.
  * Performance: installer-symlink read first (no subprocess); the
- * `claude --version` fallback carries a 1500ms hard cap.
+ * `claude --version` fallback carries a 1000ms hard cap.
  *
  * @returns {{
  *   version: string | null,
