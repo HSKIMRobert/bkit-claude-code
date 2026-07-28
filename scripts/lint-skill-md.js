@@ -18,8 +18,31 @@
 const path = require('path');
 const fs = require('fs');
 
-const ROOT = process.cwd();
-const checker = require(path.join(ROOT, 'scripts/check-skills-docs-code-sync.js'));
+// v2.1.32: resolve the checker from this script's own directory, not
+// `process.cwd()`.
+//
+// The checker is one of bkit's own modules, but cwd is the *user's* project. The
+// previous `require(path.join(process.cwd(), 'scripts/check-skills-docs-code-sync.js'))`
+// therefore only resolved when Claude Code happened to be running inside the
+// bkit repository itself. In any other project this threw MODULE_NOT_FOUND at
+// module load — before main() could run — so the hook exited 1 with an uncaught
+// stack trace on every `Write` to a `skills/*/SKILL.md` path, contradicting the
+// "Exit: 0 always (warning-only, never blocks write)" contract documented above.
+//
+// Loaded lazily and guarded so that a checker that is missing or fails to load
+// degrades to a silent no-op, which is what a warning-only linter should do.
+let _checker = null;
+let _checkerLoadFailed = false;
+
+function getChecker() {
+  if (_checker || _checkerLoadFailed) return _checker;
+  try {
+    _checker = require(path.join(__dirname, 'check-skills-docs-code-sync.js'));
+  } catch (_) {
+    _checkerLoadFailed = true;
+  }
+  return _checker;
+}
 
 function readStdinJSON() {
   try {
@@ -36,7 +59,16 @@ function extractSkillNameFromPath(filePath) {
 
 function lintBySkillName(skillName) {
   if (!skillName) return { ok: true, warnings: ['no skill name resolved'] };
-  const result = checker.evaluateSkillInvariant(skillName);
+  const checker = getChecker();
+  if (!checker || typeof checker.evaluateSkillInvariant !== 'function') {
+    return { ok: true, skill: skillName, warnings: ['checker unavailable — lint skipped'] };
+  }
+  let result;
+  try {
+    result = checker.evaluateSkillInvariant(skillName);
+  } catch (e) {
+    return { ok: true, skill: skillName, warnings: [`checker threw: ${e.message}`] };
+  }
   return {
     ok: result.invariantPass,
     skill: skillName,

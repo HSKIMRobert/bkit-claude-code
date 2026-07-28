@@ -30,7 +30,18 @@
 const fs = require('fs');
 const path = require('path');
 
+// v2.1.32: two distinct roots, previously conflated into one.
+//
+// ROOT is the tree being *checked* — the repository when this runs as a CI
+// script, the user's project when `scripts/lint-skill-md.js` invokes it from a
+// PreToolUse hook. PLUGIN_ROOT is where bkit's own modules live, which is fixed
+// relative to this file no matter what cwd is.
+//
+// Requiring a bkit module through ROOT only worked while cwd happened to be the
+// bkit repository. Anywhere else it threw MODULE_NOT_FOUND at load, which
+// crashed the SKILL.md linter hook for every user (see lint-skill-md.js).
 const ROOT = process.cwd();
+const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const SKILLS_DIR = path.join(ROOT, 'skills');
 
 function parseArgs(argv) {
@@ -45,7 +56,7 @@ function parseArgs(argv) {
 // v2.1.19 S3 CO-S2-1: extracted markdown utilities to lib/util/markdown-parse.js
 // for reuse (context-importer also consumes). Re-export here as a thin alias
 // to preserve backward compat for code that imports from this module.
-const MD_PARSE = require(path.join(ROOT, 'lib/util/markdown-parse.js'));
+const MD_PARSE = require(path.join(PLUGIN_ROOT, 'lib/util/markdown-parse.js'));
 const stripCodeBlocks = MD_PARSE.stripCodeBlocks;
 const extractFrontmatter = MD_PARSE.extractFrontmatter;
 

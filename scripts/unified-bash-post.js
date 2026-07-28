@@ -94,15 +94,26 @@ try {
   });
 } catch (_) {}
 
-// v2.0.0: Loop detection for repeated commands
+// v2.0.0: loop-breaker checkpoint after a Bash command completes.
+//
+// ENH-378: this used to call `recordAction('bash_command', …)` first. No LB rule
+// consumes that actionType — the switch in lib/control/loop-breaker.js handles
+// pdca_iteration / file_edit / agent_call / error only, and there is no
+// `guardrails.loopBreaker` config key or design doc for a bash rule either. The
+// call fell through and did nothing from v2.0.0 onward, while the block's name
+// implied bash commands were being counted. Recording was removed rather than a
+// rule invented, since adding one is a feature decision, not a bug fix.
+//
+// `checkLoop()` is kept: it evaluates LB-001/002/004 from the persisted
+// cross-process counters, and a completed Bash command is a legitimate point to
+// notice that some other loop is running away.
 try {
   const toolInput = input.tool_input || {};
   const command = toolInput.command || '';
   const lb = require('../lib/control/loop-breaker');
-  lb.recordAction('bash_command', command.substring(0, 100));
   const loopCheck = lb.checkLoop();
   if (loopCheck.detected) {
-    debugLog('UnifiedBashPost', 'Loop detected in bash commands', {
+    debugLog('UnifiedBashPost', 'Loop detected at bash checkpoint', {
       command: command.substring(0, 100), details: loopCheck
     });
   }

@@ -37,7 +37,7 @@ A development approach where AI operates as **a controllable partner leading the
 
 | Aspect | As-Is (Traditional) | To-Be (With bkit v2.0.0) |
 |--------|---------------------|--------------------------|
-| **Methodology** | Waterfall or Agile (manual) | Declarative PDCA state machine (20 transitions, 9 guards) |
+| **Methodology** | Waterfall or Agile (manual) | Declarative PDCA state machine (25 transitions, 9 guards) |
 | **Automation** | All manual or all-or-nothing | 5-level controllable automation (L0-L4) |
 | **Documentation** | Code first, docs later | State machine enforces Plan → Design → Do |
 | **Quality** | Manual QA team testing | Quality gates (7 stages) + Zero Script QA + metrics (M1-M10) |

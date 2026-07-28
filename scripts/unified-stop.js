@@ -11,7 +11,7 @@
  */
 
 const path = require('path');
-const { readStdinBounded, outputAllow } = require('../lib/core/io');
+const { readStdinBounded, outputAllow, hasInFlightBackgroundWork } = require('../lib/core/io');
 const { STDIN_READ_TIMEOUT_MS } = require('../lib/core/constants');
 const { debugLog } = require('../lib/core/debug');
 const { getPdcaStatusFull } = require('../lib/pdca/status');
@@ -592,13 +592,27 @@ if (handled || feature) {
 clearActiveContext();
 
 // Fallback: agent state cleanup if no handler did it (v1.5.3 Team Visibility)
+//
+// ENH-374: gated on `background_tasks` being empty. This Stop fires when the
+// MAIN turn ends, which since CC v2.1.218/219 (background `/code-review`,
+// nested subagents to depth 3 by default) regularly happens while subagents are
+// still running. Wiping the roster there orphaned every later SubagentStop —
+// reproduced at 4/4 on CC v2.1.220. Deferring cleanup to the Stop that fires
+// once nothing is in flight costs nothing: the roster is cleared either way,
+// just not while it is still being written to.
 if (!handled) {
   try {
     const teamModule = require('../lib/team');
     const state = teamModule.readAgentState ? teamModule.readAgentState() : null;
     if (state && state.enabled) {
-      teamModule.cleanupAgentState();
-      debugLog('UnifiedStop', 'Fallback agent state cleanup executed');
+      if (hasInFlightBackgroundWork(hookContext)) {
+        debugLog('UnifiedStop', 'Fallback agent state cleanup deferred (background work in flight)', {
+          backgroundTaskCount: hookContext.background_tasks.length,
+        });
+      } else {
+        teamModule.cleanupAgentState();
+        debugLog('UnifiedStop', 'Fallback agent state cleanup executed');
+      }
     }
   } catch (e) {
     // Silent - not all stops need agent state cleanup

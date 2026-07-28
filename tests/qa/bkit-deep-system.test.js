@@ -175,8 +175,13 @@ group('A2-core: platform/cache/config/paths/version/io/file/errors/state-store/c
     const camel = parseHookInput({ toolName: 'Bash', tool_input: { filePath: '/b' } });
     assert.equal(camel.toolName, 'Bash');
     assert.equal(camel.filePath, '/b');
+    // v2.1.32: the absent-value sentinel is null, not ''. parseHookInput's
+    // internal pick() returns null when no candidate is present, and it treats
+    // '' itself as absent — so asserting '' contradicted the function's own
+    // contract. Consumers destructure and test truthiness, for which both
+    // behave identically.
     const nul = parseHookInput(null);
-    assert.equal(nul.toolName, '');
+    assert.equal(nul.toolName, null);
   });
 
   tc('A2-12 io.xmlSafeOutput', () => {
@@ -1051,8 +1056,8 @@ group('A10-hooks/config/workflow/i18n', () => {
     assert.equal(bkitCfg.version, BKIT_VERSION);
   });
 
-  tc('A10-8 bkit.config.json ui.contextInjection has 8 sections', () => {
-    assert.equal(bkitCfg.ui.contextInjection.sections.length, 8);
+  tc('A10-8 bkit.config.json ui.contextInjection has 9 sections', () => {
+    assert.equal(bkitCfg.ui.contextInjection.sections.length, 9);
     assert.equal(bkitCfg.ui.contextInjection.maxChars, 8000);
   });
 

@@ -54,7 +54,7 @@ bkit is a **practical implementation of Context Engineering**, providing a syste
 │  │ State Machine    │  │ Workflow Engine   │  │ Controllable AI         │   │
 │  │ (NEW v2.0.0)     │  │ (NEW v2.0.0)     │  │ (NEW v2.0.0)           │   │
 │  │                  │  │                  │  │                          │   │
-│  │ • 20 transitions │  │ • 3 YAML presets │  │ • L0-L4 automation      │   │
+│  │ • 25 transitions │  │ • 3 YAML presets │  │ • L0-L4 automation      │   │
 │  │ • 9 guards       │  │ • Step execution │  │ • Trust Score (0-100)   │   │
 │  │ • Declarative    │  │ • Parallel-check │  │ • Emergency stop        │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────────┘   │

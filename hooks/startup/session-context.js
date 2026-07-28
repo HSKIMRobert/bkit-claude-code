@@ -1,5 +1,5 @@
 /**
- * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.31)
+ * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.32)
  *
  * Builds the additionalContext string for the SessionStart hook response.
  * Includes PDCA status injection, Feature Usage rules, Executive Summary rules,
@@ -40,8 +40,11 @@ const { FABLE_MODEL_FLOOR } = require('../../lib/infra/cc-version-checker');
 // before upgrading CC.
 //
 // Performance budget:
-//   - child_process.execSync timeout 200ms hard cap
-//   - .bkit/runtime/cc-version.json cache 1h TTL
+//   - Strategy 0 (ENH-375): `~/.local/bin/claude` symlink read — no subprocess
+//   - child_process.execSync timeout 1000ms hard cap (fallback only)
+//   - .bkit/runtime/cc-version.json cache 1h TTL on success
+//   - failed detections cached for 60s only, so a transient failure retries
+//     instead of pinning "unknown" for an hour (ENH-375)
 //   - 1회/session cap (identical session reuses cache mtime)
 //   - opt-out via BKIT_DISABLE_CC_VERSION_DETECTION=1
 //   - OTEL emit: gen_ai.cc_version_detection_ms (3-month telemetry → v2.1.21+
@@ -51,8 +54,22 @@ const { FABLE_MODEL_FLOOR } = require('../../lib/infra/cc-version-checker');
 // Reference: docs/adr/0011-plugin-manifest-schema-compliance.md § Decision
 
 const CC_MIN_VERSION = '2.1.143';
-const CC_VERSION_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const CC_VERSION_DETECT_TIMEOUT_MS = 200;
+const CC_VERSION_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour (successful detection)
+
+// ENH-375: a failed detection gets its own, much shorter TTL. Caching a failure
+// for the full hour is what turned one timeout into a permanently dead
+// advisory — the cache read below accepts `version: null` as a hit, so every
+// later session short-circuited to "unknown" without retrying.
+const CC_VERSION_FAILURE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+// ENH-375: raised from 200ms. Claude Code ships as a ~264 MB native binary and
+// `claude --version` measured 302–327 ms on the reference machine (5/5 runs),
+// so the old cap could never succeed — detection failed 100% of the time and
+// the CC-version advisory never rendered. 1000 ms leaves roughly 3x headroom for
+// a slower machine while still aborting well before a hung binary becomes
+// noticeable at session start. This path is only a fallback anyway: Strategy 0
+// resolves the version for free on a native install.
+const CC_VERSION_DETECT_TIMEOUT_MS = 1000;
 
 /**
  * Compare two semver-ish strings (returns true if a < b).
@@ -76,9 +93,11 @@ function ccVersionLt(a, b) {
 /**
  * Detect installed Claude Code version + emit advisory if < v2.1.143.
  *
- * 1회/session cap + cache 1h TTL (.bkit/runtime/cc-version.json).
+ * 1회/session cap + cache 1h TTL on success (.bkit/runtime/cc-version.json);
+ * failed detections expire after 60s so they retry (ENH-375).
  * Opt-out: BKIT_DISABLE_CC_VERSION_DETECTION=1.
- * Performance: timeout 200ms hard cap on `claude --version`.
+ * Performance: installer-symlink read first (no subprocess); the
+ * `claude --version` fallback carries a 1000ms hard cap.
  *
  * @returns {{
  *   version: string | null,
@@ -99,17 +118,29 @@ function detectCCVersion() {
   const cachePath = path.join(cacheDir, 'cc-version.json');
 
   // 2. Cache check (mtime within TTL)
+  //
+  // ENH-375: a cached entry with `version: null` records a FAILED detection, not
+  // a valid answer. The previous guard (`typeof cached.version !== 'undefined'`)
+  // accepted it — `typeof null` is `'object'` — so one timeout pinned "unknown"
+  // for the full hour and the next session re-cached the same failure, making
+  // the advisory permanently dead. Failures now expire in a minute and only a
+  // successful detection earns the long TTL.
   try {
     if (fs.existsSync(cachePath)) {
       const stat = fs.statSync(cachePath);
       const ageMs = Date.now() - stat.mtimeMs;
-      if (ageMs < CC_VERSION_CACHE_TTL_MS) {
-        const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-        if (cached && typeof cached === 'object' && typeof cached.version !== 'undefined') {
+      const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+      if (cached && typeof cached === 'object') {
+        const isSuccess = typeof cached.version === 'string' && cached.version.length > 0;
+        const ttl = isSuccess ? CC_VERSION_CACHE_TTL_MS : CC_VERSION_FAILURE_CACHE_TTL_MS;
+        if (ageMs < ttl) {
+          // A cached failure is still honoured, but only for a minute — long
+          // enough to stop back-to-back sessions each paying the fallback
+          // subprocess timeout, short enough that detection recovers on its own.
           return {
-            version: cached.version,
-            isOldVersion: !!cached.isOldVersion,
-            advisory: cached.isOldVersion ? buildCCAdvisoryText(cached.version) : null,
+            version: isSuccess ? cached.version : null,
+            isOldVersion: isSuccess ? !!cached.isOldVersion : false,
+            advisory: isSuccess && cached.isOldVersion ? buildCCAdvisoryText(cached.version) : null,
             source: 'cache',
           };
         }
@@ -123,16 +154,30 @@ function detectCCVersion() {
   const startTime = Date.now();
   let version = null;
   let detectError = null;
+
+  // Strategy 0 (ENH-375): native-installer symlink — no subprocess, no timeout.
+  // Tried first because the subprocess path below cannot beat its own budget on
+  // a native-binary install.
   try {
-    const result = execSync('claude --version', {
-      timeout: CC_VERSION_DETECT_TIMEOUT_MS,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).toString().trim();
-    const match = result.match(/(\d+)\.(\d+)\.(\d+)/);
-    if (match) version = match[0];
-  } catch (e) {
-    detectError = e.message || String(e);
-    debugLog('SessionStart', 'CC version detection failed', { error: detectError });
+    const { readVersionFromInstallerSymlink } = require('../../lib/infra/cc-version-checker');
+    version = readVersionFromInstallerSymlink();
+  } catch (_e) {
+    // fail-open: fall through to the subprocess strategy
+  }
+
+  // Strategy 1: subprocess fallback (npm installs, Windows, non-standard layouts)
+  if (version === null) {
+    try {
+      const result = execSync('claude --version', {
+        timeout: CC_VERSION_DETECT_TIMEOUT_MS,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).toString().trim();
+      const match = result.match(/(\d+)\.(\d+)\.(\d+)/);
+      if (match) version = match[0];
+    } catch (e) {
+      detectError = e.message || String(e);
+      debugLog('SessionStart', 'CC version detection failed', { error: detectError });
+    }
   }
   const durationMs = Date.now() - startTime;
 

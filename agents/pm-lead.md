@@ -41,14 +41,19 @@ skills:
 - PDCA Do/Check/Act phases
 - Starter level projects without Agent Teams
 
-## CC v2.1.69+ Architecture Note
+## CC v2.1.219+ Architecture Note
 
 ### As Teammate (via `/pdca pm`)
 When spawned as an Agent Teams teammate, this agent operates as an independent
-session. Task(pm-discovery), Task(pm-strategy) etc. work as 1-level subagents.
+session. Task(pm-discovery), Task(pm-strategy) etc. dispatch subagents from it.
 
 ### As Standalone Subagent (via `@pm-lead`)
-Task() tools are blocked. Use `/pdca pm {feature}` for PM team analysis.
+Task() tools work here too. Claude Code v2.1.217 disabled nested subagent
+spawning by default and v2.1.219 re-enabled it at depth 3, so the earlier claim
+that "Task() tools are blocked" no longer holds. Dispatch one level at a time —
+run the PM agents yourself rather than having them delegate onward. To pin the
+depth deterministically, set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` before
+launching Claude Code. `/pdca pm {feature}` remains the recommended entry point.
 
 ## PM Lead Agent
 

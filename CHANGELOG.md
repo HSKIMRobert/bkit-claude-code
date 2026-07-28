@@ -5,6 +5,240 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.32] - 2026-07-28
+
+> **Status**: Claude Code v2.1.219/220 compatibility response, from the
+> `/bkit:cc-version-analysis` cycle #30. v2.1.219 reversed v2.1.217 and made
+> subagents spawn nested subagents to **depth 3 by default**. Combined with
+> v2.1.218 moving `/code-review` to a background subagent, the main turn now
+> routinely ends while subagents are still alive — which broke assumptions bkit
+> had carried since v1.5.3. **Every defect below was reproduced before it was
+> fixed**, using `claude -p --plugin-dir .` against CC v2.1.220 with a depth-2
+> probe; none was inferred from the changelog.
+
+### Team roster no longer wiped mid-flight (ENH-374)
+
+- **Reproduced**: the Stop hook fired while subagents were still running,
+  cleared the roster, and **4/4 subsequent `SubagentStop` calls logged
+  "Teammate not found for status update"** — a 100% orphan rate. The next
+  `SubagentStart` then re-initialised the state from scratch.
+- **Root cause**: `cleanupAgentState()` was guarded only by `state.enabled`.
+  That was correct while subagents ran in the foreground and always finished
+  before the main turn; it no longer is.
+- **Fix**: CC already supplies the signal — the Stop payload carries
+  `background_tasks`, documented upstream as *"Lets hooks distinguish 'session
+  is done' from 'session is paused waiting for background work to wake it'.
+  Empty array when nothing is in flight."* bkit read it nowhere. New
+  `io.hasInFlightBackgroundWork()` is the single source of truth, and all three
+  cleanup sites (`unified-stop`, `cto-stop`, `team-stop`) are gated on it.
+  Emptiness is the contract, so there is no status allowlist to drift. Absent
+  `background_tasks` (CC < 2.1.218) preserves the historical behaviour.
+
+### CC version detection was permanently dead (ENH-375)
+
+- **Reproduced**: `.bkit/runtime/cc-version.json` held
+  `{"version": null, "detectError": "spawnSync /bin/sh ETIMEDOUT"}`.
+- **Root cause, two compounding**: the budget was a 200 ms `execSync` cap, but
+  Claude Code now ships as a ~264 MB native binary and `claude --version`
+  measured **302–327 ms** (5/5 runs) — detection could never succeed. The
+  failure was then cached: the cache-read guard tested
+  `typeof cached.version !== 'undefined'`, and `typeof null` is `'object'`, so a
+  failed detection was served as a valid hit for the full 1 h TTL and re-cached
+  itself. The CC-version advisory, the ENH-368 model-floor notice and the
+  `RECOMMENDED_VERSION` warning therefore **never rendered** — which is how
+  `RECOMMENDED_VERSION` drifted 20 releases without anyone noticing.
+- **Fix**: new Strategy 0 reads the native installer symlink
+  `~/.local/bin/claude`, whose target basename is the active version — one
+  `readlink`, **0 ms vs 302–327 ms**. Only successful detections earn the 1 h
+  TTL; failures expire in 60 s and retry. The subprocess fallback cap is raised
+  to 1500 ms for npm/Windows installs where Strategy 0 does not apply.
+
+### Roster identity matches what CC actually sends (ENH-376, ENH-377)
+
+- **Reproduced**: the SubagentStart payload is `session_id, transcript_path,
+  cwd, prompt_id, agent_id, agent_type, hook_event_name` — **no `agent_name`, no
+  `model`, no `team_name`, no `tool_input`**. Depth-1 and depth-2 payloads are
+  field-for-field identical, so there is no depth or parent key and the nesting
+  tree cannot be reconstructed from this event.
+- Every fallback chain therefore always hit its last branch: teammate names were
+  the opaque `agent_id`, **every teammate was labelled `sonnet`** (18 of bkit's
+  34 agents are not), `currentTask` was always `null`, `teamName` always `''`.
+- **Fix**: `agent_id` is the identity, `agent_type` the display name, and the
+  model is resolved from the agent's own frontmatter.
+- Roster rows now key on `agent_id`, so two concurrent instances of the same
+  agent — reachable since v2.1.219 — no longer collapse into one row where
+  completing the first marked the second completed.
+- `MAX_TEAMMATES` overflow was a `debugLog` and a bare return; it is now counted
+  in `state.droppedTeammates`. The constant is single-sourced from
+  `lib/core/constants.js` (it was declared twice) and remains distinct from
+  `team.maxTeammates` in `bkit.config.json`, which bounds requested team size
+  rather than roster capacity.
+- `addTeammate`/`updateTeammateStatus` now use `state-store` `lockedUpdate`.
+  `tmp`+`rename` made each write atomic but the read and write were not held
+  together, so two concurrent hook processes could lose one.
+
+### Nested-spawn documentation corrected (ENH-372, ENH-373)
+
+- `agents/cto-lead.md` and `agents/pm-lead.md` told users Task() was *"blocked
+  by CC's nested spawn restriction"*, under a heading pinned to **v2.1.69 — 150
+  releases stale**. Both now describe the real behaviour and state that
+  one-level dispatch is bkit's own convention, not a platform guarantee.
+- The depth default resolves through `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` → a
+  **remote feature gate** → a hardcoded `3`, so it can change server-side with
+  no CC release. Setting the env var explicitly is the only deterministic bound,
+  and is now documented as such.
+- `cto-lead` and `pm-lead` each declare `Task(sprint-master-planner)` while
+  `sprint-master-planner` declares `Task(cto-lead)`/`Task(pm-lead)` — two cycles
+  that were unreachable at depth 1 and are now legal chains. Both directions are
+  deliberate and documented, so **no edge was removed**; `sprint-master-planner`
+  instead carries an explicit rule not to delegate back to its invoker.
+
+### Loop breaker (ENH-378, ENH-379)
+
+- **LB-013, a long-standing failing test, is fixed.** `reset('feature', target)`
+  cleared only the in-process mirror while `getCounters()` reads the persisted
+  bucket, so resetting one feature appeared to do nothing. The H3 cross-process
+  migration updated `reset('all')` and `resetCounter()` but missed this branch.
+  `loop-breaker` is now 15/15.
+- `recordAction()` silently swallowed unrecognised action types.
+  `unified-bash-post.js` had passed `'bash_command'` since v2.0.0 with no rule
+  consuming it — a no-op under a block named for bash loop detection. The
+  recording was removed rather than a rule invented (there is no config key and
+  no design doc for one); `checkLoop()` is kept because it legitimately surfaces
+  other runaway loops, and a `default` branch now makes the next mis-wiring
+  visible.
+- `team-protocol.registerSpawn` called `addTeammate` positionally against a
+  function taking one descriptor object. Latent — no runtime caller, and the
+  tests only asserted `typeof`.
+
+### File lock could be stolen from its holder (ENH-380)
+
+Found while QA-ing the roster serialisation above, not by reading the code.
+
+- **Reproduced**: eight concurrent writers to the roster produced **seven rows**.
+  Every worker reported success and no lock error, so the lock *was* being
+  taken — and an update was still lost.
+- **Root cause**: `lock()` creates the lock file with
+  `writeFileSync(path, data, { flag: 'wx' })`, which is create-then-write. A
+  competing process can read it in that window and see **zero bytes**.
+  `JSON.parse('')` throws, the old code classified that as a *corrupt* lock,
+  deleted it, and entered the critical section alongside the live holder.
+- **A/B against main**, three trials each, eight concurrent writers:
+  main `7/8, 6/8, 7/8` — fixed `8/8, 8/8, 8/8`.
+- **Fix**: staleness is judged from the lock file's mtime, which needs no
+  parsing and is set at creation. A lock mid-creation is milliseconds old, so it
+  is waited on with the existing backoff; only a lock older than
+  `LOCK_STALE_MS` is removed. A genuinely corrupt lock still recovers, on the
+  same schedule as an abandoned one. The waiter now also honours the caller's
+  timeout rather than looping to the retry cap.
+- **Blast radius**: this is a pre-existing defect in a core primitive, so every
+  `lockedUpdate` consumer was exposed — including `loop-breaker`'s cross-process
+  counters, the ones ENH-378 had just repaired.
+- New regression test spawns real concurrent processes, since a single-process
+  test cannot open the window (`test/regression/v2132-lock-mutual-exclusion.test.js`,
+  4 TC).
+
+### Full-feature QA findings (v2.1.32)
+
+Every bkit surface was swept, not just the ones this release changed: all 44
+skill and 34 agent frontmatters, all 26 registered hook handlers fired with
+realistic CC payloads, all 19 MCP tools driven over real stdio JSON-RPC, all 28
+user-invocable skills invoked through live `claude -p --plugin-dir .` sessions,
+8-language trigger routing, the state machine, quality gates, UI renderers and
+the checkpoint round-trip. Two user-facing defects surfaced.
+
+- **The SKILL.md linter hook crashed in every project except bkit's own.**
+  `scripts/lint-skill-md.js` resolved its checker through `process.cwd()`, which
+  is the *user's* project — so outside the bkit repository it threw
+  MODULE_NOT_FOUND at module load and the PreToolUse hook exited 1 with an
+  uncaught stack trace on every Write to a `skills/*/SKILL.md` path, against its
+  own documented "Exit: 0 always (warning-only, never blocks write)" contract.
+  `scripts/check-skills-docs-code-sync.js` had the same defect one level down;
+  its single `ROOT` conflated the tree being checked with the location of bkit's
+  own modules. Now split into `ROOT` and `PLUGIN_ROOT`, so CI behaviour is
+  unchanged (44/44) while the hook path works anywhere. The linter also loads its
+  checker lazily behind a guard so a missing checker degrades to a no-op.
+- **`/btw` was unreachable.** Bare `/btw` answers "isn't available in this
+  environment" — distinct from "Unknown command", so Claude Code knows the name
+  and gates it; the string is present in the CC binary. A sweep of all 28
+  user-invocable skills found this is the **only** collision (the other 27
+  resolve bare), so `skills/btw/SKILL.md` and the `cto-lead` tip now advertise
+  `/bkit:btw`, which works end-to-end.
+
+Verified working with no change needed: 19/19 MCP tools, 26/26 hook handlers,
+195/195 lib modules, 8-language trigger routing 12/12, state machine (25
+transitions, invalid events rejected), quality gates M1–M10, all five UI
+renderers, and checkpoint create/list.
+
+### Test suite: 20 failing on `main` → 0 (v2.1.32)
+
+Maintainer-approved scope expansion. All twenty predated this branch; none were
+regressions. Two turned out to be real defects, the rest were assertions that had
+stopped tracking deliberate changes.
+
+**The workflow presets were a lost feature, not an overclaim.** An earlier draft
+of this entry said the docs oversold them. That was wrong, and this section
+replaces it. `test/unit/v200-workflows.test.js` (WF-001~020) and
+`automation-first-v2.test.js` (AF-021~025) specify the three preset files and
+their contents in detail — they were designed, then went missing, while the
+engine at `unified-stop.js:412` returned `null` in every installation. Restored
+from that specification plus `lib/pdca/workflow-parser.js`: **default** keeps all
+nine PDCA phases at matchRate 90 / semi-auto, **hotfix** omits pm and design and
+drops to 80, **enterprise** adds a parallel check fan-out carrying a
+security-review branch (merged `all`) at 95.
+
+**Two isolation defects made results depend on execution order.** The
+`02-cc-regression` ledger tests isolated with `process.chdir()`, which never
+worked — `lib/core/platform.js` captures `PROJECT_DIR` at module load, so the
+tests were reading *and writing* the repository's own
+`.bkit/runtime/token-ledger.ndjson`, and every suite run appended more. Likewise
+`hook-runner` defaults to cwd = the bkit repo with no `CLAUDE_PROJECT_DIR`, so
+`unified-stop.js` with an empty payload fell back to the active-skill marker and
+PDCA status that other tests write; STOP-01 passed alone and failed in a full
+run. Both now use throwaway project directories.
+
+**`lock()` never created its parent directory** though `write()` always has, so
+`lockedUpdate` on a path under a not-yet-existing directory threw ENOENT — the
+normal state of a fresh project, where `loop-breaker`'s persisted counters
+silently never accumulated because callers wrap the call in a catch.
+
+**Twelve `lib/` modules carried no `@version`.** Each tag is the version the
+module was actually introduced in, read from git history rather than stamped with
+today's number.
+
+**Stale contracts**, each pinning a value the code deliberately moved past: the
+starting trust score is 38, not 40 (ENH-318 added a seventh component at weight
+0.05 and rescaled the rest); `ACTION_TYPES` is 40, not 29; `VALID_ACTIONS` is 20,
+not 17; the evals inventory is 32 skills / 13 workflow; `detectDocumentType`
+returns `'analysis'` since the M1 audit fix; `GATE_MEASUREMENT_ROUTES` covers 8
+agent-routed gates with `UNSUPPORTED_GATES` now empty; `QUALITY_GATE_FAIL` is
+scoped to the phase's active gates; feature completion reads
+`featureMap[f].completion`; `advancePhase`'s gate_fail result gained `hint` in
+v2.1.22; `parseHookInput`'s absent sentinel is `null`, not `''`.
+
+**The skill-description cap was a Claude Code v2.1.86 constraint** that is absent
+from the v2.1.220 binary. Fourteen of 44 skills exceeded it, every one because of
+its `Triggers:` block — the 8-language keyword lists implicit routing matches on
+(verified 12/12 across ES/FR/DE/IT). Enforcing 250 meant deleting the keywords
+that make non-English invocation work, so the cap moved to 500 (longest is
+`enterprise` at 474) with the reasoning recorded in the test.
+
+Also: four table rows in `skills/sprint/SKILL.md` carried Hangul in the body,
+against the project's own English-only rule, and the state machine's transition
+count was documented as 20 in six places where the code exposes 25.
+
+### Compatibility
+
+- **Recommended CC runtime raised to v2.1.220.** The cycle-#30 analysis
+  recommended holding at 2.1.218 *pending* nesting containment; this release
+  delivers it. v2.1.219 → 2.1.220 was verified as a no-op for every surface bkit
+  integrates against (feature gates 1754/1754 identical; hook, subagent, plugin,
+  skill, MCP and fork/background surfaces unchanged).
+- `MIN_VERSION` 2.1.78, install floor 2.1.143, `FABLE_MODEL_FLOOR` 2.1.170 —
+  unchanged.
+- **0 breaking changes.** Consecutive compatible releases: **163**
+  (v2.1.34 – v2.1.220).
+
 ## [2.1.31] - 2026-07-23
 
 > **Status**: Claude Code v2.1.218 compatibility response (proactive, from the

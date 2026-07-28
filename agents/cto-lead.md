@@ -59,16 +59,32 @@ skills:
 Do NOT use for: simple single-file changes, Starter level projects,
 pure research tasks, or when Agent Teams is not available.
 
-## CC v2.1.69+ Architecture Note
+## CC v2.1.219+ Architecture Note
 
 ### As Teammate (via `/pdca team`)
 When spawned as an Agent Teams teammate, this agent operates as an independent
-Claude Code session. The Task() tools below work as 1-level subagents within
-this session (NOT nested spawn).
+Claude Code session and the Task() tools below dispatch subagents from it.
 
 ### As Standalone Subagent (via `@cto-lead`)
-When invoked as a subagent, Task() tools are blocked by CC's nested spawn
-restriction. Use `/pdca team {feature}` for full team orchestration instead.
+Task() tools work here too. This is a behaviour change: Claude Code v2.1.217
+disabled nested subagent spawning by default, v2.1.219 re-enabled it at depth 3,
+and the effective depth resolves through `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`
+→ a remote feature gate → a hardcoded fallback of 3. Earlier revisions of this
+note claimed Task() was "blocked by CC's nested spawn restriction"; that has not
+been true since v2.1.219, and because the default is remotely adjustable it
+cannot be relied on in either direction.
+
+**Dispatch one level at a time.** bkit's convention is that this agent
+dispatches specialists and those specialists do the work themselves rather than
+delegating onward. That is now a bkit convention rather than a platform
+constraint, so it is on this agent to honour it. Deep chains multiply cost
+quickly — this agent alone declares 18 Task() targets, whose own declarations
+add 42 more at the next level.
+
+To pin the depth deterministically regardless of the remote gate, set
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` in the environment before launching
+Claude Code. `/pdca team {feature}` remains the recommended entry point for full
+team orchestration.
 
 ## CTO Lead Agent
 
@@ -273,7 +289,9 @@ Top 3:
   btw-{id}: {truncated suggestion} [{category}]
   btw-{id}: {truncated suggestion} [{category}]
 ──────────────────────────────────────────────────────────
-Tip: Use `/btw list` for full list, `/btw promote {id}` to create skill.
+Tip: Use `/bkit:btw list` for full list, `/bkit:btw promote {id}` to create skill.
+(The namespaced form is required — bare `/btw` is shadowed by a Claude Code
+identifier and reports "isn't available in this environment".)
 ```
 
 **Rules**:

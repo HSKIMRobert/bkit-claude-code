@@ -8,7 +8,7 @@
  * 3. Team 정리 안내 메시지 출력
  */
 
-const { outputAllow } = require('../lib/core/io');
+const { outputAllow, hasInFlightBackgroundWork } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getPdcaStatusFull, addPdcaHistory } = require('../lib/pdca/status');
 
@@ -27,10 +27,20 @@ function run(context) {
   }
 
   // State writer: agent state cleanup (v1.5.3 Team Visibility)
+  //
+  // ENH-374: skipped while background work is still registered — teammates
+  // spawned during the team session can outlive the coordinator's own turn on
+  // CC v2.1.218+ (background subagents) and v2.1.219+ (nested spawn by default).
   try {
     const teamModule = require('../lib/team');
     if (teamModule.cleanupAgentState) {
-      teamModule.cleanupAgentState();
+      if (hasInFlightBackgroundWork(context)) {
+        debugLog('TeamStop', 'Agent state cleanup deferred (background work in flight)', {
+          backgroundTaskCount: context.background_tasks.length,
+        });
+      } else {
+        teamModule.cleanupAgentState();
+      }
     }
   } catch (e) {
     debugLog('TeamStop', 'Agent state cleanup failed (non-fatal)', { error: e.message });

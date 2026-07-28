@@ -90,9 +90,16 @@ test('[3/9] Design — Design path convention + Architecture Options invariant',
   const designDir = path.join(PROJECT_ROOT, 'docs', '02-design', 'features');
   assert.ok(fs.existsSync(designDir), 'docs/02-design/features must exist');
 
-  // Sprint γ design doc itself is a self-test artifact:
-  const gammaDoc = path.join(designDir, 'bkit-v2111-sprint-gamma.design.md');
-  assert.ok(fs.existsSync(gammaDoc), 'Sprint γ design doc must exist');
+  // v2.1.32: assert the naming convention rather than one specific document.
+  // This pinned bkit-v2111-sprint-gamma.design.md, which the v2.1.13
+  // documentation-sync sprint archived to docs/archive/2026-05/ along with 70
+  // other completed PDCA docs. Archiving finished work is the intended
+  // lifecycle, so a test naming a single artifact fails every time the archive
+  // runs — while the invariant it is actually named for, that design documents
+  // live at docs/02-design/features/<feature>.design.md, keeps holding.
+  const designDocs = fs.readdirSync(designDir).filter((f) => f.endsWith('.design.md'));
+  assert.ok(designDocs.length > 0,
+    'docs/02-design/features must contain at least one <feature>.design.md');
 });
 
 // ── Scenario 4/9 — Do ────────────────────────────────────────────────────

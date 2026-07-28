@@ -152,10 +152,18 @@ process.chdir(origCwd);
 const trustEngine = require(path.join(PROJECT_ROOT, 'lib/control/trust-engine'));
 
 // CP-011: createDefaultProfile returns valid profile
+//
+// v2.1.32: expected score corrected 40 -> 38. The default is the weighted sum of
+// the components that start at 100 (rollbackFrequency, destructiveBlockRate,
+// userOverrideRate). Under the original six components that was
+// 0.15 + 0.15 + 0.10 = 40. ENH-318 (v2.1.19 S4 F4-1) added
+// externalDogfoodFeedbackResponseRate at weight 0.05 and rescaled the other six
+// by 0.95, making it 14.25 + 14.25 + 9.5 = 38. The assertion was never updated,
+// so it had been pinning a value the code stopped producing.
 const profile11 = trustEngine.createDefaultProfile();
 assert('CP-011',
-  profile11.trustScore === 40 && profile11.currentLevel === 0 && profile11.components.pdcaCompletionRate,
-  'createDefaultProfile returns profile with trustScore=40, level=0'
+  profile11.trustScore === 38 && profile11.currentLevel === 0 && profile11.components.pdcaCompletionRate,
+  'createDefaultProfile returns profile with trustScore=38, level=0'
 );
 
 // CP-012: calculateScore returns weighted sum

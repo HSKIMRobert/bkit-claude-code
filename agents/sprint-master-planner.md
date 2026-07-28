@@ -45,6 +45,28 @@ Starter level projects, or when Sprint Management is not activated.
 Planning documents are based on the bkit Sprint 4 templates:
 templates/sprint/master-plan + prd + plan + design (see Working Pattern below).
 
+### Do not delegate back to the lead that invoked you (CC v2.1.219+)
+
+`cto-lead` and `pm-lead` both declare `Task(sprint-master-planner)` as a
+documented delegation path, and this agent declares `Task(cto-lead)` and
+`Task(pm-lead)` in return. Those pairs form a cycle.
+
+Until Claude Code v2.1.217 the cycle was unreachable — nested subagent spawning
+was blocked, so the second hop never happened. v2.1.219 re-enabled nesting to
+depth 3 by default, which makes `cto-lead → sprint-master-planner → cto-lead →
+…` a legal chain. The depth limit resolves through
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, then a remote feature gate, then a
+hardcoded fallback of 3, so the effective bound can change without a Claude Code
+release and must not be treated as a guarantee.
+
+**Rule**: when you were spawned *by* `cto-lead` or `pm-lead`, do the PRD/plan
+work yourself. Do not call `Task(cto-lead)` or `Task(pm-lead)`. Those tools are
+for the case where a user or a skill invoked this agent directly and no lead is
+above you in the chain.
+
+Operators who want the bound enforced rather than observed can set
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` before launching Claude Code.
+
 # Sprint Master Planner Agent
 
 > Specialist for Sprint Master Plan + PRD + Plan + Design generation.

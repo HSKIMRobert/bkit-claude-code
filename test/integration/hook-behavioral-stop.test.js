@@ -9,7 +9,32 @@
  */
 
 const assert = require('assert');
-const { runHook } = require('../helpers/hook-runner');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { runHook: runHookRaw } = require('../helpers/hook-runner');
+
+// v2.1.32: run every hook in a throwaway project directory.
+//
+// hook-runner defaults to cwd = the bkit repository and sets no
+// CLAUDE_PROJECT_DIR, so unified-stop.js read the repo's live .bkit/ state.
+// With an empty payload it has nothing else to go on and falls back to the
+// active-skill marker and PDCA status — both of which other tests in the suite
+// write. STOP-01 therefore passed standalone and failed inside a full run,
+// depending on what had executed before it. Isolating the project dir removes
+// the ordering dependency without weakening any assertion.
+const ISOLATED_PROJECT_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-stop-hook-'));
+process.on('exit', () => {
+  try { fs.rmSync(ISOLATED_PROJECT_DIR, { recursive: true, force: true }); } catch (_) { /* ignore */ }
+});
+
+function runHook(scriptPath, payload = {}, options = {}) {
+  return runHookRaw(scriptPath, payload, {
+    ...options,
+    cwd: options.cwd || ISOLATED_PROJECT_DIR,
+    env: { CLAUDE_PROJECT_DIR: ISOLATED_PROJECT_DIR, ...(options.env || {}) },
+  });
+}
 
 let passed = 0, failed = 0, total = 0;
 

@@ -229,7 +229,13 @@ function baseSprint(over) {
   });
 
   test('A-04: QUALITY_GATE_FAIL fires when S1<100', () => {
+    // v2.1.32: pinned to the qa phase. Slice 2 (Cluster D) scoped
+    // QUALITY_GATE_FAIL to the gates active for the sprint's *current* phase,
+    // and S1 is active in qa and report only — baseSprint() sits in `do`, where
+    // a failing S1 is correctly not a pause trigger. The test was written before
+    // that scoping and had been asserting against the pre-Slice-2 behaviour.
     const s = cloneSprint(baseSprint(), {
+      phase: 'qa',
       qualityGates: { ...baseSprint().qualityGates, S1_dataFlowIntegrity: { current: 85, threshold: 100, passed: false } },
     });
     const hits = checkAutoPauseTriggers(s);
@@ -593,10 +599,16 @@ function baseSprint(over) {
   // ─────────────────────────────────────────────────────────────────────────
 
   await testAsync('R-01: kpiSnapshot featuresTotal/Completed', async () => {
+    // v2.1.32: completion is read from featureMap[f].completion, not inferred
+    // from pdcaPhase. That field is part of the entity's own feature schema
+    // (lib/domain/sprint/entity.js seeds `completion: 0`) and is what
+    // advance-phase monotonically bumps; kpi-resolver counts truthy values.
+    // This test predated the field and had been asserting on a shape the
+    // resolver never inspected.
     const s = cloneSprint(baseSprint(), {
       featureMap: {
-        a: { pdcaPhase: 'archive', matchRate: 100, qa: 'pass', s1Score: 100 },
-        b: { pdcaPhase: 'do', matchRate: 75, qa: 'pending', s1Score: 50 },
+        a: { pdcaPhase: 'archive', matchRate: 100, qa: 'pass', s1Score: 100, completion: 100 },
+        b: { pdcaPhase: 'do', matchRate: 75, qa: 'pending', s1Score: 50, completion: 0 },
       },
     });
     const r = await generateReport(s);
@@ -605,11 +617,16 @@ function baseSprint(over) {
     assert.equal(r.kpiSnapshot.featureCompletionRate, 50);
   });
 
-  await testAsync('R-02: dataFlowIntegrity avg', async () => {
+  await testAsync('R-02: dataFlowIntegrity comes from the S1 gate', async () => {
+    // v2.1.32: dataFlowIntegrity is resolved from the S1 quality gate (or
+    // sprint.kpi), not averaged across featureMap s1Score values —
+    // kpi-resolver.js:37 is the single source of truth. Averaging per-feature
+    // scores would silently disagree with the gate the sprint is actually
+    // measured against.
     const s = cloneSprint(baseSprint(), {
-      featureMap: {
-        a: { pdcaPhase: 'qa', matchRate: 100, qa: 'pass', s1Score: 100 },
-        b: { pdcaPhase: 'qa', matchRate: 100, qa: 'pass', s1Score: 80 },
+      qualityGates: {
+        ...baseSprint().qualityGates,
+        S1_dataFlowIntegrity: { current: 90, threshold: 100, passed: false },
       },
     });
     const r = await generateReport(s);

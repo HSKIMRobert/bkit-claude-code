@@ -177,9 +177,9 @@ const LANG_REGEX = {
   // H — sprint-handler.js dispatcher 15 actions
   // ─────────────────────────────────────────────────────────────────────────
 
-  test('H-01: VALID_ACTIONS frozen 17 entries (v2.1.13 +master-plan, v2.1.16 +measure)', () => {
+  test('H-01: VALID_ACTIONS frozen 20 entries (v2.1.13 +master-plan, v2.1.16 +measure, v2.1.32 +trust/annotate/dogfood)', () => {
     assert.ok(Object.isFrozen(handler.VALID_ACTIONS));
-    assert.equal(handler.VALID_ACTIONS.length, 17);
+    assert.equal(handler.VALID_ACTIONS.length, 20);
     assert.ok(handler.VALID_ACTIONS.includes('master-plan'),
       'VALID_ACTIONS must include master-plan (S2-UX v2.1.13)');
     assert.ok(handler.VALID_ACTIONS.includes('measure'),
@@ -314,13 +314,13 @@ const LANG_REGEX = {
     assert.equal(typeof ac.getCurrentLevel, 'function');
   });
 
-  test('AUDIT-01: ACTION_TYPES has 29 entries (v2.1.13 baseline 20 + v2.1.14 +7 + v2.1.16 #95 +1 + #94 +1)', () => {
+  test('AUDIT-01: ACTION_TYPES has 40 entries (v2.1.13 baseline 20 + v2.1.14 +7 + v2.1.16 +2 + later +11)', () => {
     // v2.1.14 Sub-Sprint 2 (Defense) added 7 entries: layer_6_audit_completed,
     // layer_6_alarm_triggered, heredoc_bypass_blocked, git_push_intercepted,
     // post_tool_block_recorded, hook_reachability_lost, memory_directive_enforced.
     // v2.1.16 (Issue #95 F2) added scope_boundary_approved single-use escape hatch.
     // v2.1.16 (Issue #94 F3) added gate_measured for /sprint measure UC.
-    assert.equal(al.ACTION_TYPES.length, 29);
+    assert.equal(al.ACTION_TYPES.length, 40);
     assert.ok(al.ACTION_TYPES.includes('scope_boundary_approved'),
       'ACTION_TYPES must include scope_boundary_approved (v2.1.16 Issue #95 F2)');
     assert.ok(al.ACTION_TYPES.includes('gate_measured'),

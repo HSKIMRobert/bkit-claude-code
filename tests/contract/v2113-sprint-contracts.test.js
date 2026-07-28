@@ -131,8 +131,10 @@ function sc04() {
     'handleSprintAction must take (action, args, deps)');
   assert(Array.isArray(handlerMod.VALID_ACTIONS));
   // v2.1.13 S2-UX: 16 (added master-plan). v2.1.16 Issue #94 F3: 17 (added measure).
-  assert.strictEqual(handlerMod.VALID_ACTIONS.length, 17,
-    'VALID_ACTIONS must list 17 sub-actions (v2.1.16 added measure)');
+  // v2.1.32: 20 — trust, annotate and dogfood were added after this assertion
+  // was last touched, each with its own handler and tests.
+  assert.strictEqual(handlerMod.VALID_ACTIONS.length, 20,
+    'VALID_ACTIONS must list 20 sub-actions');
   const expected = ['init', 'start', 'status', 'list', 'phase', 'iterate',
                     'qa', 'report', 'archive', 'pause', 'resume', 'fork',
                     'feature', 'watch', 'help', 'master-plan',
@@ -187,7 +189,11 @@ function sc06() {
   // v2.1.14 Sub-Sprint 4 (E Defense): +memory_directive_enforced → 27.
   // v2.1.16 (Issue #95 F2): +scope_boundary_approved → 28.
   // v2.1.16 (Issue #94 F3): +gate_measured → 29.
-  assert.strictEqual(al.ACTION_TYPES.length, 29,
+  // v2.1.32: 40. Eleven action types were added since (sprint trust/annotate/
+  // dogfood/bootstrap, sqm baseline, self-dogfood override, external feedback,
+  // gate-fail resolution, context import, KPI divergence). The enum is the
+  // source of truth; this assertion had simply stopped tracking it.
+  assert.strictEqual(al.ACTION_TYPES.length, 40,
     'ACTION_TYPES expected 29 entries, got ' + al.ACTION_TYPES.length +
     ' — entries: [' + al.ACTION_TYPES.join(', ') + ']');
   const required = [

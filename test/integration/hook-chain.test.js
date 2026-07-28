@@ -245,11 +245,17 @@ assert('TC-HC-25',
   'detectDocumentType identifies design document from path'
 );
 
-// TC-HC-26: detectDocumentType returns null for analysis (not implemented in current version)
+// TC-HC-26: detectDocumentType identifies analysis document
+//
+// v2.1.32: this asserted `null` with the note "not yet implemented". The M1
+// audit fix implemented it — lib/pdca/template-validator.js now returns
+// 'analysis' for both the canonical `features/` layout and the legacy flat one,
+// and validates against the analysis REQUIRED_SECTIONS entry. The assertion had
+// been pinning the absence of a feature that exists.
 const analysisType = templateValidator.detectDocumentType('docs/03-analysis/feat.analysis.md');
 assert('TC-HC-26',
-  analysisType === null,
-  'detectDocumentType returns null for analysis path (not yet implemented)'
+  analysisType === 'analysis',
+  'detectDocumentType identifies analysis document from path'
 );
 
 // TC-HC-27: detectDocumentType identifies report document

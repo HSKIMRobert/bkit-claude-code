@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "bkit-marketplace",
-  "version": "2.1.31",
+  "version": "2.1.32",
   "description": "POPUP STUDIO's Vibecoding Kit marketplace - PDCA methodology and AI-native development tools. Requires Claude Code v2.1.143+ for the bkit plugin (older versions reject the displayName field).",
   "owner": {
     "name": "POPUP STUDIO PTE. LTD.",
@@ -38,7 +38,7 @@
         "name": "POPUP STUDIO PTE. LTD.",
         "email": "contact@popupstudio.ai"
       },
-      "version": "2.1.31",
+      "version": "2.1.32",
       "repository": "https://github.com/popup-studio-ai/bkit-claude-code",
       "source": {
         "source": "url",

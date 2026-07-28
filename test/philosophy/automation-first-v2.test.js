@@ -116,10 +116,26 @@ assert('AF-008',
   'getRuntimeState sets currentLevel to 2 (Semi-Auto)'
 );
 
-// --- AF-009: initState trustScore starts at 40 (component weighted sum) ---
+// --- AF-009: the starting trust score is the component weighted sum ---
+//
+// v2.1.32: two corrections.
+//
+// The expected value moves 40 -> 38. The default is the weighted sum of the
+// components that start at 100 (rollbackFrequency, destructiveBlockRate,
+// userOverrideRate). Under the original six components that was 40; ENH-318
+// (v2.1.19 S4 F4-1) added externalDogfoodFeedbackResponseRate at weight 0.05 and
+// rescaled the other six by 0.95, making it 38.
+//
+// The source moves from getRuntimeState() to createDefaultProfile().
+// getRuntimeState() reads the *live* project's trust profile, so this assertion
+// was environment-dependent: 38 in a clean checkout, but 50 when run inside a
+// repository that has accumulated trust history — which is exactly what the bkit
+// repo itself has in .bkit/state/trust-profile.json. A test of the starting
+// value must not depend on how much the host project has used bkit.
+const defaultProfile = require(path.join(PROJECT_ROOT, 'lib/control/trust-engine')).createDefaultProfile();
 assert('AF-009',
-  initState.trustScore === 40,
-  'getRuntimeState trustScore starts at 40 (calculated from trust-engine components)'
+  defaultProfile.trustScore === 38,
+  'starting trust score is 38 (weighted sum of the seven trust-engine components)'
 );
 
 // --- AF-010: initState emergencyStop is false by default ---

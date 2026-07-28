@@ -192,8 +192,11 @@ function resetCwdDependentModules() {
     });
     // Pre-v2.1.16 shape was { ok:false, reason:'gate_fail', gateResults }.
     // v2.1.16 F4 adds reportPath + sprint (cloned with lastGateFailure).
+    // v2.1.22 (Issue #93 Task 5.1) adds `hint`, an actionable message naming the
+    // gates that failed — see advance-phase.usecase.js:205-215, where it is part
+    // of the documented return typedef. The assertion had not been updated.
     assert.deepStrictEqual(Object.keys(r).sort(),
-      ['gateResults', 'ok', 'reason', 'reportPath', 'sprint']);
+      ['gateResults', 'hint', 'ok', 'reason', 'reportPath', 'sprint']);
     assert.strictEqual(r.reportPath, 'docs/03-analysis/ac6.md');
     assert(r.sprint && r.sprint.lastGateFailure);
   });

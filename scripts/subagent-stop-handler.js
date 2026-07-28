@@ -43,9 +43,14 @@ function main() {
   }
 
   // v1.5.9: ENH-74 agent_id/agent_type extraction
+  //
+  // ENH-376: SubagentStop carries `agent_id` and `agent_type` but no
+  // `agent_name` (verified against CC v2.1.220), so the old fallback chain
+  // always produced the opaque id. Address the roster row by id — the same
+  // identity SubagentStart registers — and keep the readable type for display.
   const agentId = hookContext.agent_id || null;
   const agentType = hookContext.agent_type || 'unknown';
-  const agentName = hookContext.agent_name || agentId || 'unknown';
+  const agentName = agentType !== 'unknown' ? agentType : (agentId || 'unknown');
 
   // Determine exit status (transcript_path exists = normal exit)
   const isSuccess = hookContext.transcript_path != null
@@ -55,7 +60,7 @@ function main() {
 
   // Update status
   try {
-    teamModule.updateTeammateStatus(agentName, status, null);
+    teamModule.updateTeammateStatus({ id: agentId, name: agentName }, status, null);
   } catch (e) {
     debugLog('SubagentStop', 'Status update failed (non-fatal)', { error: e.message });
   }
