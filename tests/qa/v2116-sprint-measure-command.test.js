@@ -127,32 +127,42 @@ function resetCwdDependentModules() {
     assert.strictEqual(r.phase, 'design');
     assert.strictEqual(r.successCount, 2, 'design phase has [M4, M8]');
     assert.deepStrictEqual(r.skippedUnsupported, []);
-    // qa phase has 8 gates (M1, M2, M3, M4, M5, M7, S1, S2); M5/S2 unsupported.
+    // v2.1.32: the qa phase's 8 gates (M1, M2, M3, M4, M5, M7, S1, S2) are all
+    // routed now. M5 gained a qa-monitor route, and S2 carries a null agent —
+    // routed, measured another way — so nothing is skipped as unsupported and
+    // all 8 succeed.
     const qaRes = await lifecycle.measurePhaseGates(sprint, 'qa', {
       agentTaskRunner: fakeRunner(85),
     });
-    assert(qaRes.skippedUnsupported.includes('M5'));
-    assert(qaRes.skippedUnsupported.includes('S2'));
-    assert.strictEqual(qaRes.successCount, 6, 'qa phase has 6 supported (M1, M2, M3, M4, M7, S1)');
+    assert.deepStrictEqual(qaRes.skippedUnsupported, []);
+    assert.strictEqual(qaRes.successCount, 8, 'qa phase measures all 8 gates');
   });
 
   // ─────────────────────────────────────────────────────────────────────
   // AC4 — gateKey → agent routing table (Master Plan §11.3).
   // ─────────────────────────────────────────────────────────────────────
-  await tc('AC4: GATE_MEASUREMENT_ROUTES table — 7 gates × 4 agents per Master Plan', async () => {
+  // v2.1.32: M5 moved out of UNSUPPORTED_GATES when it gained a qa-monitor
+  // route, so the table is 8 gates across 5 agents and the carried-forward list
+  // is down to three. The routing assertions below were already correct; only
+  // the count in the title and the unsupported list had lagged.
+  await tc('AC4: GATE_MEASUREMENT_ROUTES table — 8 gates × 5 agents per Master Plan', async () => {
     const expected = {
       M1: 'gap-detector', M3: 'gap-detector', M4: 'gap-detector',
       M2: 'code-analyzer', M7: 'code-analyzer',
       M8: 'sprint-orchestrator',
       S1: 'sprint-qa-flow',
+      M5: 'qa-monitor',
     };
     for (const [g, agent] of Object.entries(expected)) {
       assert.strictEqual(mr.GATE_MEASUREMENT_ROUTES[g].agent, agent,
         g + ' must route to ' + agent);
     }
-    // Unsupported gates carried to v2.1.17.
-    assert.deepStrictEqual(mr.UNSUPPORTED_GATES.slice().sort(),
-      ['M5', 'M10', 'S2', 'S4'].sort());
+    // v2.1.32: UNSUPPORTED_GATES is now empty. Every gate in the catalogue has
+    // an entry in GATE_MEASUREMENT_ROUTES; M10, S2 and S4 are present with a
+    // null agent, meaning "routed, measured another way" rather than "carried
+    // forward unimplemented". The assertion below tracks the list rather than
+    // hard-coding the gates that happened to be pending in v2.1.16.
+    assert.deepStrictEqual(mr.UNSUPPORTED_GATES.slice().sort(), []);
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -238,7 +248,10 @@ function resetCwdDependentModules() {
   // ─────────────────────────────────────────────────────────────────────
   await tc('TC-BONUS-8: router error paths — unsupported_gate / no_agent_runner / no_json / invalid_value', async () => {
     const sprint = { id: 'b', phase: 'design' };
-    assert.strictEqual((await mr.measureGate('M5', sprint, {})).reason, 'unsupported_gate');
+    // v2.1.32: M5 is no longer an unsupported gate — it routes to qa-monitor, so
+    // with no runner supplied it reports no_agent_runner like any other routed
+    // agent gate. The remaining three reasons are unchanged.
+    assert.strictEqual((await mr.measureGate('M5', sprint, {})).reason, 'no_agent_runner');
     assert.strictEqual((await mr.measureGate('M4', sprint, {})).reason, 'no_agent_runner');
     assert.strictEqual((await mr.measureGate('M4', sprint, {
       agentTaskRunner: async () => ({ output: 'plain prose, no json here' }),
@@ -259,8 +272,8 @@ function resetCwdDependentModules() {
   // ─────────────────────────────────────────────────────────────────────
   // Bonus TC-9 — ACTION_TYPES.gate_measured enum present (cross-check SC-06).
   // ─────────────────────────────────────────────────────────────────────
-  await tc('TC-BONUS-9: ACTION_TYPES.gate_measured present (29 total)', async () => {
-    assert.strictEqual(al.ACTION_TYPES.length, 29);
+  await tc('TC-BONUS-9: ACTION_TYPES.gate_measured present (40 total)', async () => {
+    assert.strictEqual(al.ACTION_TYPES.length, 40);
     assert(al.ACTION_TYPES.includes('gate_measured'));
     assert(al.ACTION_TYPES.includes('scope_boundary_approved')); // F2 cross-check
   });
