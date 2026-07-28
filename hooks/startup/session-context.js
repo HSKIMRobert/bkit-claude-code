@@ -1,5 +1,5 @@
 /**
- * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.31)
+ * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.32)
  *
  * Builds the additionalContext string for the SessionStart hook response.
  * Includes PDCA status injection, Feature Usage rules, Executive Summary rules,
@@ -92,9 +92,11 @@ function ccVersionLt(a, b) {
 /**
  * Detect installed Claude Code version + emit advisory if < v2.1.143.
  *
- * 1회/session cap + cache 1h TTL (.bkit/runtime/cc-version.json).
+ * 1회/session cap + cache 1h TTL on success (.bkit/runtime/cc-version.json);
+ * failed detections expire after 60s so they retry (ENH-375).
  * Opt-out: BKIT_DISABLE_CC_VERSION_DETECTION=1.
- * Performance: timeout 200ms hard cap on `claude --version`.
+ * Performance: installer-symlink read first (no subprocess); the
+ * `claude --version` fallback carries a 1500ms hard cap.
  *
  * @returns {{
  *   version: string | null,

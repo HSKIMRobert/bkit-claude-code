@@ -112,7 +112,7 @@ Layer 1: hooks.json          → SessionStart, PreToolUse, PostToolUse hooks
 Layer 2: Skill Frontmatter   → hooks: PreToolUse, PostToolUse, Stop
 Layer 3: Agent Frontmatter   → hooks: PreToolUse, PostToolUse
 Layer 4: Description Triggers → "Triggers:" keyword matching
-Layer 5: Scripts             → Actual Node.js logic execution (61 scripts)
+Layer 5: Scripts             → Actual Node.js logic execution (62 scripts)
 ```
 
 This separation allows fine-grained control over when and how automation triggers.
@@ -874,7 +874,7 @@ bkit-claude-code/
 ├── hooks/
 │   ├── hooks.json                  # Claude Code hook configuration (22 events)
 │   └── session-start.js            # Session initialization (Node.js)
-├── scripts/                        # Hook execution scripts (61 scripts — v2.1.11 additions: check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh)
+├── scripts/                        # Hook execution scripts (62 scripts — v2.1.11 additions: check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh)
 │   └── *.js
 ├── output-styles/                  # Level-based response formatting (v1.5.3)
 │   ├── bkit-learning.md            # Starter level style
