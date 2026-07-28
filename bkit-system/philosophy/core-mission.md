@@ -24,7 +24,7 @@
 
 | Philosophy | Description | v2.0.0 Implementation |
 |------------|-------------|----------------------|
-| **Automation First** | Claude automatically applies PDCA even if user doesn't know commands | State machine (20 transitions, 9 guards) + Workflow Engine (3 YAML presets) + L0-L4 automation levels |
+| **Automation First** | Claude automatically applies PDCA even if user doesn't know commands | State machine (25 transitions, 9 guards) + Workflow Engine (YAML DSL, opt-in via `.bkit/workflows/`) + L0-L4 automation levels |
 | **No Guessing** | If unsure, check docs → If not in docs, ask user (never guess) | gap-detector agent + design-validator + quality gates (7 stages) + blast radius analysis |
 | **Docs = Code** | Design first, implement later (maintain design-implementation sync) | PDCA workflow + `/pdca analyze` + metrics collector (M1-M10) + regression guard |
 
@@ -168,7 +168,7 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 
 | Area | Modules | Key Capability |
 |------|---------|----------------|
-| **Workflow Engine** | state-machine, workflow-engine, workflow-parser, lifecycle | Declarative PDCA with 20 transitions, 9 guards, 3 YAML presets |
+| **Workflow Engine** | state-machine, workflow-engine, workflow-parser, lifecycle | Declarative PDCA with 25 transitions, 9 guards, and a YAML workflow DSL (`.bkit/workflows/`, opt-in — no presets ship) |
 | **Controllable AI** | automation-controller, trust-engine, do-detector, full-auto-do | L0-L4 levels, Trust Score (6 components), phase auto-advance |
 | **Safety** | destructive-detector, blast-radius, scope-limiter, checkpoint-manager, circuit-breaker, loop-breaker | 8 detection rules, blast radius analysis, checkpoint/rollback |
 | **Quality** | gate-manager, metrics-collector, regression-guard | 7 quality gates, 10 metrics (M1-M10), regression rules |
@@ -179,7 +179,7 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 
 ### Key Features
 
-- **Declarative State Machine**: 20 transitions, 9 guards, YAML-defined workflows
+- **Declarative State Machine**: 25 transitions, 9 guards, optional YAML-defined workflows
 - **5-Level Automation (L0-L4)**: Manual → Guided → Semi-Auto → Auto → Full-Auto
 - **Trust Score Engine**: 6 weighted components, cooldown-protected escalation, immediate downgrade
 - **CLI Dashboard**: progress-bar, workflow-map, control-panel rendered on every SessionStart
