@@ -9,7 +9,7 @@
  */
 
 const { debugLog } = require('../lib/core/debug');
-const { outputAllow } = require('../lib/core/io');
+const { outputAllow, hasInFlightBackgroundWork } = require('../lib/core/io');
 const { getPdcaStatusFull, addPdcaHistory } = require('../lib/pdca/status');
 
 function run(context) {
@@ -44,9 +44,20 @@ function run(context) {
     }
 
     // State writer: agent state cleanup (v1.5.3 Team Visibility)
+    //
+    // ENH-374: skipped while background work is still registered. cto-lead
+    // delegates through Task(), and since CC v2.1.219 those subagents may
+    // themselves spawn nested subagents that outlive the CTO turn. Clearing the
+    // roster here would orphan their SubagentStop updates.
     try {
       if (teamModule.cleanupAgentState) {
-        teamModule.cleanupAgentState();
+        if (hasInFlightBackgroundWork(context)) {
+          debugLog('CTOStop', 'Agent state cleanup deferred (background work in flight)', {
+            backgroundTaskCount: context.background_tasks.length,
+          });
+        } else {
+          teamModule.cleanupAgentState();
+        }
       }
     } catch (e) {
       debugLog('CTOStop', 'Agent state cleanup failed (non-fatal)', { error: e.message });
