@@ -289,7 +289,9 @@ Top 3:
   btw-{id}: {truncated suggestion} [{category}]
   btw-{id}: {truncated suggestion} [{category}]
 ──────────────────────────────────────────────────────────
-Tip: Use `/btw list` for full list, `/btw promote {id}` to create skill.
+Tip: Use `/bkit:btw list` for full list, `/bkit:btw promote {id}` to create skill.
+(The namespaced form is required — bare `/btw` is shadowed by a Claude Code
+identifier and reports "isn't available in this environment".)
 ```
 
 **Rules**:
