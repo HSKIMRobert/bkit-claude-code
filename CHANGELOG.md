@@ -170,6 +170,63 @@ Verified working with no change needed: 19/19 MCP tools, 26/26 hook handlers,
 transitions, invalid events rejected), quality gates M1–M10, all five UI
 renderers, and checkpoint create/list.
 
+### Test suite: 20 failing on `main` → 0 (v2.1.32)
+
+Maintainer-approved scope expansion. All twenty predated this branch; none were
+regressions. Two turned out to be real defects, the rest were assertions that had
+stopped tracking deliberate changes.
+
+**The workflow presets were a lost feature, not an overclaim.** An earlier draft
+of this entry said the docs oversold them. That was wrong, and this section
+replaces it. `test/unit/v200-workflows.test.js` (WF-001~020) and
+`automation-first-v2.test.js` (AF-021~025) specify the three preset files and
+their contents in detail — they were designed, then went missing, while the
+engine at `unified-stop.js:412` returned `null` in every installation. Restored
+from that specification plus `lib/pdca/workflow-parser.js`: **default** keeps all
+nine PDCA phases at matchRate 90 / semi-auto, **hotfix** omits pm and design and
+drops to 80, **enterprise** adds a parallel check fan-out carrying a
+security-review branch (merged `all`) at 95.
+
+**Two isolation defects made results depend on execution order.** The
+`02-cc-regression` ledger tests isolated with `process.chdir()`, which never
+worked — `lib/core/platform.js` captures `PROJECT_DIR` at module load, so the
+tests were reading *and writing* the repository's own
+`.bkit/runtime/token-ledger.ndjson`, and every suite run appended more. Likewise
+`hook-runner` defaults to cwd = the bkit repo with no `CLAUDE_PROJECT_DIR`, so
+`unified-stop.js` with an empty payload fell back to the active-skill marker and
+PDCA status that other tests write; STOP-01 passed alone and failed in a full
+run. Both now use throwaway project directories.
+
+**`lock()` never created its parent directory** though `write()` always has, so
+`lockedUpdate` on a path under a not-yet-existing directory threw ENOENT — the
+normal state of a fresh project, where `loop-breaker`'s persisted counters
+silently never accumulated because callers wrap the call in a catch.
+
+**Twelve `lib/` modules carried no `@version`.** Each tag is the version the
+module was actually introduced in, read from git history rather than stamped with
+today's number.
+
+**Stale contracts**, each pinning a value the code deliberately moved past: the
+starting trust score is 38, not 40 (ENH-318 added a seventh component at weight
+0.05 and rescaled the rest); `ACTION_TYPES` is 40, not 29; `VALID_ACTIONS` is 20,
+not 17; the evals inventory is 32 skills / 13 workflow; `detectDocumentType`
+returns `'analysis'` since the M1 audit fix; `GATE_MEASUREMENT_ROUTES` covers 8
+agent-routed gates with `UNSUPPORTED_GATES` now empty; `QUALITY_GATE_FAIL` is
+scoped to the phase's active gates; feature completion reads
+`featureMap[f].completion`; `advancePhase`'s gate_fail result gained `hint` in
+v2.1.22; `parseHookInput`'s absent sentinel is `null`, not `''`.
+
+**The skill-description cap was a Claude Code v2.1.86 constraint** that is absent
+from the v2.1.220 binary. Fourteen of 44 skills exceeded it, every one because of
+its `Triggers:` block — the 8-language keyword lists implicit routing matches on
+(verified 12/12 across ES/FR/DE/IT). Enforcing 250 meant deleting the keywords
+that make non-English invocation work, so the cap moved to 500 (longest is
+`enterprise` at 474) with the reasoning recorded in the test.
+
+Also: four table rows in `skills/sprint/SKILL.md` carried Hangul in the body,
+against the project's own English-only rule, and the state machine's transition
+count was documented as 20 in six places where the code exposes 25.
+
 ### Compatibility
 
 - **Recommended CC runtime raised to v2.1.220.** The cycle-#30 analysis
