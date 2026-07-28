@@ -138,6 +138,38 @@ Found while QA-ing the roster serialisation above, not by reading the code.
   test cannot open the window (`test/regression/v2132-lock-mutual-exclusion.test.js`,
   4 TC).
 
+### Full-feature QA findings (v2.1.32)
+
+Every bkit surface was swept, not just the ones this release changed: all 44
+skill and 34 agent frontmatters, all 26 registered hook handlers fired with
+realistic CC payloads, all 19 MCP tools driven over real stdio JSON-RPC, all 28
+user-invocable skills invoked through live `claude -p --plugin-dir .` sessions,
+8-language trigger routing, the state machine, quality gates, UI renderers and
+the checkpoint round-trip. Two user-facing defects surfaced.
+
+- **The SKILL.md linter hook crashed in every project except bkit's own.**
+  `scripts/lint-skill-md.js` resolved its checker through `process.cwd()`, which
+  is the *user's* project — so outside the bkit repository it threw
+  MODULE_NOT_FOUND at module load and the PreToolUse hook exited 1 with an
+  uncaught stack trace on every Write to a `skills/*/SKILL.md` path, against its
+  own documented "Exit: 0 always (warning-only, never blocks write)" contract.
+  `scripts/check-skills-docs-code-sync.js` had the same defect one level down;
+  its single `ROOT` conflated the tree being checked with the location of bkit's
+  own modules. Now split into `ROOT` and `PLUGIN_ROOT`, so CI behaviour is
+  unchanged (44/44) while the hook path works anywhere. The linter also loads its
+  checker lazily behind a guard so a missing checker degrades to a no-op.
+- **`/btw` was unreachable.** Bare `/btw` answers "isn't available in this
+  environment" — distinct from "Unknown command", so Claude Code knows the name
+  and gates it; the string is present in the CC binary. A sweep of all 28
+  user-invocable skills found this is the **only** collision (the other 27
+  resolve bare), so `skills/btw/SKILL.md` and the `cto-lead` tip now advertise
+  `/bkit:btw`, which works end-to-end.
+
+Verified working with no change needed: 19/19 MCP tools, 26/26 hook handlers,
+195/195 lib modules, 8-language trigger routing 12/12, state machine (25
+transitions, invalid events rejected), quality gates M1–M10, all five UI
+renderers, and checkpoint create/list.
+
 ### Compatibility
 
 - **Recommended CC runtime raised to v2.1.220.** The cycle-#30 analysis
