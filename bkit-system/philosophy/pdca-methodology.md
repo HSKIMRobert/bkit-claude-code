@@ -40,7 +40,7 @@ Starting v2.1.13, bkit has **two parallel workflow primitives**:
 │    └──── (SKIP_PM) ──→ Plan                   │       ▼       ▼         │
 │                                               └──── Act    Completed    │
 │                                                                         │
-│   25 transitions │ 9 guards │ YAML DSL (opt-in) │ Checkpoint per phase  │
+│   25 transitions │ 9 guards │ 3 YAML presets │ Checkpoint per phase     │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```

@@ -6,8 +6,6 @@ deprecation-risk: none
 effort: medium
 description: |
   By-The-Way: 작업 중 개선 제안을 즉시 수집하고 관리하는 스킬.
-  Invoke with the namespaced form — bare /btw is shadowed by a Claude Code
-  identifier and answers "isn't available in this environment".
   Triggers: /bkit:btw, /bkit:btw list, /bkit:btw analyze, /bkit:btw promote, /bkit:btw stats
   Keywords: btw, 개선, 제안, suggestion, improve, idea, feedback
 argument-hint: "/bkit:btw {suggestion} | /bkit:btw list | /bkit:btw analyze | /bkit:btw promote {id} | /bkit:btw stats"

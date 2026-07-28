@@ -150,7 +150,7 @@ State Management (195 modules / 22 subdirs, Clean Arch 4-Layer + Application pil
   ├─ next-action-engine (Stop-family)                           │
   ├─ team-protocol (PM/CTO/QA Lead)                             │
   └─ workflow-state-machine (matchRate SSoT 90)                 │
-Workflow Engine (YAML DSL, user-authored) ─┤
+Workflow Engine (3 presets) ─────────┤
 Controllable AI (L0-L4 + fast-track Daniel-mode) ────────────────┤
 Defense-in-Depth 4-Layer (CC→bkit→audit-logger→Token Ledger) ──┤
 Invocation Contract L1~L5 (226 CI-gated + L2 + L3 MCP + L5 E2E)┤
