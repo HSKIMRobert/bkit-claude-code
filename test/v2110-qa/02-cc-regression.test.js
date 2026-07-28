@@ -289,43 +289,65 @@ test('accountant.LEDGER_REL constant', () => {
 test('accountant.RETENTION_DAYS = 30', () => {
   assert.strictEqual(accountant.RETENTION_DAYS, 30);
 });
-test('accountant.getLedgerStats: empty dir returns zeros', () => {
+
+// v2.1.32: the three ledger tests below used `process.chdir(tmpRoot)` to isolate
+// themselves. That never worked. lib/core/platform.js captures PROJECT_DIR once
+// at module load (`process.env.CLAUDE_PROJECT_DIR || process.cwd()`), and
+// token-accountant resolves its ledger through it — so after the require at the
+// top of this file the path is frozen, chdir moves nothing, and the tests were
+// reading *and writing* the bkit repository's own
+// .bkit/runtime/token-ledger.ndjson. "Empty dir returns zeros" saw whatever the
+// repo had accumulated, and every run appended more.
+//
+// Real isolation needs CLAUDE_PROJECT_DIR set before the module graph loads, so
+// each test gets a freshly-required accountant with the env pointed at its own
+// temp directory.
+function withIsolatedLedger(fn) {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-qa-'));
-  const origCwd = process.cwd();
-  process.chdir(tmpRoot);
+  const origEnv = process.env.CLAUDE_PROJECT_DIR;
+  process.env.CLAUDE_PROJECT_DIR = tmpRoot;
+  for (const key of Object.keys(require.cache)) {
+    if (key.includes('token-accountant') || key.includes(path.join('lib', 'core', 'platform'))) {
+      delete require.cache[key];
+    }
+  }
+  const isolated = require(path.join(ROOT, 'lib/cc-regression/token-accountant'));
   try {
-    const s = accountant.getLedgerStats();
+    return fn(isolated);
+  } finally {
+    if (origEnv === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = origEnv;
+    for (const key of Object.keys(require.cache)) {
+      if (key.includes('token-accountant') || key.includes(path.join('lib', 'core', 'platform'))) {
+        delete require.cache[key];
+      }
+    }
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+test('accountant.getLedgerStats: empty dir returns zeros', () => {
+  withIsolatedLedger((acc) => {
+    const s = acc.getLedgerStats();
     assert.strictEqual(s.total, 0);
     assert.strictEqual(s.avgOverhead, 0);
     assert.strictEqual(s.sonnetTurns, 0);
-  } finally {
-    process.chdir(origCwd);
-    fs.rmSync(tmpRoot, { recursive: true, force: true });
-  }
+  });
 });
 test('accountant.getLedgerStats: accumulates entries', () => {
-  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-qa-'));
-  const origCwd = process.cwd();
-  process.chdir(tmpRoot);
-  try {
-    accountant.recordTurn({ model: 'claude-sonnet-4-6', overheadDelta: 1000 });
-    accountant.recordTurn({ model: 'claude-sonnet-4-6', overheadDelta: 2000 });
-    accountant.recordTurn({ model: 'claude-opus-4-7', overheadDelta: 100 });
-    const s = accountant.getLedgerStats();
+  withIsolatedLedger((acc) => {
+    acc.recordTurn({ model: 'claude-sonnet-4-6', overheadDelta: 1000 });
+    acc.recordTurn({ model: 'claude-sonnet-4-6', overheadDelta: 2000 });
+    acc.recordTurn({ model: 'claude-opus-4-7', overheadDelta: 100 });
+    const s = acc.getLedgerStats();
     assert.strictEqual(s.total, 3);
     assert.strictEqual(s.sonnetTurns, 2);
     assert.strictEqual(s.avgOverhead, Math.round((1000+2000+100)/3));
-  } finally {
-    process.chdir(origCwd);
-    fs.rmSync(tmpRoot, { recursive: true, force: true });
-  }
+  });
 });
 test('accountant: NDJSON format (no prompt body)', () => {
-  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-qa-'));
-  const origCwd = process.cwd();
-  process.chdir(tmpRoot);
-  try {
-    accountant.recordTurn({
+  withIsolatedLedger((acc) => {
+    acc.recordTurn({
       sessionId: 'sess-123',
       agent: 'qa-lead',
       model: 'claude-sonnet-4-6',
@@ -335,7 +357,7 @@ test('accountant: NDJSON format (no prompt body)', () => {
       outputTokens: 500,
       overheadDelta: 100,
     });
-    const ledger = fs.readFileSync(accountant.getLedgerPath(), 'utf8').trim();
+    const ledger = fs.readFileSync(acc.getLedgerPath(), 'utf8').trim();
     const entry = JSON.parse(ledger);
     assert.strictEqual(entry.agent, 'qa-lead');
     assert.strictEqual(entry.model, 'claude-sonnet-4-6');
@@ -347,10 +369,7 @@ test('accountant: NDJSON format (no prompt body)', () => {
     assert.strictEqual(entry.prompt, undefined);
     assert.strictEqual(entry.message, undefined);
     assert.strictEqual(entry.body, undefined);
-  } finally {
-    process.chdir(origCwd);
-    fs.rmSync(tmpRoot, { recursive: true, force: true });
-  }
+  });
 });
 
 // =============== Lifecycle ===============

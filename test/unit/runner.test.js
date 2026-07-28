@@ -48,8 +48,12 @@ const hybridCount = config.skills.hybrid.length;
 const totalSkills = workflowCount + capabilityCount + hybridCount;
 // v2.1.16 hardening: counts grew (workflow 11→12 from sprint workflow addition,
 // total 30→31 from v2.1.13 sprint major). Capability 18 + hybrid 1 unchanged.
-assert('U-RUN-015', totalSkills === 31, `Total skills = 31 (got ${totalSkills})`);
-assert('U-RUN-016', workflowCount === 12, `Workflow = 12 (got ${workflowCount})`);
+// v2.1.32: workflow 12→13, total 31→32. evals/config.json and
+// evals/workflow/github-stats/ are both committed, so the inventory grew
+// deliberately and only these assertions lagged — the same drift the v2.1.16
+// note above records.
+assert('U-RUN-015', totalSkills === 32, `Total skills = 32 (got ${totalSkills})`);
+assert('U-RUN-016', workflowCount === 13, `Workflow = 13 (got ${workflowCount})`);
 assert('U-RUN-017', capabilityCount === 18, `Capability = 18 (got ${capabilityCount})`);
 assert('U-RUN-018', hybridCount === 1, `Hybrid = 1 (got ${hybridCount})`);
 
@@ -198,7 +202,7 @@ assert('U-RUN-051', evalDef3 === null, 'Nonexistent skill returns null');
   assert('U-RUN-068', typeof benchmark.summary.hybrid === 'object', 'Summary has hybrid');
 
   const bmTotal = benchmark.summary.workflow.total + benchmark.summary.capability.total + benchmark.summary.hybrid.total;
-  assert('U-RUN-069', bmTotal === 31, `Benchmark covers 31 skills (got ${bmTotal})`);
+  assert('U-RUN-069', bmTotal === 32, `Benchmark covers 32 skills (got ${bmTotal})`);
 
   // Check high pass rate (28/28 expected, allow minor variance)
   const bmPassed = benchmark.summary.workflow.passed + benchmark.summary.capability.passed + benchmark.summary.hybrid.passed;
@@ -210,7 +214,7 @@ assert('U-RUN-051', evalDef3 === null, 'Nonexistent skill returns null');
     ...config.skills.capability,
     ...config.skills.hybrid
   ];
-  assert('U-RUN-071', skills28.length === 31, `All 31 skills in config (got ${skills28.length})`);
+  assert('U-RUN-071', skills28.length === 32, `All 32 skills in config (got ${skills28.length})`);
 
   // Check that each classification contains expected skills
   assert('U-RUN-072', config.skills.workflow.includes('pdca'), 'pdca in workflow');
