@@ -191,12 +191,25 @@ function main() {
         total.fail += summary.fail;
       }
       total.skip += summary.skip;
+      /*
+       * v2.1.33: keep the failing assertion lines, not just the tally.
+       *
+       * Only the one-line per-file summary was reported, so a red CI run said
+       * "14 failing assertion(s)" and named the files but never said WHICH
+       * assertions — reproducing it meant guessing at platform differences.
+       * The child's stdout is already in hand here; capture the failure lines
+       * while we have them and print them below.
+       */
+      const failureLines = summary.fail > 0
+        ? out.split('\n').filter((l) => /^\s*(✗|FAIL[: ])/.test(l)).slice(0, 12)
+        : [];
       results.push({
         file: relPath,
         label,
         ...summary,
         expected: isExpectedFailure,
         error: error ? error.split('\n')[0].slice(0, 80) : null,
+        failureLines,
       });
     }
   }
@@ -236,6 +249,14 @@ function main() {
       `${mark} [${r.label}] ${r.file} — pass:${r.pass} fail:${r.fail} skip:${r.skip}` +
         (r.error ? ` (error: ${r.error})` : '')
     );
+    // v2.1.33: name the assertions, so a red CI run is reproducible without
+    // guessing which of a file's checks broke.
+    if (Array.isArray(r.failureLines)) {
+      for (const line of r.failureLines) {
+        // eslint-disable-next-line no-console
+        console.log(`      ${line.trim()}`);
+      }
+    }
   }
 
   // Print totals
