@@ -162,7 +162,13 @@ function main() {
       let out = '';
       let error = null;
       try {
-        out = execSync(`node "${file}"`, {
+        // v2.1.33: fold stderr into the captured output.
+        //
+        // execSync returns stdout only, and several suites report failures with
+        // `console.error`. Their FAIL lines were therefore invisible to the
+        // parser and to the diagnostics below — a red CI run named the file but
+        // could not name the assertion.
+        out = execSync(`node "${file}" 2>&1`, {
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'pipe'],
           timeout: 30000,
