@@ -164,10 +164,20 @@ assert('SB-012',
   `Trust score 40 < L3 threshold (${trustEngine.LEVEL_THRESHOLDS[3]}): cannot auto-escalate to L3`
 );
 
-// --- SB-013: Trust score 40 is at/above L2 threshold (40) ---
+// --- SB-013: a fresh profile does NOT qualify for L2 unattended ---
+//
+// v2.1.33: this asserted the opposite — that the starting trust score clears the
+// L2 threshold. It passed on a machine with an accumulated profile (50 here) and
+// failed on a fresh checkout, where `createDefaultProfile()` computes 38 against
+// a threshold of 40. Machine-dependent either way, and pointed the wrong way for
+// a suite called security-by-default: a brand-new install should have to *earn*
+// semi-autonomy, not begin with it.
+//
+// The invariant worth holding is that trust is earned. A fresh profile starts
+// below L2; a profile that has accumulated a record may sit above it.
 assert('SB-013',
-  initState.trustScore >= trustEngine.LEVEL_THRESHOLDS[2],
-  `Trust score 40 >= L2 threshold (${trustEngine.LEVEL_THRESHOLDS[2]}): qualifies for L2 Semi-Auto`
+  trustEngine.createDefaultProfile().trustScore < trustEngine.LEVEL_THRESHOLDS[2],
+  `a fresh trust profile (${trustEngine.createDefaultProfile().trustScore}) must start below the L2 threshold (${trustEngine.LEVEL_THRESHOLDS[2]}) — semi-autonomy is earned, not granted on install`
 );
 
 // --- SB-014: SCORE_CHANGES has negative values for risky events ---
