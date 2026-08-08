@@ -78,7 +78,26 @@ jobs:
       # propagates qa-aggregate's exit code while keeping the output trimmed.
       - name: Aggregate all tests (summary)
         shell: bash
-        run: node test/contract/scripts/qa-aggregate.js | tail -10
+        run: |
+          # `| tail -10` keeps the summary readable, but on a failure it also
+          # discards every line naming what failed — the first red run under the
+          # restored gate reported "14 failing assertion(s)" with no way to tell
+          # which files. A gate that fails without saying why is only half a gate.
+          # Keep the trimmed output on success; print the offenders on failure.
+          set -o pipefail
+          if node test/contract/scripts/qa-aggregate.js > /tmp/qa-agg.log 2>&1; then
+            tail -10 /tmp/qa-agg.log
+          else
+            status=$?
+            tail -12 /tmp/qa-agg.log
+            echo ""
+            echo "---- failing entries ----"
+            grep -E '^(✗|⚠)' /tmp/qa-agg.log || echo "(no per-file markers found; full log below)"
+            echo ""
+            echo "---- full log (last 200 lines) ----"
+            tail -200 /tmp/qa-agg.log
+            exit $status
+          fi
 
       # ENH-411 (v2.1.33): lock the gating itself. This step fails if anyone
       # reintroduces a non-gating pipe, drops the aggregator's exit, or marks a
