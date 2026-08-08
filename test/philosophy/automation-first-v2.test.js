@@ -225,7 +225,15 @@ assert('AF-020',
 // AF-021~025: YAML workflows define auto-advance rules
 // =====================================================================
 
-const workflowDir = path.join(PROJECT_ROOT, '.bkit', 'workflows');
+// v2.1.33: prefer the shipped presets over local runtime state.
+// `.bkit/workflows/` is git-ignored, so on a fresh clone this directory is
+// empty and AF-021 threw ENOENT. The presets ship in `templates/workflows/`;
+// a project's own `.bkit/workflows/` still wins when it has content.
+const localWorkflowDir = path.join(PROJECT_ROOT, '.bkit', 'workflows');
+const workflowDir = (fs.existsSync(localWorkflowDir)
+  && fs.readdirSync(localWorkflowDir).some((f) => f.endsWith('.workflow.yaml')))
+  ? localWorkflowDir
+  : path.join(PROJECT_ROOT, 'templates', 'workflows');
 
 // --- AF-021: default.workflow.yaml exists and is parseable ---
 const defaultYaml = path.join(workflowDir, 'default.workflow.yaml');
