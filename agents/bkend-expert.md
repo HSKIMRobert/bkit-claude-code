@@ -7,10 +7,8 @@ description: |
   Use proactively when user mentions login, signup, authentication, database operations,
   or fullstack development with a BaaS platform.
 
-  Triggers: bkend, BaaS, authentication, login, signup, database, fullstack, backend,
-  API integration, data model, REST API, file upload, presigned url, CRUD,
-  인증, 로그인, 회원가입, 데이터베이스, 풀스택, 백엔드, 파일 업로드,
-  認証, 数据库, autenticacion, authentification, Authentifizierung, autenticazione
+  Triggers: bkend, BaaS, authentication, login, signup, database, fullstack, backend, API integration,
+  data model, REST API, file upload, presigned url, CRUD
 model: sonnet
 effort: medium
 maxTurns: 20

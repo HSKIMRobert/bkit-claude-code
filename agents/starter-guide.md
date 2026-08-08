@@ -7,10 +7,8 @@ description: |
   Use proactively when user is a beginner, mentions "first time", asks about learning,
   or requests a simple static website without backend requirements.
 
-  Triggers: beginner, first project, new to coding, learn to code, simple website,
-  portfolio, landing page, HTML CSS, help understand, don't understand, confused,
-  초보자, 입문, 처음, 코딩 배우기, 웹사이트 만들기, 이해 안 돼, 설명해, 어려워, 모르겠,
-  初心者, 新手, principiante, débutant, Anfänger, non capisco
+  Triggers: beginner, first project, new to coding, learn to code, simple website, portfolio,
+  landing page, HTML CSS, help understand, don't understand, confused
 model: sonnet
 effort: medium
 maxTurns: 20

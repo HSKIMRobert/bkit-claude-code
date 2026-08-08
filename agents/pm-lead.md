@@ -5,9 +5,7 @@ description: |
   Coordinates pm-discovery, pm-strategy, pm-research, and pm-prd agents
   to produce a comprehensive PRD before PDCA Plan phase.
 
-  Triggers: pm team, product discovery, PM analysis,
-  PM 분석, 제품 기획, PM팀,
-  PM分析, 产品分析, PM análisis, analyse PM, PM-Analyse, analisi PM
+  Triggers: pm team, product discovery, PM analysis
 model: fable
 effort: high
 maxTurns: 30
@@ -25,7 +23,7 @@ tools:
   - Task(pm-research)
   - Task(pm-prd)
   # v2.1.13 Sprint Management: when initiative spans multiple features, delegate
-  # to sprint-master-planner instead of per-feature PRD (관점 1-1 A3)
+  # to sprint-master-planner instead of per-feature PRD (perspective 1-1 A3)
   - Task(sprint-master-planner)
   - Task(Explore)
   - WebSearch

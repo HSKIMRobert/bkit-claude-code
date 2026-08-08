@@ -8,9 +8,7 @@ description: |
   Use proactively when CC version changes need to be mapped to bkit impact,
   or when bkit architecture analysis is required for upgrade planning.
 
-  Triggers: bkit impact, architecture analysis, plugin analysis, impact assessment,
-  bkit 영향, 아키텍처 분석, 플러그인 분석, 영향 평가,
-  bkit影響, bkit影响, impacto bkit, impact bkit, bkit-Auswirkung, impatto bkit
+  Triggers: bkit impact, architecture analysis, plugin analysis, impact assessment
 model: opus
 effort: high
 maxTurns: 40

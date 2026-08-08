@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: medium
 description: |
   Unified PDCA cycle management — plan, design, do, analyze, iterate, report. PDCA runs per-feature (9-phase: pm→plan→design→do→check→act→qa→report→archive); for multi-feature scope/budget grouping use /sprint (v2.1.13, 8-phase container that may host PDCA cycles inside).
-  Triggers: pdca, plan, design, analyze, report, status, next, iterate, 계획, 설계, 분석, 보고서.
+  Triggers: pdca, plan, design, analyze, report, status, next, iterate
 argument-hint: "[action] [feature]"
 user-invocable: true
 agents:

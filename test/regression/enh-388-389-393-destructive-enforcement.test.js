@@ -81,14 +81,39 @@ function runHook(command) {
   try {
     const line = stdout.trim().split('\n').filter(Boolean).pop();
     const parsed = JSON.parse(line);
-    return { decision: parsed.decision === 'block' ? 'block' : 'allow', reason: parsed.reason || '' };
+    // v2.1.34 (D9): three tiers, not two. `ask` uses the documented PreToolUse
+    // shape (`hookSpecificOutput.permissionDecision`); collapsing it into
+    // `allow` here would report a confirmation prompt as a silent pass.
+    const hso = parsed.hookSpecificOutput || {};
+    if (parsed.decision === 'block') {
+      return { decision: 'block', reason: parsed.reason || '' };
+    }
+    if (hso.permissionDecision === 'ask') {
+      return { decision: 'ask', reason: hso.permissionDecisionReason || '' };
+    }
+    return { decision: 'allow', reason: parsed.reason || '' };
   } catch (_e) {
     return { decision: 'allow', reason: '' };
   }
 }
 
 const RM = ['r', 'm'].join('');
-const RECURSIVE_DELETE = `${RM} -rf /tmp/enh388-regression`;
+/*
+ * v2.1.34 (D9): the payload is now a BROAD target.
+ *
+ * This read `${RM} -rf /tmp/enh388-regression`, from a time when G-001 graded
+ * every recursive delete as critical regardless of what it pointed at. That
+ * blanket severity is what made the guard's own advice — "scope the command to
+ * a specific path" — impossible to act on, and it refused ordinary cleanup of a
+ * temporary directory.
+ *
+ * G-001 now grades by target: broad stays critical and blocks, specific asks.
+ * ENH-388's assertion is about the CRITICAL path reaching a real block rather
+ * than only an audit line, so it needs a critical payload to test. The scoped
+ * case is asserted separately below, so both tiers stay locked.
+ */
+const RECURSIVE_DELETE = `${RM} -rf /`;
+const SCOPED_DELETE = `${RM} -rf /tmp/enh388-regression`;
 const ROOT_CHMOD = 'chmod 777 /';
 
 console.log('=== ENH-388/389/393: destructive detection must block ===\n');
@@ -107,6 +132,16 @@ assert('E388-03', del.decision === 'block',
   `a critical recursive delete must be blocked, not merely logged (got ${del.decision})`);
 assert('E388-04', /G-\d/.test(del.reason),
   `the block reason must name the rule that fired (got ${JSON.stringify(del.reason.slice(0, 80))})`);
+
+// --- D9: a specific target asks rather than refusing outright ---
+// The other half of the same contract. Grading a scoped delete down to a silent
+// `allow` would be a relaxation dressed up as a fix, so it must still reach the
+// user — just as a question, not a refusal.
+const scoped = runHook(SCOPED_DELETE);
+assert('E388-03b', scoped.decision !== 'block',
+  `a scoped recursive delete must not be refused outright (got ${scoped.decision})`);
+assert('E388-03c', scoped.decision === 'ask',
+  `a scoped recursive delete must still reach the user for confirmation (got ${scoped.decision})`);
 
 const rootChmod = runHook(ROOT_CHMOD);
 assert('E388-05', rootChmod.decision === 'block',

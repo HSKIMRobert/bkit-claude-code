@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   Static web development for beginners — HTML/CSS/JS and Next.js App Router.
-  Triggers: static website, portfolio, landing page, beginner, 정적 웹, 초보자, init starter.
+  Triggers: static website, portfolio, landing page, beginner
 argument-hint: "[init|guide|help]"
 agent: bkit:starter-guide
 allowed-tools:

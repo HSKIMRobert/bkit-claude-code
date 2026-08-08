@@ -5,9 +5,7 @@ description: |
   Customer Journey Map, User Segmentation, and Sentiment Analysis.
   Conducts comprehensive market research for product decisions.
 
-  Triggers: persona, competitor, market size, TAM, SAM, SOM, segmentation,
-  페르소나, 경쟁사, 시장규모,
-  ペルソナ, 用户画像, competidor, concurrent, Wettbewerber, concorrente
+  Triggers: persona, competitor, market size, TAM, SAM, SOM, segmentation
 model: sonnet
 effort: medium
 maxTurns: 20

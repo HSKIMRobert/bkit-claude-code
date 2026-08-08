@@ -7,10 +7,7 @@ description: |
   Use proactively when user invokes /sprint start with auto-run enabled
   or a sprint phase transition requires coordinated multi-agent work.
 
-  Triggers: sprint, sprint orchestrator, sprint coordination, sprint lifecycle,
-  스프린트, 스프린트 조율, 스프린트 진행, 스프린트 사이클,
-  スプリント調整, 冲刺协调, orquestador sprint, orchestrateur sprint,
-  Sprint-Koordination, orchestratore sprint
+  Triggers: sprint, sprint orchestrator, sprint coordination, sprint lifecycle
 model: fable
 effort: high
 maxTurns: 40

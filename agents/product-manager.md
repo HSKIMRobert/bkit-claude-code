@@ -7,9 +7,7 @@ description: |
   Use proactively when user describes a new feature, discusses requirements,
   or needs help defining project scope and priorities.
 
-  Triggers: requirements, feature spec, user story, priority, scope, feature definition,
-  요구사항, 기능 정의, 우선순위, 범위, 사용자 스토리, 기능 명세,
-  要件定義, 需求分析, requisitos, exigences, Anforderungen, requisiti
+  Triggers: requirements, feature spec, user story, priority, scope, feature definition
 model: sonnet
 effort: medium
 maxTurns: 20

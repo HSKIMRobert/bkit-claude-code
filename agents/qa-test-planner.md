@@ -4,8 +4,7 @@ description: |
   Analyzes design docs and creates comprehensive test plans with L1-L5 test items.
   Produces structured test plan documents with prioritized test cases.
 
-  Triggers: test plan, test planning, QA plan, 테스트 계획, テスト計画,
-  测试计划, plan de pruebas, plan de test, Testplan, piano di test
+  Triggers: test plan, test planning, QA plan
 model: sonnet
 effort: medium
 maxTurns: 20

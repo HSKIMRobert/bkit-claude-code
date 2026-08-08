@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   Live PDCA dashboard ticking every 30s — reads pdca-status.json + token-ledger.ndjson tail, renders fixed-width panel via CC /loop.
-  Triggers: pdca watch, live dashboard, watch progress, 실시간 대시보드, ライブダッシュボード, 实时仪表板, panel en vivo, tableau de bord.
+  Triggers: pdca watch, live dashboard, watch progress
 argument-hint: "[feature]"
 user-invocable: true
 allowed-tools:

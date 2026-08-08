@@ -7,10 +7,8 @@ description: |
   Use proactively when user requests code review, quality check, security scan,
   or asks to verify implementation quality before PR or deployment.
 
-  Triggers: code analysis, quality check, security scan, code review, architecture check,
-  any issues?, any problems?, something wrong?, something off?, analyze,
-  코드 분석, 품질 검사, 보안 스캔, 이상해, 뭔가 이상해, 괜찮아 보여?, 품질,
-  コード分析, 代码分析, hay problemas?, il y a des problèmes?, gibt es Probleme?, ci sono problemi?
+  Triggers: code analysis, quality check, security scan, code review, architecture check, any issues?,
+  any problems?, something wrong?, something off?, analyze
 model: opus
 effort: high
 maxTurns: 30

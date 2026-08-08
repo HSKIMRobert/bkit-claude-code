@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   Run skill evals via evals/runner.js — wrapper validates skill names, captures stdout/stderr, persists JSON results.
-  Triggers: bkit evals, evals run, skill quality, eval runner, 스킬 평가, 評価実行, 评估运行, evaluación, évaluation.
+  Triggers: bkit evals, evals run, skill quality, eval runner
 argument-hint: "run <skill> | list"
 user-invocable: true
 allowed-tools:

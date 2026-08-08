@@ -58,6 +58,13 @@ jobs:
       - name: Shipped shell scripts parse (bash -n + portability)
         run: node test/contract/shipped-scripts-parse.test.js
 
+      # v2.1.34 (issue #129): the 8-language trigger vocabulary lives in code,
+      # where it costs nothing, and frontmatter stays English-only. Guards both
+      # directions — non-English creeping back onto the always-resident prompt
+      # surface, and an agent/skill losing its multilingual routing entirely.
+      - name: Trigger locale contract (English frontmatter + code-side coverage)
+        run: node test/contract/trigger-locale-contract.test.js
+
       # v2.1.17 (CO-7): detect untracked production test files. Defends
       # against silent .gitignore regression that previously masked CI-
       # referenced test files (Cannot find module errors).
@@ -101,7 +108,20 @@ jobs:
       # the CLI and credentials exist. BKIT_REQUIRE_HOST_INTEGRATION=1 turns a
       # skip into a failure.
       - name: L6 Host Integration (hooks actually dispatch in a live session)
+        env:
+          # Live runs are opt-in because each case starts a real session and the
+          # offline aggregate walks every *.test.js. This step is the thing that
+          # opts in; test/contract/ci-host-integration-wiring.test.js fails if it
+          # is removed or stops setting this.
+          BKIT_HOST_INTEGRATION: '1'
         run: node test/contract/host-integration/hook-dispatch.test.js
+
+      # Guards the wiring above. `validate-plugin --strict` shipped with
+      # `continue-on-error: true` for eleven minor releases while its comment
+      # claimed otherwise, verifying nothing — a guard is only as real as the
+      # step that invokes it.
+      - name: CI wiring contract (the host-integration gate is actually enabled)
+        run: node test/contract/ci-host-integration-wiring.test.js
 
       # ENH-411 (v2.1.33) — layer 3 of 3: make the pipe preserve the exit code.
       # Without an explicit `shell:`, GitHub Actions runs steps under `bash -e`

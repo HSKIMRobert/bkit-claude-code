@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.34] - 2026-08-09
 
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
 > **Status**: Reachability release. v2.1.33 made bkit's defenses act when they
 > fired. This one is about the hooks that never fired at all.
 >
@@ -47,6 +49,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validation, reachability ping) never ran when Claude used `Edit` — the common
   case for an existing file. Both now declare one handler per tool.
 
+- **A recursive delete was refused no matter what it pointed at.** `G-001`
+  matched `rm -r` regardless of target, so clearing a scoped temporary directory
+  was refused exactly as hard as clearing `/` — while the refusal advised
+  "scope the command to a specific path", which the rule made impossible to act
+  on. The rule now grades by target: a broad one (`/`, `~`, `$HOME`, a glob, a
+  system directory, an unresolved variable) still denies; a specific path asks.
+  `ask` needed building, because bkit had only two outcomes and grading a
+  command down to a silent `allow` would have been a relaxation rather than a
+  fix.
+
+- **Two guards blocked ordinary work.** Writing a commit message that merely
+  *mentioned* a blocked pattern, and piping documentation through
+  `python3 - <<'PY'`, were both refused as critical — the detectors read heredoc
+  bodies as if they were command lines. Quoted heredoc bodies are now treated as
+  the data they are, while the terminator line is kept whole, since a known
+  bypass writes its exec vector there (`EOF-1 | bash`). Unquoted heredocs still
+  expand at runtime and are left fully visible.
+
+- **Four destructive-command bypasses.** Probing the shipped rules found
+  `eval "$(echo <base64> | base64 -d)"`, `find / -delete`, `dd of=/dev/disk0`
+  and `curl … | sh` all returning `allow`. Now `G-012`–`G-015`, each with a
+  regression test naming the payload it blocks.
+
+- **`lint-skill-md` still used the pattern behind issue #139.** v2.1.30 replaced
+  `fs.readFileSync(0)` centrally; this handler kept its own copy, and with it the
+  unbounded stall.
+
 ### Changed
 
 - **Hook counts now describe what is proven to fire, not what is registered.**
@@ -56,6 +85,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   agents/skills/MCP tools: silent removal still fails the contract test, a
   declared removal records why.
 
+- **The 8-language trigger vocabulary moved into code** (issue #129, open seven
+  months). The keywords lived in two places: `lib/intent/language.js`, where
+  bkit's intent-router reads them for free, and every agent/skill `description`,
+  which Claude Code loads for the whole session. The expensive copy was the
+  complete one and the free copy covered 12 of 34 agents and 16 of 44 skills.
+  `lib/i18n/trigger-keywords.js` now carries all 1,515 keywords, frontmatter is
+  English-only and free of CJK entirely, and every language still routes.
+  Moving them surfaced three routing defects that had been inert while the
+  keywords sat unused in frontmatter:
+
+  - The `/bkit` help skill owned a bare `기능` ("feature"), so
+    "회원가입 기능 만들어줘" reached help instead of `/dynamic`. A help surface
+    must never be the greediest matcher.
+  - **39 keywords ended in a sentence period** — `"제어."`, `"롤백."` — captured
+    from the last entry on each `Triggers:` line. They looked alive and could
+    never match. After the fix, "제어 레벨 바꿔줘" routes to `/control` and
+    "롤백 해줘" to `/rollback` for the first time.
+  - The vendor-specific `bkend-*` skills had lost their vendor token on the
+    non-English side, leaving bare `인증`, `로그인`, `회원가입`, `테이블`. Once
+    the period cleanup made those matchable, a generic signup request routed to
+    a BaaS documentation skill. Every `bkend-*` keyword now names bkend.
+
+  Each is locked by a guard in `trigger-locale-contract`: no trailing
+  punctuation, no single-character CJK keyword, no vendor skill capturing a
+  generic prompt.
+
+- **The product one-liner drops "The only".** GitHub Spec Kit documents
+  `/speckit.converge` as "Assess the codebase against spec/plan/tasks", so the
+  superlative was disprovable in one search — and until this release it was also
+  untrue of bkit itself, which reported a perfect match for a feature that had
+  neither design nor implementation.
+
+- **Hook failures are now visible.** The hook layer holds 333 catch blocks and
+  188 swallow without a trace. Most are legitimately best-effort, but a layer
+  where every failure is silent is one where working and broken look identical.
+  Crashes are recorded centrally and surfaced once at the next session start;
+  control flow is untouched, so an uncaught exception is still fatal.
+
 ### Added
 
 - `test/contract/hooks-config-contract.test.js` — validates `hooks/hooks.json`
@@ -63,6 +130,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   placement, one-rule-per-`if`, `if` only on tool events, event names, matcher
   support, handler resolution, and count parity with the SoT. Verified against
   the v2.1.33 configuration, where it reports the three defects above.
+
+- `test/contract/host-integration/hook-dispatch.test.js` — the new L6 layer.
+  Runs a real `claude -p --plugin-dir` session and asserts from the outside that
+  Claude Code dispatched each hook, including that `PostToolUse` fires for
+  `Edit` and not only `Write`.
+
+- `test/qa-harness-full-live.js` — exhaustive live QA across every surface: 44
+  skills as slash commands, 34 agents as dispatch targets, 21 hook events as
+  observed dispatches, 19 MCP tools over a real stdio handshake. Sampling cannot
+  find a dead surface, because a dead surface looks exactly like an unsampled
+  one. `--layer` narrows a run; `--list` prints the plan.
+
+- `test/contract/shipped-scripts-parse.test.js` — every shipped shell script
+  must pass `bash -n`, carry no expanded-heredoc corruption, and hardcode no home
+  directory. v2.1.33's live-QA harness shipped with a syntax error, referenced by
+  nothing, so it could not be caught.
+
+- `test/contract/trigger-locale-contract.test.js`,
+  `test/regression/destructive-bypass.test.js`,
+  `test/regression/hook-failure-observability.test.js` — regression locks for the
+  trigger relocation, the four proven bypasses plus the two false positives, and
+  crash observability.
+
+### Notes for maintainers
+
+- New CI steps: hooks config contract, shipped-script parse, trigger locale
+  contract, and L6 host integration. The last skips cleanly when the `claude` CLI
+  is absent, so it costs seconds on a stock runner;
+  `BKIT_REQUIRE_HOST_INTEGRATION=1` turns a skip into a failure.
+
+- `.bkit/runtime/hook-dispatch.ndjson` is a new per-project diagnostic file
+  (append-only, self-compacting, ~0.69 ms per hook). Set
+  `BKIT_HOOK_DISPATCH_RECORD=0` to switch it off; the host-integration tests and
+  the session-start failure warning both read it.
 
 ## [2.1.33] - 2026-08-08
 

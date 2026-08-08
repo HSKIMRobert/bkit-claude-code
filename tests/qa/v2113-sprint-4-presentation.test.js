@@ -81,18 +81,45 @@ const LANG_REGEX = {
   // TRIG — 5 frontmatters × 8 languages = 40 micro-assertions in 5 TCs
   // ─────────────────────────────────────────────────────────────────────────
 
+  /*
+   * v2.1.34 (issue #129): the 8-language vocabulary is asserted against code.
+   *
+   * These five frontmatters used to carry keywords in all eight languages, and
+   * frontmatter is loaded into context for the entire session — the cost #129
+   * was filed about. The vocabulary now lives in lib/i18n/trigger-keywords.js,
+   * where bkit's intent-router matches it for free, so frontmatter keeps the
+   * English trigger and this check follows the keywords to their real home.
+   *
+   * The intent is unchanged: each of these five surfaces must still be
+   * reachable in all eight languages.
+   */
+  const { AGENT_TRIGGER_KEYWORDS, SKILL_TRIGGER_KEYWORDS } =
+    require(path.join(PLUGIN_ROOT, 'lib/i18n/trigger-keywords'));
+
   for (const fm of FRONTMATTERS) {
-    test(`TRIG-${fm.label}: 8-language triggers present`, () => {
+    test(`TRIG-${fm.label}: English trigger in frontmatter, other languages in code`, () => {
       const src = readFile(fm.file);
-      // Extract YAML frontmatter (between leading --- markers)
       const m = src.match(/^---\n([\s\S]*?)\n---/);
       assert.ok(m, `frontmatter delimiters in ${fm.file}`);
       const fmBody = m[1];
-      // English keyword presence (catch-all): word boundary 'sprint'
       assert.ok(/sprint/i.test(fmBody), `EN keyword in ${fm.file}`);
-      // Other 7 languages
+
+      const name = path.basename(fm.file, '.md') === 'SKILL'
+        ? path.basename(path.dirname(fm.file))
+        : path.basename(fm.file, '.md');
+      const table = fm.label === 'skill' ? SKILL_TRIGGER_KEYWORDS : AGENT_TRIGGER_KEYWORDS;
+      const entry = table[name];
+      assert.ok(entry, `no lib/i18n/trigger-keywords.js entry for ${name}`);
+
+      const allKeywords = Object.entries(entry)
+        .filter(([lang]) => lang !== 'en')
+        .flatMap(([, words]) => words)
+        .join(' ');
       for (const [lang, re] of Object.entries(LANG_REGEX)) {
-        assert.ok(re.test(fmBody), `${lang.toUpperCase()} keyword missing in ${fm.file}`);
+        assert.ok(
+          re.test(allKeywords),
+          `${lang.toUpperCase()} keyword missing for ${name} in lib/i18n/trigger-keywords.js`
+        );
       }
     });
   }

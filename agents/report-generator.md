@@ -7,10 +7,8 @@ description: |
   Use proactively when user completes PDCA cycle, finishes feature implementation,
   or requests summary/status report of development progress.
 
-  Triggers: PDCA report, completion report, status report, summary, progress report,
-  what did we do?, status?, progress?, write report,
-  PDCA 보고서, 완료 보고서, 진행 보고서, 뭐 했어?, 진행 상황, 요약,
-  PDCA報告書, PDCA报告, qué hicimos?, qu'avons-nous fait?, was haben wir?, cosa abbiamo fatto?
+  Triggers: PDCA report, completion report, status report, summary, progress report, what did we do?,
+  status?, progress?, write report
 model: haiku
 effort: low
 maxTurns: 15

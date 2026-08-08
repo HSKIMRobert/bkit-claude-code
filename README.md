@@ -1,6 +1,6 @@
 # bkit — AI Native Development OS
 
-> The only Claude Code plugin that verifies AI-generated code against its own design specs.
+> A Claude Code plugin that verifies AI-generated code against its own design specs.
 
 **Three commands. Anyone — even someone vibe-coding for the first time — can ship robust, production-quality software.** bkit turns Claude Code into a *Context Engineering system*: 44 skills, 34 specialist agents, 11 quality gates, and a memory that survives across sessions deliver the right context to the AI at the right moment, so you don't have to know prompts, commands, or PDCA to get high-quality results.
 
@@ -198,7 +198,7 @@ Full M1–M10 + S1 catalog in [README-FULL.md §5](README-FULL.md#5-quality-gate
 
 ## Architecture at a glance
 
-44 skills · 34 agents · 22 hook events / 25 blocks · 2 MCP servers (19 tools) · 195 lib modules across 22 subdirs · 66 scripts · 40 templates · 353 test files. Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L5 (226 CI-gated assertions).
+44 skills · 34 agents · 21 hook events / 24 blocks · 2 MCP servers (19 tools) · 195 lib modules across 22 subdirs · 66 scripts · 40 templates · 353 test files. Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L5 (226 CI-gated assertions).
 
 Agents run on a 4-tier role-based model matrix: **fable** (long-horizon orchestration — leads), **opus** (deep reasoning, security & high-frequency PDCA verifiers), **sonnet** (implementers), **haiku** (monitors). The repeated Check/iterate verifiers (gap-detector, design-validator, pdca-iterator) run on Opus 4.8 — strong verification at half Fable's cost.
 

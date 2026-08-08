@@ -20,7 +20,7 @@
  *   reformulated command automatically (agent resilience boost).
  */
 
-const { readStdinSync, parseHookInput, outputAllow, outputBlock, outputBlockWithContext } = require('../lib/core/io');
+const { readStdinSync, parseHookInput, outputAllow, outputBlock, outputBlockWithContext, outputAsk } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getActiveSkill, getActiveAgent } = require('../lib/task/context');
 
@@ -288,6 +288,43 @@ if (!blocked) {
 
       blocked = true;
       outputBlockWithContext(reason, alternatives, 'PreToolUse');
+    }
+
+    /*
+     * v2.1.34 (D9) — high-severity findings ask instead of passing silently.
+     *
+     * Before this, only `critical` did anything, so a rule was either an
+     * absolute refusal or invisible. That is why G-001 refused `rm -rf` on any
+     * target at all: making it proportionate would have meant making it
+     * toothless. With a grading step (see `severityFor` on G-001) a scoped
+     * recursive delete lands on `high`, and `high` must reach the user rather
+     * than slip past — grading it down to a silent allow would be a relaxation
+     * dressed up as a fix.
+     */
+    if (!blocked && result.detected) {
+      const askRules = (result.rules || []).filter((r) => r.severity === 'high');
+      if (askRules.length > 0) {
+        const ids = askRules.map((r) => r.id);
+        const askReason =
+          `bkit Destructive Detector: this command matches ${ids.length > 1 ? 'rules' : 'rule'} `
+          + `${ids.join(', ')} (${askRules.map((r) => r.name).join('; ')}). `
+          + `The target looks specific rather than broad, so this is a confirmation, not a refusal.`;
+        try {
+          const audit = require('../lib/audit/audit-logger');
+          audit.writeAuditLog({
+            actor: 'hook', actorId: 'unified-bash-pre',
+            action: 'destructive_confirmation_requested', category: 'control',
+            target: toolInput.command?.substring(0, 100) || '', targetType: 'file',
+            details: { rules: ids, confidence: result.confidence },
+            result: 'ask', destructiveOperation: true,
+            reason: askReason,
+          });
+        } catch (_) { /* graceful — auditing must never prevent the prompt */ }
+        outputAsk(askReason, [
+          'Confirm the exact path is the one you mean',
+          'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
+        ]);
+      }
     }
   } catch (_) {}
 }

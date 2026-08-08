@@ -50,6 +50,29 @@ const path = require('node:path');
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const REQUIRE_HOST = process.env.BKIT_REQUIRE_HOST_INTEGRATION === '1';
 
+/*
+ * Live runs are opt-in.
+ *
+ * Every case here starts a real Claude Code session, which takes minutes and
+ * needs credentials. `qa-aggregate.js` walks every *.test.js, so without this
+ * gate the offline suite would spawn live sessions on every run — slow, and
+ * flaky under its own concurrency (observed: ETIMEDOUT when the aggregate and a
+ * live run overlapped).
+ *
+ * The obvious risk of an opt-in test is that nobody opts in and it quietly
+ * never runs — precisely the failure this whole layer exists to prevent. So the
+ * CI workflow sets the flag on its dedicated step, and
+ * `test/contract/ci-host-integration-wiring.test.js` fails if that step is ever
+ * removed or stops setting it.
+ */
+const LIVE_ENABLED = process.env.BKIT_HOST_INTEGRATION === '1' || REQUIRE_HOST;
+if (!LIVE_ENABLED) {
+  console.log('⚠ host-integration SKIPPED — set BKIT_HOST_INTEGRATION=1 to run live sessions');
+  console.log('  (CI runs this on its own step; see .github/workflows/contract-check.yml)');
+  console.log('pass:0 fail:0 skip:1');
+  process.exit(0);
+}
+
 let pass = 0;
 let skip = 0;
 const failures = [];

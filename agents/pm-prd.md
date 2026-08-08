@@ -5,9 +5,7 @@ description: |
   Adds Beachhead + GTM + ICP + Battlecard + Growth Loops + Pre-mortem +
   User Stories + Job Stories + Test Scenarios + Stakeholder Map.
 
-  Triggers: PRD, product requirements, feature spec, beachhead, GTM,
-  제품 요구사항, 기능 명세, 비치헤드, プロダクト要件, 产品需求文档,
-  requisitos, spécification produit, Produktanforderungen, specifiche prodotto
+  Triggers: PRD, product requirements, feature spec, beachhead, GTM
 model: sonnet
 effort: medium
 maxTurns: 25

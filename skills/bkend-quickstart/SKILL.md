@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   bkend.ai onboarding — MCP setup, resource hierarchy, tenant/user model, first project.
-  Triggers: bkend quickstart, onboarding, setup, MCP, 시작하기, 온보딩.
+  Triggers: bkend quickstart, onboarding, setup, MCP
 user-invocable: false
 agent: bkit:bkend-expert
 allowed-tools:

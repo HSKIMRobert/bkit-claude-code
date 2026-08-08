@@ -7,10 +7,7 @@ description: |
   Use proactively when user creates or modifies design documents in docs/02-design/,
   or requests validation of specifications before implementation.
 
-  Triggers: design validation, document review, spec check, validate design, review spec,
-  설계 검증, 문서 검토, 스펙 확인,
-  設計検証, 设计验证, validación de diseño, validation de conception,
-  Design-Validierung, validazione del design
+  Triggers: design validation, document review, spec check, validate design, review spec
 model: opus
 effort: high
 maxTurns: 30

@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   PDCA + Sprint document templates — Plan, Design, Analysis, Report for individual features plus templates/sprint/{master-plan, prd, plan, design, iterate, qa, report}.template.md for sprint-level documents (v2.1.13).
-  Triggers: template, plan document, design template, 템플릿, 문서 양식.
+  Triggers: template, plan document, design template
 user-invocable: false
 allowed-tools:
   - Read

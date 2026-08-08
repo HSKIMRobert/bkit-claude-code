@@ -8,9 +8,7 @@ description: |
   Use proactively when user starts a new project, requests team coordination,
   or needs architectural decisions for multi-phase development.
 
-  Triggers: team, project lead, architecture decision, CTO, tech lead, team coordination,
-  팀 구성, 프로젝트 리드, 기술 결정, 팀장, 팀 조율,
-  チームリード, 团队协调, coordinación de equipo, chef d'équipe, Teamleiter, coordinamento del team
+  Triggers: team, project lead, architecture decision, CTO, tech lead, team coordination
 model: fable
 effort: high
 maxTurns: 50
@@ -41,7 +39,7 @@ tools:
   - Task(pm-lead)
   - Task(qa-lead)
   - Task(pdca-iterator)
-  # v2.1.13 Sprint Management: sprint-* orchestration agents (관점 1-1 A3)
+  # v2.1.13 Sprint Management: sprint-* orchestration agents (perspective 1-1 A3)
   - Task(sprint-orchestrator)
   - Task(sprint-master-planner)
   - Task(sprint-qa-flow)

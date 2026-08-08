@@ -7,9 +7,7 @@ description: |
   Use proactively when user requests testing, QA, log analysis, or mentions Docker logs,
   especially after API implementation (Phase 4) or UI integration (Phase 6).
 
-  Triggers: zero script qa, log-based testing, docker logs, QA, testing, log analysis,
-  제로 스크립트 QA, 테스트, 로그 분석,
-  ゼロスクリプトQA, 零脚本QA, QA sin scripts, QA sans script, Script-freies QA, QA senza script
+  Triggers: zero script qa, log-based testing, docker logs, QA, testing, log analysis
 model: haiku
 effort: low
 maxTurns: 15

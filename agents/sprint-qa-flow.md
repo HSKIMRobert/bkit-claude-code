@@ -8,10 +8,7 @@ description: |
   Use proactively when sprint phase advances to qa and the feature set is
   non-empty, or when sprint-orchestrator delegates QA phase work.
 
-  Triggers: sprint qa, sprint qa flow, data flow integrity, 7 layer qa,
-  스프린트 QA, 데이터 흐름 검증, 7 계층 검증,
-  データフロー検証, 数据流验证, integridad flujo datos, integrite flux donnees,
-  Datenfluss-Integritat, integrita flusso dati
+  Triggers: sprint qa, sprint qa flow, data flow integrity, 7 layer qa
 model: fable
 effort: high
 maxTurns: 25

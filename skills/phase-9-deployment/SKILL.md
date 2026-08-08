@@ -7,9 +7,7 @@ effort: medium
 user-invocable: false
 description: |
   Deploy to production — CI/CD pipelines, environment config, deployment strategies.
-  Triggers: deployment, CI/CD, production, Vercel, 배포, 프로덕션.
-imports:
-  - ${PLUGIN_ROOT}/templates/pipeline/phase-9-deployment.template.md
+  Triggers: deployment, CI/CD, production, Vercel
 agent: bkit:infra-architect
 allowed-tools:
   - Read
