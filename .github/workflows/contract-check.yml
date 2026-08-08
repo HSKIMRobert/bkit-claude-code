@@ -91,11 +91,15 @@ jobs:
             status=$?
             tail -12 /tmp/qa-agg.log
             echo ""
-            echo "---- failing entries ----"
-            grep -E '^(✗|⚠)' /tmp/qa-agg.log || echo "(no per-file markers found; full log below)"
+            echo "---- failing entries (file + assertion) ----"
+            # Match the per-file markers AND the indented assertion lines printed
+            # under them. `tail -200` is not enough: the per-file section is one
+            # line per test file (350+), so a failure in the middle is cut off.
+            grep -E '^(✗|⚠)|^[[:space:]]+(✗|FAIL:)' /tmp/qa-agg.log \
+              || echo "(no per-file markers found)"
             echo ""
-            echo "---- full log (last 200 lines) ----"
-            tail -200 /tmp/qa-agg.log
+            echo "---- last 60 lines ----"
+            tail -60 /tmp/qa-agg.log
             exit $status
           fi
 
