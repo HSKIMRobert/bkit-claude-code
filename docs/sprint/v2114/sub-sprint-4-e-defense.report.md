@@ -108,7 +108,18 @@ trust-level: L4 (Full-Auto)
 **bkit 해결**:
 1. SessionStart에서 정규식 5종 (`do-not`/`never`/`must-not`/`forbidden`/`avoid`) → directives 추출
 2. atomic write로 `.bkit/runtime/memory-directives.json` 캐시
-3. PreToolUse Bash에서 deserialize → tool_input substring 매칭 → deny 시 `outputBlock('deny', reason)`로 hard-enforce
+3. PreToolUse Bash에서 deserialize → tool_input substring 매칭 → deny 시 `outputBlockWithContext(reason, alternatives, 'PreToolUse')`로 hard-enforce
+
+> **정정 (v2.1.33, ENH-410)** — 위 3번은 원래 `outputBlock('deny', reason)`이라는
+> **2-인자 시그니처**를 규정하고 있었다. 그런 시그니처는 존재한 적이 없다.
+> `lib/core/io.js:346`의 `outputBlock(reason)`은 파라미터가 하나뿐이라,
+> 이 문서를 따라 작성된 `scripts/unified-bash-pre.js`의 호출은 `reason`에 리터럴
+> `'deny'`를 바인딩하고 나머지 인자를 조용히 버렸다. 그 결과 Memory Enforcer가
+> 차단할 때 모델에 도달한 정보는 `{"decision":"block","reason":"deny"}`가 전부였고,
+> 이 상태가 v2.1.14부터 v2.1.32까지 유지됐다.
+> 사유와 대안을 함께 전달하려면 `outputBlockWithContext(reason, alternatives, hookEvent)`
+> (`lib/core/io.js:374`)를 써야 한다. 회귀 잠금:
+> `test/regression/enh-410-block-reason-contract.test.js`.
 4. `memory_directive_enforced` audit emit (Sub-Sprint 2 예약 슬롯 활용)
 
 **CC native 동등 기능**: 없음 — bkit 단독 보유 (차별화 #1 product moat).

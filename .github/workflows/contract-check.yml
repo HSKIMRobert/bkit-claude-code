@@ -70,8 +70,45 @@ jobs:
       - name: L3 MCP Runtime (stdio JSON-RPC lifecycle)
         run: node test/contract/l3-mcp-runtime.test.js
 
+      # ENH-411 (v2.1.33) — layer 3 of 3: make the pipe preserve the exit code.
+      # Without an explicit `shell:`, GitHub Actions runs steps under `bash -e`
+      # WITHOUT pipefail, so the pipeline's status came from `tail` (always 0)
+      # and a failing aggregate could never turn the job red. Naming `bash`
+      # explicitly selects `bash --noprofile --norc -eo pipefail`, which
+      # propagates qa-aggregate's exit code while keeping the output trimmed.
       - name: Aggregate all tests (summary)
-        run: node test/contract/scripts/qa-aggregate.js | tail -10
+        shell: bash
+        run: |
+          # `| tail -10` keeps the summary readable, but on a failure it also
+          # discards every line naming what failed — the first red run under the
+          # restored gate reported "14 failing assertion(s)" with no way to tell
+          # which files. A gate that fails without saying why is only half a gate.
+          # Keep the trimmed output on success; print the offenders on failure.
+          set -o pipefail
+          if node test/contract/scripts/qa-aggregate.js > /tmp/qa-agg.log 2>&1; then
+            tail -10 /tmp/qa-agg.log
+          else
+            status=$?
+            tail -12 /tmp/qa-agg.log
+            echo ""
+            echo "---- failing entries (file + assertion) ----"
+            # Match the per-file markers AND the indented assertion lines printed
+            # under them. `tail -200` is not enough: the per-file section is one
+            # line per test file (350+), so a failure in the middle is cut off.
+            grep -E '^(✗|⚠)|^[[:space:]]+(✗|FAIL:)' /tmp/qa-agg.log \
+              || echo "(no per-file markers found)"
+            echo ""
+            echo "---- last 60 lines ----"
+            tail -60 /tmp/qa-agg.log
+            exit $status
+          fi
+
+      # ENH-411 (v2.1.33): lock the gating itself. This step fails if anyone
+      # reintroduces a non-gating pipe, drops the aggregator's exit, or marks a
+      # gate advisory again. It runs AFTER the aggregate so a genuine test
+      # failure surfaces first and this one does not mask it.
+      - name: CI Gating Contract (a failing test must be able to turn CI red)
+        run: node test/contract/ci-gating-contract.test.js
 
       # v2.1.16 release-hardening: explicit release gate.
       # bkit-full-system verifies version-sync across README/hooks/manifests +
@@ -96,7 +133,10 @@ jobs:
       # v2.1.21+: strict (continue-on-error: false) — see CHANGELOG [2.1.21].
       - name: Release Gate — plugin.json schema validation (21-key whitelist)
         run: node scripts/validate-plugin.js --strict
-        continue-on-error: true # v2.1.20 advisory only; v2.1.21+: false (strict)
+        # v2.1.33 (ENH-411): the comment above has promised strict since v2.1.21,
+        # but the value stayed `true` for 11 minor versions — the advisory window
+        # closed long ago and the step verified nothing. Now strict, as designed.
+        continue-on-error: false
 
   contract-l5-e2e:
     name: Contract Test L5 (Invocation Inventory)

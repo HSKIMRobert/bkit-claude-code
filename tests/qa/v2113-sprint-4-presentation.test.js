@@ -23,6 +23,10 @@ const PLUGIN_ROOT = path.resolve(__dirname, '../../');
 const handler = require(path.join(PLUGIN_ROOT, 'scripts/sprint-handler'));
 const ac = require(path.join(PLUGIN_ROOT, 'lib/control/automation-controller'));
 const al = require(path.join(PLUGIN_ROOT, 'lib/audit/audit-logger'));
+// v2.1.33: ACTION_TYPES count comes from the counts SoT. Six separate files
+// carried six different literals for it (19/29/16/29/40/40 against a live 41);
+// one number, one home.
+const { EXPECTED_COUNTS } = require(path.join(PLUGIN_ROOT, 'lib/domain/rules/docs-code-invariants'));
 
 let pass = 0;
 let fail = 0;
@@ -320,7 +324,7 @@ const LANG_REGEX = {
     // post_tool_block_recorded, hook_reachability_lost, memory_directive_enforced.
     // v2.1.16 (Issue #95 F2) added scope_boundary_approved single-use escape hatch.
     // v2.1.16 (Issue #94 F3) added gate_measured for /sprint measure UC.
-    assert.equal(al.ACTION_TYPES.length, 40);
+    assert.equal(al.ACTION_TYPES.length, EXPECTED_COUNTS.actionTypes);
     assert.ok(al.ACTION_TYPES.includes('scope_boundary_approved'),
       'ACTION_TYPES must include scope_boundary_approved (v2.1.16 Issue #95 F2)');
     assert.ok(al.ACTION_TYPES.includes('gate_measured'),

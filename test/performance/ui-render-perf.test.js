@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 'use strict';
+
+/*
+ * v2.1.33: timing budgets widen when the suite runs under the aggregator.
+ *
+ * These assert wall-clock durations. `qa-aggregate.js` spawns 350+ test files
+ * back to back, which inflates every measurement here by a factor that has
+ * nothing to do with bkit's code — during this release, different perf files
+ * failed on each aggregate run while every one of them passed standalone.
+ * A timing test that fails at random is worse than none: it trains people to
+ * ignore a red suite, which is exactly the habit ENH-411 was fixing.
+ *
+ * The budgets remain smoke checks against pathological regressions, not
+ * benchmarks. `BKIT_TEST_AGGREGATE` is set by the aggregator.
+ */
+const PERF_SLACK = process.env.BKIT_TEST_AGGREGATE === '1' ? 4 : 1;
 /**
  * Performance Test: UI Render Performance (10 TC)
  * UR-001~005: Each UI component renders in <10ms
@@ -43,7 +58,7 @@ console.log('\n=== ui-render-perf.test.js (10 TC) ===\n');
 // ============================================================
 console.log('--- UI Component Render (<10ms) ---');
 
-const RENDER_THRESHOLD = 10;
+const RENDER_THRESHOLD = 10 * PERF_SLACK;
 
 // UR-001: Progress bar render
 {
@@ -159,7 +174,7 @@ const RENDER_THRESHOLD = 10;
 // ============================================================
 console.log('\n--- Progress Bar Stress (<5ms) ---');
 
-const FAST_THRESHOLD = 5;
+const FAST_THRESHOLD = 5 * PERF_SLACK;
 
 // UR-006: Progress bar - all completed
 {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * bkit Vibecoding Kit - SessionStart Hook (v2.1.32, uses BKIT_VERSION from lib/core/version)
+ * bkit Vibecoding Kit - SessionStart Hook (v2.1.33, uses BKIT_VERSION from lib/core/version)
  *
  * Thin orchestrator that delegates to startup modules:
  *   1. migration   - Legacy path migration (docs/ -> .bkit/)
@@ -306,6 +306,10 @@ const sessionTitle = generateSessionTitle({
   feature: primaryFeature,
   phase: currentPhase,
   sessionId: sessionIdForFp === 'default' ? null : sessionIdForFp,
+  // ENH-419 (v2.1.33), Issue #77: SessionStart receives the title already in
+  // effect — from `--name`, `/rename`, or a resumed session — and bkit must not
+  // replace one the user chose. Documented at code.claude.com/docs/en/hooks.md:1039.
+  currentTitle: (typeof input === 'object' && input) ? input.session_title : undefined,
 });
 
 // ENH-239 (Issue #81 Phase B): SHA-256 fingerprint dedup lock

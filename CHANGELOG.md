@@ -5,6 +5,141 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.33] - 2026-08-08
+
+> **Status**: Enforcement release. bkit had several defenses that detected
+> correctly and then did nothing — a destructive command was logged as
+> `blocked` and executed, a denied path was described to the model and written,
+> a failing test suite exited 0. This release makes them act. It adds no
+> features; it makes the existing ones true.
+>
+> Originating from `/bkit:cc-version-analysis` cycle #34 (CC v2.1.224 → v2.1.225,
+> 0 breaking changes on the Claude Code side). The findings were bkit's own.
+
+### User-visible changes
+
+- **bkit no longer names your session.** `ui.sessionTitle.enabled` now defaults
+  to **`false`**. Issue #77 reported that bkit overwrote the session title on
+  essentially every turn, so a name set in the Claude app or with `/rename` came
+  back as `[bkit] <PHASE> <feature>` moments later. #77 was closed in v2.1.21 by
+  adding a per-session tag, which fixed parallel windows showing identical titles
+  but not the overwriting. Two causes, both fixed:
+  - bkit never read Claude Code's `session_title` hook input, though the CC docs
+    name that exact use ("A hook that emits `sessionTitle` can check
+    `session_title` first to avoid overwriting a title the user set explicitly",
+    `hooks.md:1039`). It now does, and treats any title it did not write —
+    yours, or Claude Code's own summary — as final.
+  - The dedup cache compared `action`. A skill Stop hook published with
+    `action: 'PLAN'`; the next user prompt published with no action; the values
+    differed, so it republished — and again on the next skill stop. Alternating
+    between working and typing was enough to rename the session. `action` no
+    longer takes part in the comparison.
+  - **Migration**: if you want bkit to label sessions, set
+    `ui.sessionTitle.enabled: true` in `bkit.config.json`. It still never
+    overwrites a title you set yourself.
+
+- **Blocked commands now say why.** The Memory Enforcer's deny path called
+  `outputBlock('deny', reason, 'PreToolUse')` against a **one-parameter**
+  function, so `reason` bound to the literal `'deny'` and everything computed —
+  directive text, rule, source, matched pattern — was discarded. What reached
+  the model was `{"decision":"block","reason":"deny"}`. With no stated cause the
+  model's rational move is to retry, and Claude Code's auto mode pauses after 3
+  consecutive blocks (aborting outright in headless `-p` runs). Blocks now carry
+  the reason and concrete alternatives.
+
+- **Destructive commands are actually blocked.** The detector wrote an audit
+  entry saying `result: 'blocked'`, incremented the `destructiveBlocked`
+  counter, and let the command run. It now blocks. It was also being called with
+  `{ command }` where a string was expected, so rules matched against
+  `{"command":"…"}` and every anchored pattern silently failed: `chmod 777 /`,
+  `chown root /` and `mv /etc/passwd /` were **not detected at all** in
+  production.
+
+- **Heredoc bypass defense is no longer defeated by an absolute path.**
+  `… | bash` was blocked, but `… | /bin/bash`, `| nice bash`, `| command bash`,
+  `| "bash"`, `| \bash` and `| $SHELL` all fell to the warning tier, which is
+  allowed through with an audit entry. Eight literal interpreter rules were
+  replaced with three tolerant ones covering paths, quotes, backslashes, wrapper
+  commands and interpreters resolved at runtime.
+
+- **Denied file paths are enforced on Write/Edit.** Scope verdicts were advisory
+  text appended to the model's context before the write proceeded. Explicit
+  security rules (deny list, symlink escape, null byte) now block. Automation-level
+  scope (`NOT_IN_SCOPE`) stays advisory on purpose — L0's allowlist is narrow
+  enough that blocking on it would refuse ordinary edits.
+
+- **Secrets are denied anywhere in the tree.** `.env*`, `*.key` and `*.pem` were
+  effectively root-anchored and could never match a path containing a slash. At
+  L4, `src/.env` was **allowed**. Paths are also matched after resolution, so
+  `docs/../.env` no longer presents an allowed spelling for a denied location.
+
+- **Your PDCA backup is no longer overwritten by another project.**
+  `${CLAUDE_PLUGIN_DATA}/backup` carried no project segment, while
+  `CLAUDE_PLUGIN_DATA` is namespaced per plugin *install*. Projects sharing a
+  marketplace slot wrote to the same file on every `savePdcaStatus()` and the
+  last writer won — observed on a real machine, two unrelated projects in one
+  slot. Backups are now per project. When a pre-v2.1.33 backup turns out to hold
+  another project's state, the message says your backup was overwritten rather
+  than the misleading "backup belongs to different project".
+
+- **The quality gate can no longer be undecidable.** `matchRate` accepted any
+  `typeof === 'number'`, which admits `NaN`; both `>= 90` and `< 90` then
+  evaluate false and a gate branching on either comparison falls through. Values
+  are coerced to a finite 0–100, and an unmeasurable run reads as 0.
+
+### Internal changes
+
+- **CI can fail again.** Three independent mechanisms each made a red suite
+  report green: `qa-aggregate.js` had no `process.exit` at all; the workflow
+  piped it through `| tail -10` without `pipefail`, so the step's status came
+  from `tail`; and the plugin-schema release gate carried
+  `continue-on-error: true` while its own comment had promised strict mode since
+  v2.1.21. All three fixed, and `test/contract/ci-gating-contract.test.js` now
+  locks the property so it cannot silently return.
+- **CI coverage 188 → 353 test files.** `TEST_DIRS` named three directories by
+  hand and `findTestFiles` did not recurse. 143 files across 13 directories —
+  including the entire `test/security` suite — had never run in CI. All of them
+  passed; they were simply never wired in. Directories are now discovered.
+- **Nine failures surfaced by that coverage, all resolved.** Six of them were
+  stale count assertions; `ACTION_TYPES` alone carried six different expected
+  values across the repo (19 / 29 / 16 / 29 / 40 / 40 against a live 41). Counts
+  now come from `lib/domain/rules/docs-code-invariants.js`.
+- **`EXPECTED_FAILURES` emptied.** Both entries were verified green and removed.
+  A stale exemption suppresses everything a file reports: during this release an
+  unrelated change broke `project-isolation.test.js` in 7 places and the
+  aggregate still exited 0.
+- Sprint Stop hook no longer reports a completion that did not happen. Running
+  `/sprint master-plan <new-id>` printed `Sprint "<id>" — report → archived`
+  with another sprint's summary, for a sprint whose state file did not exist.
+  Three causes: the header id was not corrected when the fallback loaded a
+  different sprint, `master-plan` was missing from the read-only action list, and
+  `advancePhase` never settled `status` on reaching the terminal phase, leaving
+  6 of 7 sprints permanently `active`.
+- Count assertions that measured cardinality rather than coverage were rewritten
+  to assert behaviour — an exact rule count fails when protection is *added* and
+  stays silent when it is removed.
+- Dead code removed from `scripts/unified-bash-pre.js` after a five-point
+  no-op proof; archived locally under a git-ignored `.backup/`.
+- `PRIVACY.md` corrected: it claimed bkit "does not make network requests of any
+  kind", which stopped being true when the opt-in OpenTelemetry exporter was
+  added. The exporter is off unless you set `OTEL_EXPORTER_OTLP_ENDPOINT`.
+- `CUSTOMIZATION-GUIDE.md` no longer shows `{"decision":"allow"}` for PreToolUse;
+  there is no such decision.
+
+### ENH
+
+ENH-388, 389, 390, 393, 397, 398, 399, 400, 401, 402, 403, 404, 407, 410, 411,
+412, 417, 419.
+
+### Deferred
+
+ENH-395/384 (raising `RECOMMENDED_VERSION` from 2.1.220 — npm `stable` is
+exactly 2.1.220, v2.1.225 resolved none of the tracked upstream issues, and
+raising would import the #84892 and #84925 regressions), ENH-396/418
+(`WorktreeCreate`/`WorktreeRemove`/`DirectoryAdded` registration — confirmed
+supported by Claude Code, deferred for the hook-count cascade), ENH-405, 406,
+408, 413, 414, 415.
+
 ## [2.1.32] - 2026-07-28
 
 > **Status**: Claude Code v2.1.219/220 compatibility response, from the

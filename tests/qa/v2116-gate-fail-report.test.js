@@ -1,7 +1,7 @@
 /**
  * v2116-gate-fail-report.test.js — L3-F4 unit tests (Issue #93).
  *
- * Mirror of canonical SC-14 contract test (tests/contract/v2113-sprint-contracts)
+ * Mirror of canonical SC-14 contract test (test/contract/v2113-sprint-contracts)
  * but with AC-by-AC TC mapping. Local-only (.gitignore tests/qa/*).
  *
  * Master Plan: docs/01-plan/features/v2116-issue-fixes.master-plan.md §11.4

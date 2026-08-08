@@ -1,8 +1,9 @@
 {
-  "version": "2.1.32",
+  "version": "2.1.33",
   "ui": {
+    "_comment_sessionTitle": "v2.1.33 (Issue #77): opt-in. bkit no longer names your session by default. Set enabled=true to have bkit label the session with the active PDCA feature and phase; even then it never overwrites a title you set with --name or /rename.",
     "sessionTitle": {
-      "enabled": true,
+      "enabled": false,
       "staleTTLHours": 24,
       "format": "[bkit] {action} {feature}"
     },

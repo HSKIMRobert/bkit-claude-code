@@ -5,7 +5,7 @@
  * v2.1.26 (I-13, test isolation): every CLI invocation now runs against a
  * throwaway mkdtemp project root (cwd + CLAUDE_PROJECT_DIR both pointed at
  * it), so sprint state and audit writes NEVER touch the repo's real .bkit.
- * Pattern follows tests/contract/v2113-sprint-contracts.test.js SC-05.
+ * Pattern follows test/contract/v2113-sprint-contracts.test.js SC-05.
  *
  * @module test/unit/sprint-handler/default-level-warning.test
  */

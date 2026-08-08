@@ -41,7 +41,13 @@ try {
 
 console.log('\n=== docs-equals-code-v2.test.js ===\n');
 
-const workflowDir = path.join(PROJECT_ROOT, '.bkit', 'workflows');
+// v2.1.33: prefer the shipped presets over git-ignored runtime state, so this
+// suite behaves the same on a fresh clone as on a machine that has run bkit.
+const localWorkflowDir = path.join(PROJECT_ROOT, '.bkit', 'workflows');
+const workflowDir = (fs.existsSync(localWorkflowDir)
+  && fs.readdirSync(localWorkflowDir).some((f) => f.endsWith('.workflow.yaml')))
+  ? localWorkflowDir
+  : path.join(PROJECT_ROOT, 'templates', 'workflows');
 
 // =====================================================================
 // DC-001~005: Workflow YAML files are valid and parseable

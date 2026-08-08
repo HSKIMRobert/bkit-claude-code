@@ -5,7 +5,7 @@
  *
  * Placed under test/regression/ alongside issue-53-path-quoting.test.js so the
  * issue-specific bug cannot recur silently. Complements the unit-level contract
- * at tests/contract/session-id-env-119.test.js.
+ * at test/contract/session-id-env-119.test.js.
  *
  * Bug: hooks/session-start.js (and 3 other sites) read process.env.CLAUDE_SESSION_ID,
  * but Claude Code exposes CLAUDE_CODE_SESSION_ID. sessionId was always null on the

@@ -108,10 +108,28 @@ test('UT-PA-008', 'STATE_PATHS.pluginData returns env value when set', () => {
   else delete process.env.CLAUDE_PLUGIN_DATA;
 });
 
-test('UT-PA-009', 'STATE_PATHS.pluginDataBackup returns backup subdir', () => {
+test('UT-PA-009', 'STATE_PATHS.pluginDataBackup is namespaced per project', () => {
   const orig = process.env.CLAUDE_PLUGIN_DATA;
   process.env.CLAUDE_PLUGIN_DATA = '/tmp/pd';
-  assert.strictEqual(STATE_PATHS.pluginDataBackup(), '/tmp/pd/backup');
+
+  // v2.1.33 (ENH-402): this asserted the bare '/tmp/pd/backup'. That shared
+  // location was the defect: CLAUDE_PLUGIN_DATA is namespaced per plugin
+  // INSTALL, not per project, so every project sharing a marketplace slot wrote
+  // its pdca-status to the same file and the last writer won. Observed on a real
+  // machine — one slot held tene-studio's state, another held bkit-claude-code's,
+  // and whichever project lost the race lost its backup permanently.
+  const backup = STATE_PATHS.pluginDataBackup();
+  assert.ok(backup.startsWith('/tmp/pd/backup/'),
+    `expected a subdirectory under /tmp/pd/backup, got ${backup}`);
+  assert.notStrictEqual(backup, '/tmp/pd/backup',
+    'the bare shared directory is the cross-project clobber path and must not be reused');
+  assert.ok(/-[0-9a-f]{12}$/.test(backup),
+    `the project segment must end in a path digest so two checkouts of one repo do not collide, got ${backup}`);
+
+  // The pre-namespacing location stays reachable read-only, so a backup written
+  // by an earlier version can still be recovered.
+  assert.strictEqual(STATE_PATHS.pluginDataBackupLegacy(), '/tmp/pd/backup');
+
   if (orig) process.env.CLAUDE_PLUGIN_DATA = orig;
   else delete process.env.CLAUDE_PLUGIN_DATA;
 });

@@ -56,7 +56,19 @@ record('C-02 Heredoc detect API + PATTERNS frozen', () => {
   assert.equal(typeof h.detect, 'function');
   assert.ok(Object.isFrozen(h.CRITICAL_PATTERNS));
   assert.ok(Object.isFrozen(h.WARNING_PATTERNS));
-  assert.ok(h.CRITICAL_PATTERNS.length >= 20, '≥20 critical patterns required');
+  // v2.1.33 (ENH-390): coverage, not cardinality. Eight literal pipe-shell
+  // rules became three tolerant ones that additionally catch absolute paths,
+  // quotes, backslashes, wrapper commands and `$VAR` interpreters, so the count
+  // fell while protection grew. A count can also be padded with dead rules;
+  // this cannot. Full per-vector matrix lives in
+  // tests/qa/v2114-defense-heredoc.test.js SI-01.
+  assert.ok(h.CRITICAL_PATTERNS.length >= 10, 'critical pattern set must not be gutted');
+  assert.equal(h.detect('cat <<EOF\nx\nEOF | /bin/bash').severity, 'critical',
+    'absolute-path interpreter must be critical (warning tier is allowed through)');
+  assert.equal(h.detect('cat <<EOF\nx\nEOF | $SHELL').severity, 'critical',
+    'runtime-resolved interpreter must be critical');
+  assert.equal(h.detect('cat <<EOF\nx\nEOF').severity, 'warning',
+    'a lone heredoc must not be escalated');
   assert.ok(h.WARNING_PATTERNS.length >= 2, '≥2 warning patterns required');
 });
 

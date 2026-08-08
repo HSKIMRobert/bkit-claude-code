@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 'use strict';
+
+/*
+ * v2.1.33: timing budgets widen when the suite runs under the aggregator.
+ *
+ * These assert wall-clock durations. `qa-aggregate.js` spawns 350+ test files
+ * back to back, which inflates every measurement here by a factor that has
+ * nothing to do with bkit's code — during this release, different perf files
+ * failed on each aggregate run while every one of them passed standalone.
+ * A timing test that fails at random is worse than none: it trains people to
+ * ignore a red suite, which is exactly the habit ENH-411 was fixing.
+ *
+ * The budgets remain smoke checks against pathological regressions, not
+ * benchmarks. `BKIT_TEST_AGGREGATE` is set by the aggregator.
+ */
+const PERF_SLACK = process.env.BKIT_TEST_AGGREGATE === '1' ? 4 : 1;
 /**
  * Performance Test: Audit Write Performance (15 TC)
  * AW-001~005: writeAuditLog single entry <5ms
@@ -83,7 +98,7 @@ console.log('\n=== audit-write-perf.test.js (15 TC) ===\n');
 // ============================================================
 console.log('--- Single Entry Write (<5ms) ---');
 
-const SINGLE_THRESHOLD = 5;
+const SINGLE_THRESHOLD = 5 * PERF_SLACK;
 
 for (let i = 1; i <= 5; i++) {
   const id = `AW-${String(i).padStart(3, '0')}`;
@@ -107,7 +122,7 @@ for (let i = 1; i <= 5; i++) {
 // ============================================================
 console.log('\n--- 100 Sequential Entries (<500ms) ---');
 
-const BATCH_THRESHOLD = 500;
+const BATCH_THRESHOLD = 500 * PERF_SLACK;
 
 for (let batch = 0; batch < 5; batch++) {
   const id = `AW-${String(batch + 6).padStart(3, '0')}`;
@@ -131,7 +146,7 @@ for (let batch = 0; batch < 5; batch++) {
 // ============================================================
 console.log('\n--- Read 1000 Entries (<100ms) ---');
 
-const READ_THRESHOLD = 100;
+const READ_THRESHOLD = 100 * PERF_SLACK;
 
 // Prepare a file with 1000 entries
 const bigFilePath = path.join(TEMP_AUDIT_DIR, 'big-log.jsonl');

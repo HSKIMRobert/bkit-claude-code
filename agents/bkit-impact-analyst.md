@@ -67,7 +67,7 @@ bkit-claude-code/
 ├── scripts/           — Hook handler scripts
 ├── lib/               — Core library (subdirs include domain/, application/, orchestrator/, defense/, infra/, audit/, team/)
 ├── templates/         — PDCA + Sprint document templates
-├── mcp-servers/       — MCP server implementations (bkit-pdca, bkit-analysis)
+├── servers/           — MCP server implementations (bkit-pdca, bkit-analysis)
 ├── docs/              — Korean planning/design/analysis/report docs
 ├── memory/            — Project memory (cc_version_history_*.md, MEMORY.md)
 ├── test/              — Multi-layer test suite

@@ -5,7 +5,7 @@
  * Design Ref: docs/02-design/features/issue-89-pdca-status-fix.design.md §4, §6
  * Version: v2.1.15
  *
- * @module tests/unit/pdca-status-gating
+ * @module test/unit/pdca-status-gating
  */
 
 const test = require('node:test');

@@ -43,7 +43,12 @@ const { getSprintStateDir, getSprintStateFile } = require('../lib/infra/sprint/s
 
 // Read-only actions: state snapshots are surfaced by the handler itself (F8),
 // so the Stop hook does NOT re-emit a forced Executive Summary for them.
-const READONLY_ACTIONS = ['status', 'watch', 'list', 'help'];
+// ENH-417 (v2.1.33): `master-plan` joined this list. It creates a multi-sprint
+// plan and advances no sprint's phase, so the "a sprint operation just
+// completed" fallback below never applied to it — yet its absence here is what
+// let `/sprint master-plan <new-id>` reach that fallback and print a phase
+// transition for an unrelated sprint.
+const READONLY_ACTIONS = ['status', 'watch', 'list', 'help', 'master-plan'];
 // Actions whose completion warrants a forced summary on screen.
 const SURFACE_ACTIONS = ['phase', 'start', 'resume', 'report', 'iterate', 'qa', 'archive'];
 
@@ -135,16 +140,33 @@ function buildResponse(hookContext) {
   // Since unified-stop only dispatches here when activeSkill === 'sprint',
   // a sprint operation just completed — fall back to the latest active sprint
   // when the id wasn't recoverable from the payload.
+  const requestedId = sprintId;
   if (!sprint && !READONLY_ACTIONS.includes(action)) {
     sprint = latestActiveSprint(projectDir);
   }
-  if (sprint && !sprintId) sprintId = sprint.id;
+  // ENH-417 (v2.1.33): always take the id from the sprint we actually loaded.
+  //
+  // This previously read `if (sprint && !sprintId)`, so when an id WAS resolved
+  // from the marker but `loadSprint` found nothing and the fallback returned a
+  // DIFFERENT sprint, the id was never corrected. The header below then printed
+  // the requested id while the body was rendered from the fallback sprint —
+  // reporting, verbatim and untruthfully, `Sprint "<requested>" — report →
+  // archived` for a sprint that had never been created. Reproduced 2026-08-08
+  // with `/sprint master-plan v2133-defect-response`, whose state file did not
+  // exist; the summary body came from a sprint last touched two months earlier.
+  if (sprint) sprintId = sprint.id;
+  const fallbackMismatch = !!(sprint && requestedId && requestedId !== sprint.id);
 
   // Surface a forced Executive Summary unless this is a read-only action or we
   // couldn't resolve a sprint. (action===null still surfaces — a sprint skill
   // ran, we just couldn't parse which sub-action.)
   const isReadonly = READONLY_ACTIONS.includes(action);
-  const shouldSurface = !!sprint && !isReadonly;
+  // ENH-417: never present one sprint's summary in answer to a request about
+  // another. Correcting the id alone is not enough — the user asked about
+  // `requestedId`, so a report about some other sprint is noise at best and a
+  // false completion signal at worst. Stay silent and let the skill's own
+  // output speak instead.
+  const shouldSurface = !!sprint && !isReadonly && !fallbackMismatch;
 
   const sessionTitle = sprint
     ? generateSessionTitle({
@@ -157,7 +179,17 @@ function buildResponse(hookContext) {
   if (!shouldSurface) {
     // CC-compliant clean stop (S6 ENH-362): no decision:'allow', no
     // hookSpecificOutput, no skillResult root field. Diagnostics → debugLog.
-    debugLog('Skill:sprint:Stop', 'no-surface allow', { action: action || null, sprintId: sprintId || null, sessionTitle });
+    debugLog('Skill:sprint:Stop', 'no-surface allow', {
+      action: action || null,
+      sprintId: sprintId || null,
+      requestedId: requestedId || null,
+      // ENH-417: distinguishes "nothing to report" from "refused to report the
+      // wrong sprint", so this stays diagnosable without reading the source.
+      reason: fallbackMismatch
+        ? `requested sprint "${requestedId}" not found; refusing to surface "${sprint.id}" in its place`
+        : (isReadonly ? 'read-only action' : 'no sprint resolved'),
+      sessionTitle,
+    });
     return {};
   }
 

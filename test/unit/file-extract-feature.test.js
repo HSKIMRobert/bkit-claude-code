@@ -10,7 +10,7 @@
  *   - GENERIC_NAMES 확장 (auth/cms/v1/dashboard 등)
  *   - Fallback opt-in (default OFF)
  *
- * @module tests/unit/file-extract-feature
+ * @module test/unit/file-extract-feature
  */
 
 const test = require('node:test');

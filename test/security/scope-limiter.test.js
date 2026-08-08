@@ -130,14 +130,26 @@ test('SL-013', 'L4 allows test/ directory', () => {
   assert.strictEqual(r.allowed, true, 'L4 should allow test/');
 });
 
+// ENH-401 (v2.1.33): assert WHICH rule denied, not merely that something did.
+//
+// These checked `allowed === false` only. `certs/private.pem` was indeed
+// refused before v2.1.33 — but by NOT_IN_SCOPE, because `*.pem` was
+// root-anchored and never matched a path containing a slash. The deny rule was
+// broken and the test stayed green, which is the false-assurance shape these
+// suites exist to prevent. Naming the expected rule makes the assertion fail if
+// the deny list stops doing the work.
 test('SL-014', 'L4 still denies .env files', () => {
   const r = scopeLimiter.checkPathScope('.env.local', 4);
   assert.strictEqual(r.allowed, false, 'L4 should still deny .env');
+  assert.strictEqual(r.rule, 'DENIED_PATH',
+    `.env must be refused by the deny list, not incidentally by scope (got rule=${r.rule})`);
 });
 
 test('SL-015', 'L4 still denies .pem files', () => {
   const r = scopeLimiter.checkPathScope('certs/private.pem', 4);
   assert.strictEqual(r.allowed, false, 'L4 should still deny .pem files');
+  assert.strictEqual(r.rule, 'DENIED_PATH',
+    `a .pem in a subdirectory must be refused by the deny list (got rule=${r.rule})`);
 });
 
 // ============================================================

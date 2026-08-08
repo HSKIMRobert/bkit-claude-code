@@ -4,7 +4,7 @@
  * v2113-sprint-5-quality-docs.test.js — 7-perspective QA harness (★ 사용자 명시 3).
  *
  * QA Phase 6 의 다양한 관점 검증:
- *   P1 L3 Contract           — tests/contract/v2113-sprint-contracts.test.js (8 TCs)
+ *   P1 L3 Contract           — test/contract/v2113-sprint-contracts.test.js (8 TCs)
  *   P2 Sprint 1+2+3+4 regression — tests/qa/v2113-sprint-{1,2,3,4}.test.js (236 TCs)
  *   P3 bkit-evals scenarios  — documented Task invocations (≥4 scenarios)
  *   P4 claude -p headless    — child_process spawn (5 scenarios)
@@ -13,7 +13,7 @@
  *   P7 claude plugin validate — Bash invocation (F9-120 11-cycle)
  *
  * NOTE: This test file is local (tests/qa/ gitignored). The actual CI gate is
- * tests/contract/v2113-sprint-contracts.test.js (tracked).
+ * test/contract/v2113-sprint-contracts.test.js (tracked).
  *
  * Sprint Ref: v2113-sprint-5-quality-docs
  * @version 2.1.13
@@ -52,7 +52,7 @@ function record(name, fn) {
 
 // ===== P1: L3 Contract =====
 function p1_l3Contract() {
-  const result = cp.spawnSync('node', [path.join(projectRoot, 'tests/contract/v2113-sprint-contracts.test.js')], {
+  const result = cp.spawnSync('node', [path.join(projectRoot, 'test/contract/v2113-sprint-contracts.test.js')], {
     encoding: 'utf8',
     cwd: projectRoot,
   });

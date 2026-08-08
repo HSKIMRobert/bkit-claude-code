@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 'use strict';
+
+/*
+ * v2.1.33: timing budgets widen when the suite runs under the aggregator.
+ *
+ * These assert wall-clock durations. `qa-aggregate.js` spawns 350+ test files
+ * back to back, which inflates every measurement here by a factor that has
+ * nothing to do with bkit's code — during this release, different perf files
+ * failed on each aggregate run while every one of them passed standalone.
+ * A timing test that fails at random is worse than none: it trains people to
+ * ignore a red suite, which is exactly the habit ENH-411 was fixing.
+ *
+ * The budgets remain smoke checks against pathological regressions, not
+ * benchmarks. `BKIT_TEST_AGGREGATE` is set by the aggregator.
+ */
+const PERF_SLACK = process.env.BKIT_TEST_AGGREGATE === '1' ? 4 : 1;
 /**
  * Performance Test: Hook Cold Start (20 TC)
  * HS-001~010: Each new module loads in <50ms
@@ -53,7 +68,7 @@ console.log('\n=== hook-cold-start.test.js (20 TC) ===\n');
 // ============================================================
 console.log('--- Module Cold Start (<50ms) ---');
 
-const MODULE_THRESHOLD = 50;
+const MODULE_THRESHOLD = 50 * PERF_SLACK;
 const NEW_MODULES = [
   { id: 'HS-001', path: path.join(BASE_DIR, 'lib/core/state-store'),   name: 'core/state-store' },
   { id: 'HS-002', path: path.join(BASE_DIR, 'lib/core/constants'),     name: 'core/constants' },
@@ -79,7 +94,7 @@ for (const mod of NEW_MODULES) {
 // ============================================================
 console.log('\n--- Hook Scripts Cold Start (<100ms) ---');
 
-const HOOK_THRESHOLD = 100;
+const HOOK_THRESHOLD = 100 * PERF_SLACK;
 const HOOK_SCRIPTS = [
   { id: 'HS-011', path: path.join(BASE_DIR, 'scripts/unified-stop'),         name: 'unified-stop' },
   { id: 'HS-012', path: path.join(BASE_DIR, 'scripts/unified-bash-pre'),     name: 'unified-bash-pre' },

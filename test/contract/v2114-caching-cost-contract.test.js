@@ -22,7 +22,7 @@
  * This file is git-tracked (unlike tests/qa/*) and serves as the canonical
  * regression suite preventing contract drift across Sub-Sprint 1 modules.
  *
- * Run: node tests/contract/v2114-caching-cost-contract.test.js
+ * Run: node test/contract/v2114-caching-cost-contract.test.js
  *
  * Exit code 0 = all contracts hold. Non-zero = drift detected.
  *

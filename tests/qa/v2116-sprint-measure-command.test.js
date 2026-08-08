@@ -4,7 +4,7 @@
  * Tests the `/sprint measure` partial-gate measurement command added in
  * v2.1.16. Mirror of canonical SC-13 contract but with AC-by-AC TC mapping.
  *
- * NOTE: tests/qa/* is gitignored. SC-13 in tests/contract/v2113-sprint-contracts
+ * NOTE: tests/qa/* is gitignored. SC-13 in test/contract/v2113-sprint-contracts
  * is the tracked canonical regression source. This file is local-only.
  *
  * Master Plan: docs/01-plan/features/v2116-issue-fixes.master-plan.md §11.3
@@ -24,6 +24,10 @@ const mr = require(path.join(PLUGIN_ROOT, 'lib/application/quality-gates/measure
 const lifecycle = require(path.join(PLUGIN_ROOT, 'lib/application/sprint-lifecycle'));
 const domain = require(path.join(PLUGIN_ROOT, 'lib/domain/sprint'));
 const al = require(path.join(PLUGIN_ROOT, 'lib/audit/audit-logger'));
+// v2.1.33: ACTION_TYPES count comes from the counts SoT. Six separate files
+// carried six different literals for it (19/29/16/29/40/40 against a live 41);
+// one number, one home.
+const { EXPECTED_COUNTS } = require(path.join(PLUGIN_ROOT, 'lib/domain/rules/docs-code-invariants'));
 
 let pass = 0;
 let fail = 0;
@@ -273,7 +277,7 @@ function resetCwdDependentModules() {
   // Bonus TC-9 — ACTION_TYPES.gate_measured enum present (cross-check SC-06).
   // ─────────────────────────────────────────────────────────────────────
   await tc('TC-BONUS-9: ACTION_TYPES.gate_measured present (40 total)', async () => {
-    assert.strictEqual(al.ACTION_TYPES.length, 40);
+    assert.strictEqual(al.ACTION_TYPES.length, EXPECTED_COUNTS.actionTypes);
     assert(al.ACTION_TYPES.includes('gate_measured'));
     assert(al.ACTION_TYPES.includes('scope_boundary_approved')); // F2 cross-check
   });

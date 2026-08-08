@@ -5,7 +5,7 @@
  * v2.1.16. Mirror of the canonical SC-12 contract test but at the qa
  * granularity (per-AC TC mapping).
  *
- * NOTE: tests/qa/* is gitignored. SC-12 in tests/contract/v2113-sprint-contracts
+ * NOTE: tests/qa/* is gitignored. SC-12 in test/contract/v2113-sprint-contracts
  * is the tracked canonical regression source. This file is local-only.
  *
  * Master Plan: docs/01-plan/features/v2116-issue-fixes.master-plan.md §11.2

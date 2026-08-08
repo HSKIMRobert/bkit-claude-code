@@ -77,14 +77,14 @@ await testAsync('EXPECTED_COUNTS aligned with measure()', async () => {
 // v2.1.16 hardening: baselines synced to current SoT (skills=44, agents=34, mcpTools=19).
 test('diffCounts match → []', () => {
   const d = invariants.diffCounts({
-    skills: 44, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19,
+    skills: 44, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19, actionTypes: 41,
   });
   assert.deepStrictEqual(d, []);
 });
 test('diffCounts skills drift +1 detected', () => {
   // SoT=44, measured=45 → +1 drift detected
   const d = invariants.diffCounts({
-    skills: 45, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19,
+    skills: 45, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19, actionTypes: 41,
   });
   assert.strictEqual(d.length, 1);
   assert.strictEqual(d[0].field, 'skills');
@@ -94,7 +94,7 @@ test('diffCounts skills drift +1 detected', () => {
 test('diffCounts agents drift -1 detected', () => {
   // SoT=34, measured=33 → -1 drift detected
   const d = invariants.diffCounts({
-    skills: 44, agents: 33, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19,
+    skills: 44, agents: 33, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19, actionTypes: 41,
   });
   assert.strictEqual(d.length, 1);
   assert.strictEqual(d[0].field, 'agents');
@@ -103,7 +103,7 @@ test('diffCounts multiple drifts', () => {
   // 6 simultaneous drifts: all fields differ from SoT (hookEvents/Blocks use
   // off-SoT values 20/23 since the SoT is now 22/25 after v2.1.27 ENH-371)
   const d = invariants.diffCounts({
-    skills: 45, agents: 33, hookEvents: 20, hookBlocks: 23, mcpServers: 3, mcpTools: 20,
+    skills: 45, agents: 33, hookEvents: 20, hookBlocks: 23, mcpServers: 3, mcpTools: 20, actionTypes: 41,
   });
   assert.strictEqual(d.length, 6);
 });

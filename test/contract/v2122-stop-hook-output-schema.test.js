@@ -11,7 +11,7 @@
  * (skillResult / autoTrigger / iterationResult / analysisResult), which CC
  * rejects with "(root): Invalid input".
  *
- * Run: node tests/contract/v2122-stop-hook-output-schema.test.js
+ * Run: node test/contract/v2122-stop-hook-output-schema.test.js
  * Exit 0 = all emitters compliant. Non-zero = schema drift detected.
  *
  * Analysis: docs/03-analysis/features/cc-stop-hook-schema-compliance.analysis.md

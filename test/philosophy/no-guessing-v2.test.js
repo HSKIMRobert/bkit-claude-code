@@ -88,10 +88,16 @@ assert('NG-005',
 
 const { ACTION_TYPES, CATEGORIES, RESULTS, ACTORS, TARGET_TYPES } = auditLogger;
 
-// --- NG-006: ACTION_TYPES has exactly 16 entries ---
+// --- NG-006: ACTION_TYPES matches the counts SoT ---
+// v2.1.33 (D1): was a literal 16. ACTION_TYPES has grown to 40 as more events
+// became auditable, and three separate places carried three different stale
+// numbers — docs said 19, test/unit/audit-logger.test.js AL-007 said 29, and
+// this said 16. Maintainer ruling: the implementation is the source of truth.
+// Assert against the shared counts module so there is one number to update.
+const { EXPECTED_COUNTS } = require('../../lib/domain/rules/docs-code-invariants');
 assert('NG-006',
-  Array.isArray(ACTION_TYPES) && ACTION_TYPES.length === 16,
-  `ACTION_TYPES has exactly 16 entries (found: ${ACTION_TYPES.length})`
+  Array.isArray(ACTION_TYPES) && ACTION_TYPES.length === EXPECTED_COUNTS.actionTypes,
+  `ACTION_TYPES has ${EXPECTED_COUNTS.actionTypes} entries per docs-code-invariants (found: ${ACTION_TYPES.length})`
 );
 
 // --- NG-007: ACTION_TYPES includes phase_transition ---
@@ -106,10 +112,17 @@ assert('NG-008',
   'ACTION_TYPES includes "destructive_blocked" (blocked actions are logged)'
 );
 
-// --- NG-009: CATEGORIES covers 6 domains ---
+// --- NG-009: CATEGORIES still covers every original audit domain ---
+// v2.1.33: was `length === 6`. The assertion's intent is coverage — that every
+// domain bkit acts in is auditable — but an exact count tests the opposite: it
+// fails whenever coverage *grows*. It had drifted to 11 (sprint, permission,
+// checkpoint, trust, system were added). Assert the invariant that matters:
+// the original six are still present and nothing was dropped.
+const REQUIRED_AUDIT_DOMAINS = ['pdca', 'file', 'config', 'control', 'team', 'quality'];
+const missingDomains = REQUIRED_AUDIT_DOMAINS.filter((d) => !CATEGORIES.includes(d));
 assert('NG-009',
-  Array.isArray(CATEGORIES) && CATEGORIES.length === 6,
-  `CATEGORIES has 6 entries (found: ${CATEGORIES.length}): pdca, file, config, control, team, quality`
+  Array.isArray(CATEGORIES) && missingDomains.length === 0,
+  `CATEGORIES must retain every original audit domain; missing: ${missingDomains.join(', ') || 'none'} (found ${CATEGORIES.length}: ${CATEGORIES.join(', ')})`
 );
 
 // --- NG-010: RESULTS has 4 possible outcomes ---

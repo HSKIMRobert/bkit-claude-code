@@ -34,12 +34,26 @@ console.log('=== Aggregator Scope Test (v2.1.10 G-Q1/G-Q2) ===');
 assert(fs.existsSync(AGG_PATH), 'qa-aggregate.js exists');
 const src = fs.readFileSync(AGG_PATH, 'utf8');
 
-// 2. tests/qa is included in TEST_DIRS
+// 2. tests/qa is covered by the aggregator.
+//
+// v2.1.33: this used to grep the source for the literals `'tests'`/`'qa'` and
+// `qa-legacy`. TEST_DIRS is no longer a hand-written array — it is discovered at
+// runtime, because naming directories by hand is exactly what left 143 test
+// files (including all of test/security) outside CI until v2.1.33. Asserting
+// the literal would now fail while coverage is strictly better, so assert the
+// property that actually matters: the legacy QA directory is among the
+// discovered directories.
+const { TEST_DIRS } = require('./scripts/qa-aggregate');
+assert(Array.isArray(TEST_DIRS) && TEST_DIRS.length > 0,
+  'qa-aggregate exports a non-empty TEST_DIRS');
 assert(
-  /'tests'[^\n]+'qa'/.test(src) || /"tests"[^\n]+"qa"/.test(src),
-  "tests/qa/ directory integrated in TEST_DIRS"
+  TEST_DIRS.some((d) => d.dir.replace(/\\/g, '/').endsWith('tests/qa')),
+  'tests/qa/ directory integrated in TEST_DIRS'
 );
-assert(/qa-legacy/.test(src), "qa-legacy label defined for tests/qa");
+assert(
+  TEST_DIRS.some((d) => d.dir.replace(/\\/g, '/').endsWith('tests/qa') && d.label === 'qa-legacy'),
+  'qa-legacy label defined for tests/qa'
+);
 
 // 3. EXPECTED_FAILURES constant exists
 assert(/EXPECTED_FAILURES/.test(src), 'EXPECTED_FAILURES constant defined');

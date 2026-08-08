@@ -313,9 +313,43 @@ test('NM-15: array-like → not match', () => {
 // Pattern structural invariants
 // ──────────────────────────────────────────────────────────────────────────
 
-test('SI-01: CRITICAL_PATTERNS frozen, ≥ 20 entries', () => {
-  assert.ok(Object.isFrozen(CRITICAL_PATTERNS));
-  assert.ok(CRITICAL_PATTERNS.length >= 20);
+test('SI-01: CRITICAL_PATTERNS frozen, and every known bypass vector is critical', () => {
+  assert.ok(Object.isFrozen(CRITICAL_PATTERNS), 'policy array must stay immutable at runtime');
+
+  // v2.1.33 (ENH-390): the entry count is no longer the measure.
+  //
+  // This asserted `length >= 20`, which counts rules rather than coverage. The
+  // eight literal pipe-shell rules (`| bash`, `| sh`, `| zsh`, …) were replaced
+  // by three tolerant ones that also catch path prefixes, quotes, backslashes,
+  // wrapper commands and runtime-resolved interpreters — coverage went up while
+  // the count went down, so the old assertion failed on an improvement. Worse,
+  // it could be satisfied by padding the array with rules that match nothing.
+  //
+  // Assert the property that matters: each way of writing "pipe a heredoc into
+  // an interpreter" is classified critical. Warning-tier means ALLOWED
+  // (scripts/unified-bash-pre.js:325), so any of these landing on warning is a
+  // live permission bypass — which is exactly what v2.1.32 shipped.
+  const body = '\nrm -rf /\nEOF';
+  const BYPASS_FORMS = [
+    ['bare interpreter', 'cat <<EOF' + body + ' | bash'],
+    ['absolute path', 'cat <<EOF' + body + ' | /bin/bash'],
+    ['absolute path, other shell', 'cat <<EOF' + body + ' | /usr/bin/sh'],
+    ['wrapper command', 'cat <<EOF' + body + ' | command bash'],
+    ['nice wrapper', 'cat <<EOF' + body + ' | nice bash'],
+    ['quoted interpreter', 'cat <<EOF' + body + ' | "bash"'],
+    ['backslash-escaped', 'cat <<EOF' + body + ' | \\bash'],
+    ['runtime-resolved interpreter', 'cat <<EOF' + body + ' | $SHELL'],
+    ['non-word delimiter', "cat <<'EOF-1'\nrm -rf /\nEOF-1 | bash"],
+  ];
+  for (const [label, cmd] of BYPASS_FORMS) {
+    assert.equal(detect(cmd).severity, 'critical',
+      `${label} must be critical — warning severity is allowed through`);
+  }
+
+  // And the conservative half of the contract: a heredoc with no execution
+  // vector must NOT be escalated.
+  assert.equal(detect('cat <<EOF\njust text\nEOF').severity, 'warning',
+    'a lone heredoc must stay warning — false positives here block ordinary work');
 });
 
 test('SI-02: WARNING_PATTERNS frozen, ≥ 2 entries', () => {

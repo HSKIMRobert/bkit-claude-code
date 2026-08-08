@@ -22,7 +22,18 @@ const origPluginData = process.env.CLAUDE_PLUGIN_DATA;
 
 // Setup temp directories
 const TMP_BASE = path.join('/tmp', `bkit-iso-test-${Date.now()}`);
-const BACKUP_DIR = path.join(TMP_BASE, 'backup');
+/*
+ * v2.1.33 (ENH-402): the backup directory is namespaced per project.
+ *
+ * This used to be a hardcoded `${TMP_BASE}/backup`, matching the old shared
+ * layout. That layout was the bug it was meant to guard against: CLAUDE_PLUGIN_DATA
+ * is per plugin INSTALL, not per project, so every project sharing a marketplace
+ * slot wrote into the same directory and the last one won. Asking the path
+ * registry where the backup lives keeps this suite honest if the scheme changes
+ * again.
+ */
+process.env.CLAUDE_PLUGIN_DATA = TMP_BASE;
+const BACKUP_DIR = require('../../lib/core/paths').STATE_PATHS.pluginDataBackup();
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
 // ============================================================

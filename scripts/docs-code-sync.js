@@ -54,6 +54,10 @@ async function main() {
     hookBlocks: measured.hookBlocks,
     mcpServers: measured.mcpServers,
     mcpTools: measured.mcpTools,
+    // v2.1.33 (D1): ACTION_TYPES joins the counts SoT. Measured directly from
+    // the module rather than the filesystem scanner — it is an in-code array,
+    // not a file inventory, so there is nothing for the scanner to walk.
+    actionTypes: require('../lib/audit/audit-logger').ACTION_TYPES.length,
   });
 
   // Layer 2: each document vs measured

@@ -33,11 +33,38 @@ All data remains in your project directory. You can inspect, modify, or delete a
 ## What bkit Does NOT Do
 
 - Does not collect personal information (name, email, IP address, device ID)
-- Does not send telemetry, analytics, or usage data to any server
-- Does not make network requests of any kind
+- Does not send telemetry, analytics, or usage data to any server **by default**
 - Does not read, store, or transmit API keys (existence-checked only, never read)
 - Does not include third-party tracking libraries or dependencies
 - Does not use cookies, local storage, or browser-based tracking
+
+## Opt-in Telemetry (OpenTelemetry)
+
+> Corrected in v2.1.33 (ENH-404). This page previously stated that bkit "does
+> not make network requests of any kind", which was not accurate once
+> `lib/infra/telemetry.js` was added.
+
+bkit ships an **opt-in** OpenTelemetry exporter. It is inert unless you set an
+endpoint yourself:
+
+- **Off by default.** With `OTEL_EXPORTER_OTLP_ENDPOINT` unset, bkit makes no
+  network requests at all.
+- **When you set that variable**, bkit posts OTLP spans describing PDCA phase
+  transitions, quality-gate results, and token counts to the endpoint *you*
+  chose — typically a collector you run. bkit never sends data to POPUP STUDIO
+  or any third party.
+- The payload carries workflow metadata (phase names, gate scores, durations),
+  not your source code, prompts, or model responses.
+- To turn it off again, unset `OTEL_EXPORTER_OTLP_ENDPOINT`. See
+  `lib/infra/telemetry.js` for the exact fields.
+
+## Claude Code's Feedback Survey
+
+Independently of bkit, Claude Code may offer to attach your session transcript
+when you submit feedback. Consenting uploads that transcript to Anthropic, which
+can include your `CLAUDE.md`, skill and agent definitions, and MCP tool
+descriptions. bkit neither triggers nor sees this; it is mentioned here because
+those files are bkit artifacts and you should know what consenting includes.
 
 ## Claude Code and Anthropic
 

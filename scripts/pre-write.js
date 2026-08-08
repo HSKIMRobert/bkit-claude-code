@@ -17,6 +17,8 @@ const {
   parseHookInput,
   outputAllow,
   outputBlock,
+  // ENH-398 (v2.1.33): scope denials block with a reason and alternatives.
+  outputBlockWithContext,
   outputEmpty,
 } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
@@ -265,7 +267,48 @@ function runScopeLimiter(ctx) {
     const level = ac.getCurrentLevel();
     const scopeCheck = sl.checkPathScope(ctx.filePath, level);
     if (!scopeCheck.allowed) {
-      return `Scope limit: ${scopeCheck.reason || 'Path not allowed at current automation level'}`;
+      /*
+       * ENH-398 (v2.1.33): distinguish a security rule from a level policy.
+       *
+       * Every scope refusal used to come back as advisory text that main()
+       * pushed into `contextParts` and then emitted through `outputAllow` — the
+       * write went ahead regardless. Wiring all of them to block is not right
+       * either: NOT_IN_SCOPE means "outside the allowlist for this automation
+       * level", and L0's allowlist is narrow enough that blocking on it would
+       * refuse ordinary edits (measured: lib/core/io.js is NOT_IN_SCOPE at L0).
+       * That is a policy signal, and it stays advisory.
+       *
+       * These three are unambiguous security decisions, so they block:
+       *   DENIED_PATH     — the path matches the deny list (.env, keys, .git…)
+       *   SYMLINK_ESCAPE  — a symlink resolves outside the project root
+       *   NULL_BYTE       — path truncation attempt
+       *
+       * PATH_TRAVERSAL is deliberately NOT in this list. As implemented it
+       * fires whenever the resolved path sits outside `process.cwd()`, which
+       * covers ordinary work — writing to a scratch directory, /tmp, or another
+       * checkout — not just `../` escapes. Hard-blocking it made the hook
+       * refuse legitimate absolute paths the moment it was wired up (caught
+       * while writing this change: the hook blocked a write to the session
+       * scratchpad). Distinguishing a relative path that escapes from an
+       * absolute path that simply points elsewhere needs a rule change in
+       * lib/control/scope-limiter.js, so until then it stays advisory rather
+       * than blocking ordinary use.
+       */
+      const HARD_DENY_RULES = ['DENIED_PATH', 'SYMLINK_ESCAPE', 'NULL_BYTE'];
+      const reason = `Scope limit: ${scopeCheck.reason || 'Path not allowed at current automation level'}`;
+      if (HARD_DENY_RULES.includes(scopeCheck.rule)) {
+        return {
+          block: true,
+          rule: scopeCheck.rule,
+          reason,
+          alternatives: [
+            'Write to a path outside the denied list — secrets, keys and VCS internals are never writable through bkit',
+            'If this file genuinely must change, edit it directly outside the agent session',
+            'Ask the user to confirm and adjust the scope policy if the deny rule is wrong',
+          ],
+        };
+      }
+      return reason;
     }
   } catch (e) {
     debugLog('PreToolUse', 'scope limiter failed', { error: e.message });
@@ -373,7 +416,24 @@ function main() {
   const blast = runBlastRadius(ctx);
   if (blast) contextParts.push(blast);
   const scope = runScopeLimiter(ctx);
-  if (scope) contextParts.push(scope);
+  /*
+   * ENH-398 (v2.1.33): a hard scope denial must stop the write.
+   *
+   * Before this, every stage below Permission returned advisory text that was
+   * collected into `contextParts` and emitted via `outputAllow` at the end of
+   * this function — so a path on the deny list was described to the model and
+   * then written anyway. The only real block on this path was the Permission
+   * Manager at the top. `runScopeLimiter` now returns a verdict object for the
+   * security rules (deny list, traversal, symlink escape, null byte) and plain
+   * text for the level-policy case, which stays advisory on purpose.
+   */
+  if (scope && typeof scope === 'object' && scope.block) {
+    debugLog('PreToolUse', 'Scope denied', { filePath, rule: scope.rule });
+    runAuditLog(ctx, { result: 'denied', denyReason: scope.reason });
+    outputBlockWithContext(scope.reason, scope.alternatives, 'PreToolUse');
+    return;
+  }
+  if (scope) contextParts.push(typeof scope === 'string' ? scope : scope.reason);
 
   // Stage 8.5 (v2.1.10): CC regression attribution
   const ccAttr = runCCRegressionCheck(ctx);

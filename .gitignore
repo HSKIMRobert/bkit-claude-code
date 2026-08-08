@@ -91,3 +91,6 @@ docs/superpowers/
 
 # Bug reports (local working notes — not for the repo)
 bug_reports/
+
+# v2.1.33: local archive of removed dead code — never published
+.backup/

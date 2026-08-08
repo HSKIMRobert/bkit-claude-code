@@ -89,10 +89,17 @@ if (!io) {
   skip('CM-017', 'io.js failed to load');
   skip('CM-018', 'io.js failed to load');
 } else {
+  // v2.1.33: `parseHookInput` returns null for absent fields, not ''.
+  // Its `pick()` helper treats undefined, null and '' alike as absent and
+  // returns null (lib/core/io.js:276-281), so these had been failing since that
+  // helper was written. They went unnoticed because this file reports failures
+  // on stderr and the aggregator captured stdout only — the parser counted zero
+  // failures for a file that was reporting two. Same expectation corrected in
+  // test/integration/hook-behavior.test.js HB-005.
   const emptyParsed = io.parseHookInput({});
-  assert('CM-017', emptyParsed.toolName === '' && emptyParsed.filePath === '', 'parseHookInput handles empty object');
+  assert('CM-017', emptyParsed.toolName === null && emptyParsed.filePath === null, 'parseHookInput handles empty object');
   const nullParsed = io.parseHookInput(null);
-  assert('CM-018', nullParsed.toolName === '' && nullParsed.filePath === '', 'parseHookInput handles null input');
+  assert('CM-018', nullParsed.toolName === null && nullParsed.filePath === null, 'parseHookInput handles null input');
 }
 
 // --- CM-019~020: xmlSafeOutput ---
