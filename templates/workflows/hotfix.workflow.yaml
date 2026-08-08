@@ -1,0 +1,82 @@
+# bkit hotfix workflow
+#
+# Selected by lib/pdca/workflow-engine.js selectWorkflow() when the feature name
+# starts with `hotfix-` or `fix-`.
+#
+# A hotfix is a correction to something already designed and shipped, so the pm
+# and design phases are deliberately absent — there is no new product decision
+# and no new architecture to specify. The match-rate bar is 80 rather than 90
+# because the reference is the defect and its regression test, not a full design
+# document.
+#
+# Field names and permitted values are enforced by lib/pdca/workflow-parser.js.
+
+id: hotfix
+name: Hotfix Workflow
+version: 1.0.0
+description: Fast path for defect fixes — skips pm and design, goes straight from plan to implementation with a lower match-rate bar.
+
+trigger:
+  type: condition
+  condition: feature.startsWith('hotfix-') || feature.startsWith('fix-')
+
+defaults:
+  matchRateThreshold: 80
+  automationLevel: semi-auto
+  maxIterations: 3
+  requireDesignDoc: false
+
+steps:
+  idle:
+    phase: idle
+    type: sequential
+    description: Detect the hotfix target and initialise PDCA state.
+    next: plan
+
+  plan:
+    phase: plan
+    type: sequential
+    description: Reproduce the defect and record the expected behaviour, the observed behaviour and the blast radius.
+    next: do
+
+  do:
+    phase: do
+    type: sequential
+    description: Apply the minimal correction plus a regression test that fails before it and passes after.
+    next: check
+
+  check:
+    phase: check
+    type: sequential
+    description: Confirm the regression test passes and no neighbouring behaviour changed.
+    next: quality_gate
+
+  quality_gate:
+    phase: check
+    type: gate
+    description: Advance once the fix clears the hotfix threshold, otherwise iterate.
+    gate:
+      approval: conditional
+      autoCondition: matchRate >= 80
+    conditions:
+      - when: matchRate >= 80
+        next: report
+      - when: matchRate < 80
+        next: act
+
+  act:
+    phase: act
+    type: sequential
+    description: Repair the remaining gap and re-verify. Bounded by maxIterations.
+    next: check
+
+  report:
+    phase: report
+    type: sequential
+    description: Record the root cause, the fix and the regression test that locks it.
+    next: archived
+
+  archived:
+    phase: archived
+    type: sequential
+    description: Terminal state — archive the hotfix record.

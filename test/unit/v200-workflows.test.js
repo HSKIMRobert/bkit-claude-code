@@ -13,7 +13,27 @@ const { assert, assertNoThrow, skip, summary, reset } = require('../helpers/asse
 reset();
 
 const BASE_DIR = path.resolve(__dirname, '../..');
-const WORKFLOWS_DIR = path.join(BASE_DIR, '.bkit', 'workflows');
+/*
+ * v2.1.33: read the presets from the repository, not from local runtime state.
+ *
+ * This pointed at `.bkit/workflows/`, which is git-ignored. The three preset
+ * files were never in the repository and nothing in `lib/` or `scripts/`
+ * creates them — they existed only on machines where someone had made them by
+ * hand. So this suite passed for the author and could never pass on a fresh
+ * clone, and CI had been failing it silently: the aggregate ran it but could
+ * not turn the job red until ENH-411 restored gating, at which point 8 of these
+ * assertions surfaced immediately.
+ *
+ * The presets are a product feature ("Workflow Engine — 3 presets"), so they
+ * now ship in `templates/workflows/`. A project's own `.bkit/workflows/` still
+ * takes precedence when present, which is how a user override is meant to work.
+ */
+const REPO_WORKFLOWS_DIR = path.join(BASE_DIR, 'templates', 'workflows');
+const LOCAL_WORKFLOWS_DIR = path.join(BASE_DIR, '.bkit', 'workflows');
+const WORKFLOWS_DIR = fs.existsSync(LOCAL_WORKFLOWS_DIR)
+  && fs.readdirSync(LOCAL_WORKFLOWS_DIR).some((f) => f.endsWith('.workflow.yaml'))
+  ? LOCAL_WORKFLOWS_DIR
+  : REPO_WORKFLOWS_DIR;
 
 console.log('\n=== v200-workflows.test.js (20 TC) ===\n');
 

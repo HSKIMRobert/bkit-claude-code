@@ -1,0 +1,107 @@
+# bkit enterprise workflow
+#
+# Selected by lib/pdca/workflow-engine.js selectWorkflow() when the detected
+# project level is Enterprise.
+#
+# Two differences from the default workflow carry the weight here. The check
+# phase fans out into a parallel review — correctness, security-review and
+# convention — merged with `all`, so a security finding blocks the cycle rather
+# than being folded into a single aggregate score. And the match-rate bar is 95
+# rather than 90, because an enterprise design document is the contract that
+# downstream teams build against.
+#
+# Field names and permitted values are enforced by lib/pdca/workflow-parser.js.
+
+id: enterprise
+name: Enterprise PDCA Workflow
+version: 1.0.0
+description: Nine-phase cycle with a parallel check fan-out including a mandatory security review, and a 95 match-rate bar.
+
+trigger:
+  type: auto
+
+defaults:
+  matchRateThreshold: 95
+  automationLevel: semi-auto
+  maxIterations: 5
+  requireDesignDoc: true
+
+steps:
+  idle:
+    phase: idle
+    type: sequential
+    description: Detect the feature and initialise PDCA state.
+    next: pm
+
+  pm:
+    phase: pm
+    type: sequential
+    description: Product discovery and PRD generation via the PM agent team.
+    next: plan
+
+  plan:
+    phase: plan
+    type: sequential
+    description: Produce the plan document with scope, non-functional requirements and success criteria.
+    next: design
+
+  design:
+    phase: design
+    type: sequential
+    description: Produce the design document — system architecture, data model, API specification, infrastructure.
+    next: design_gate
+
+  design_gate:
+    phase: design
+    type: gate
+    description: Architecture sign-off. Required before implementation at this level.
+    gate:
+      approval: user
+    next: do
+
+  do:
+    phase: do
+    type: sequential
+    description: Implement against the approved architecture.
+    next: check
+
+  check:
+    phase: check
+    type: parallel
+    description: Fan out the review so a security finding cannot be averaged away.
+    mergeStrategy: all
+    branches:
+      - correctness
+      - security-review
+      - convention
+    next: quality_gate
+
+  quality_gate:
+    phase: check
+    type: gate
+    description: Advance only when every review branch passes and the match rate clears 95.
+    gate:
+      approval: conditional
+      autoCondition: matchRate >= 95
+    conditions:
+      - when: matchRate >= 95
+        next: report
+      - when: matchRate < 95
+        next: act
+
+  act:
+    phase: act
+    type: sequential
+    description: Self-repair the findings from the parallel review, then re-run it. Bounded by maxIterations.
+    next: check
+
+  report:
+    phase: report
+    type: sequential
+    description: Write the completion report with KPI snapshot, security posture and lessons learned.
+    next: archived
+
+  archived:
+    phase: archived
+    type: sequential
+    description: Terminal state — archive the cycle's documents.

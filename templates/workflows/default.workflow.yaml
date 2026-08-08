@@ -1,0 +1,101 @@
+# bkit default PDCA workflow
+#
+# The standard nine-phase cycle: idle -> pm -> plan -> design -> do -> check
+# -> act -> report -> archived. Selected by lib/pdca/workflow-engine.js
+# selectWorkflow() when no hotfix/enterprise match applies.
+#
+# Step ids intentionally mirror the phase names so a step can be referred to by
+# the phase it drives; the gate steps are the two exceptions.
+#
+# Field names and permitted values are enforced by lib/pdca/workflow-parser.js
+# (REQUIRED_WORKFLOW_FIELDS, VALID_STEP_TYPES, VALID_PHASES,
+# VALID_APPROVAL_TYPES, VALID_AUTOMATION_LEVELS).
+
+id: default
+name: Default PDCA Workflow
+version: 1.0.0
+description: Standard nine-phase PDCA cycle with a user gate before implementation and an automatic quality gate after it.
+
+trigger:
+  type: auto
+
+defaults:
+  matchRateThreshold: 90
+  automationLevel: semi-auto
+  maxIterations: 5
+  requireDesignDoc: true
+
+steps:
+  idle:
+    phase: idle
+    type: sequential
+    description: Detect the feature and initialise PDCA state.
+    next: pm
+
+  pm:
+    phase: pm
+    type: sequential
+    description: Product discovery and PRD generation via the PM agent team.
+    next: plan
+
+  plan:
+    phase: plan
+    type: sequential
+    description: Produce the plan document with scope, requirements and success criteria.
+    next: design
+
+  design:
+    phase: design
+    type: sequential
+    description: Produce the design document — architecture, data model, API surface.
+    next: design_gate
+
+  design_gate:
+    phase: design
+    type: gate
+    description: Confirm the design before any code is written.
+    gate:
+      approval: user
+    next: do
+
+  do:
+    phase: do
+    type: sequential
+    description: Implement against the approved design.
+    next: check
+
+  check:
+    phase: check
+    type: sequential
+    description: Measure design-to-implementation match rate with gap-detector.
+    next: quality_gate
+
+  quality_gate:
+    phase: check
+    type: gate
+    description: Advance when the match rate clears the threshold, otherwise iterate.
+    gate:
+      approval: conditional
+      autoCondition: matchRate >= 90
+    conditions:
+      - when: matchRate >= 90
+        next: report
+      - when: matchRate < 90
+        next: act
+
+  act:
+    phase: act
+    type: sequential
+    description: Self-repair the gaps found in check, then re-verify. Bounded by maxIterations.
+    next: check
+
+  report:
+    phase: report
+    type: sequential
+    description: Write the completion report with metrics and lessons learned.
+    next: archived
+
+  archived:
+    phase: archived
+    type: sequential
+    description: Terminal state — move the cycle's documents into the archive.
