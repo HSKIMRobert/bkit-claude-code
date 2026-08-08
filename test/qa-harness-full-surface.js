@@ -84,7 +84,7 @@ check('every agent has valid frontmatter and a known model tier', () => {
 });
 
 // ---------------------------------------------------------------- HOOKS
-console.log('\n=== Hook events (all 22) ===');
+console.log('\n=== Hook events (all) ===');
 const hooksJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks/hooks.json'), 'utf8'));
 const events = Object.keys(hooksJson.hooks || {});
 check('hook event count matches the counts SoT', () => {

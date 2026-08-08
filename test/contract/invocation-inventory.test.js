@@ -2,8 +2,9 @@
  * Invocation Inventory Sanity Tests — file-level cross-check of Addendum counts.
  *
  * Design Ref: bkit-v2110-invocation-contract-addendum.plan.md §3
- * Plan SC: 43 skills / 36 agents / 16 MCP tools / 22 hook events / 25 blocks
- *          (v2.1.27 #132: 21→22 events, 24→25 blocks — UserPromptExpansion added).
+ * Plan SC: 43 skills / 36 agents / 16 MCP tools / hook events + blocks read
+ *          from the docs=code counts SoT (v2.1.34: literals here drifted on a
+ *          legitimate, declared hook retirement rather than on a real regression).
  *
  * v2.1.11 update: 39 → 43 skills (Sprint β added bkit-evals, bkit-explore,
  * pdca-fast-track, pdca-watch).
@@ -17,6 +18,7 @@ const { hasDeprecatedInFrontmatterFile } = require('../../lib/util/frontmatter')
 // v2.1.17 (CO-3.1): canonical names lists imported from single SoT.
 // Replaces ~6 hardcoded EXPECTED_* arrays previously inline below.
 const {
+  EXPECTED_COUNTS,
   EXPECTED_ACTIVE_AGENT_NAMES,
   EXPECTED_DEPRECATED_AGENT_NAMES,
   EXPECTED_SKILL_NAMES,
@@ -106,20 +108,20 @@ EXPECTED_DEPRECATED_AGENT_NAMES.forEach((name) => {
 // v2.1.17 (CO-3.1): EXPECTED_HOOK_EVENT_NAMES imported from docs-code-invariants SoT.
 const hooksJson = JSON.parse(fs.readFileSync(hooksJsonPath, 'utf8'));
 const hookEventNames = Object.keys(hooksJson.hooks);
-test('Hooks count exactly 22 events', () => assert.strictEqual(hookEventNames.length, 22));
+test(`Hooks count exactly ${EXPECTED_COUNTS.hookEvents} events`, () => assert.strictEqual(hookEventNames.length, EXPECTED_COUNTS.hookEvents));
 test('Hooks count matches SoT', () => assert.strictEqual(hookEventNames.length, EXPECTED_HOOK_EVENT_NAMES.length));
 
 EXPECTED_HOOK_EVENT_NAMES.forEach((name) => {
   test(`Hook '${name}' registered`, () => assert.ok(hookEventNames.includes(name), `missing: ${name}`));
 });
 
-// v2.1.27 (#132): 25 blocks = 1 SessionStart + 2 PreToolUse + 3 PostToolUse + 19 rest
+// v2.1.34: 24 blocks = 1 SessionStart + 2 PreToolUse + 3 PostToolUse + 18 rest
 // (UserPromptExpansion added as a single "rest" event block).
 let blockCount = 0;
 for (const [, entries] of Object.entries(hooksJson.hooks)) {
   blockCount += entries.length;
 }
-test('Hooks total blocks = 25', () => assert.strictEqual(blockCount, 25));
+test(`Hooks total blocks = ${EXPECTED_COUNTS.hookBlocks}`, () => assert.strictEqual(blockCount, EXPECTED_COUNTS.hookBlocks));
 test('PreToolUse has 2 blocks', () => assert.strictEqual(hooksJson.hooks.PreToolUse.length, 2));
 test('PostToolUse has 3 blocks', () => assert.strictEqual(hooksJson.hooks.PostToolUse.length, 3));
 

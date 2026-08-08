@@ -52,6 +52,16 @@
   },
   "skills": {},
   "mcpTools": {},
+  "hookEvents": {
+    "FileChanged": {
+      "deprecatedIn": "v2.1.34",
+      "replacedBy": "PostToolUse(Write|Edit) + scripts/pdca-doc-changed-handler.js",
+      "reason": "The FileChanged registration never fired once between v2.1.1 and v2.1.33, for three independent reasons confirmed against a real Claude Code runtime: (1) it declared `if: \"Write|Edit(docs/**/*.md)\"`, but `if` holds exactly one permission rule and does not accept `|` alternation — the same string suppressed the hook on a valid tool event too, isolating syntax as its own cause; (2) `if` is evaluated only on PreToolUse/PostToolUse/PostToolUseFailure/PermissionRequest/PermissionDenied, and a hook declaring `if` on any other event never runs; (3) FileChanged's matcher names literal files to watch on disk (letters, digits, `_`, `|`), so the path glob this handler needs is not expressible on that event at all. Cause (3) means the handler's purpose — reacting to Claude editing a PDCA document — can never be served by FileChanged regardless of the other two faults, so the capability moved to the event that actually describes it rather than staying registered and dead.",
+      "issue": "v2.1.34 R3",
+      "handlerRemoved": "scripts/file-changed-handler.js",
+      "verifiedBy": "test/contract/host-integration/hook-dispatch.test.js"
+    }
+  },
   "contextChanges": {
     "qa-phase": {
       "from": "fork",

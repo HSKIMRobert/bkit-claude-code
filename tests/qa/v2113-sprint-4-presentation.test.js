@@ -582,21 +582,27 @@ const LANG_REGEX = {
     assert.equal(out, '');
   });
 
-  test('INV-05: hooks/hooks.json 22 events 25 blocks invariant', () => {
+  test('INV-05: hooks/hooks.json event/block counts match the counts SoT', () => {
     // v2.1.14 Sub-Sprint 6 Observation: the original Sprint 4 invariant
     // froze hooks.json against structural change. Version-string bumps
     // inside the `description` field are SSoT-driven (BKIT_VERSION sync)
     // and explicitly allowed — assert event/block counts directly rather
     // than relying on a clean `git diff --stat`.
-    // v2.1.27 (ENH-371): +UserPromptExpansion event/block for slash-command
-    // orchestrator reachability (issue #132) → 21→22 events, 24→25 blocks.
+    // v2.1.34: read the numbers from the counts SoT instead of repeating them.
+    // Hardcoding here meant a declared, auditable hook retirement (FileChanged,
+    // recorded in test/contract/deprecation-registry.json) failed identically to
+    // an accidental regression, which is the opposite of what this guard is for.
+    const { EXPECTED_COUNTS } = require(
+      require('path').join(PLUGIN_ROOT, 'lib/domain/rules/docs-code-invariants'));
     const data = JSON.parse(require('fs').readFileSync(
       require('path').join(PLUGIN_ROOT, 'hooks/hooks.json'), 'utf8'));
     const events = Object.keys(data.hooks || {});
     let totalBlocks = 0;
     for (const ev of events) totalBlocks += (data.hooks[ev] || []).length;
-    assert.equal(events.length, 22, 'hooks.json must declare 22 events');
-    assert.equal(totalBlocks, 25, 'hooks.json must declare 25 total blocks');
+    assert.equal(events.length, EXPECTED_COUNTS.hookEvents,
+      `hooks.json must declare ${EXPECTED_COUNTS.hookEvents} events`);
+    assert.equal(totalBlocks, EXPECTED_COUNTS.hookBlocks,
+      `hooks.json must declare ${EXPECTED_COUNTS.hookBlocks} total blocks`);
   });
 
   // ─────────────────────────────────────────────────────────────────────────

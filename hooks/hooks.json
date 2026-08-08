@@ -1,15 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-hooks.json",
-  "description": "bkit Vibecoding Kit v2.1.33 - Claude Code",
+  "description": "bkit Vibecoding Kit v2.1.34 - Claude Code. IMPORTANT: `timeout` is in SECONDS (Claude Code default 600 for command hooks). Values here were 1000x too large through v2.1.33 — a declared 10000 meant 2h46m, not 10s, which is why a hung Stop hook could stall a session for ~15 minutes (issue #139) without ever being cancelled. Verified empirically: a 5s hook survives `timeout: 30` and is killed at 2.26s under `timeout: 2`. Also: `if` holds exactly ONE permission rule (no `|` alternation) and is evaluated only on PreToolUse/PostToolUse/PostToolUseFailure/PermissionRequest/PermissionDenied; `once` is honoured only in skill frontmatter and is ignored here. See test/contract/hooks-config-contract.test.js, which fails if any of these invariants regress.",
   "hooks": {
     "SessionStart": [
       {
-        "once": true,
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\"",
-            "timeout": 5000
+            "timeout": 10
           }
         ]
       }
@@ -21,13 +20,19 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/pre-write.js\"",
-            "timeout": 5000
+            "timeout": 5
           },
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/lint-skill-md.js\"",
-            "timeout": 3000,
+            "timeout": 5,
             "if": "Write(skills/**/SKILL.md)"
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/lint-skill-md.js\"",
+            "timeout": 5,
+            "if": "Edit(skills/**/SKILL.md)"
           }
         ]
       },
@@ -37,19 +42,31 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/unified-bash-pre.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/unified-write-post.js\"",
-            "timeout": 5000
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/pdca-doc-changed-handler.js\"",
+            "timeout": 5,
+            "if": "Write(docs/**/*.md)"
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/pdca-doc-changed-handler.js\"",
+            "timeout": 5,
+            "if": "Edit(docs/**/*.md)"
           }
         ]
       },
@@ -59,7 +76,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/unified-bash-post.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       },
@@ -69,7 +86,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/skill-post.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -80,7 +97,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/unified-stop.js\"",
-            "timeout": 10000
+            "timeout": 10
           }
         ]
       }
@@ -91,7 +108,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/stop-failure-handler.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -102,7 +119,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/user-prompt-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -113,7 +130,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/user-prompt-expansion-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -125,7 +142,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/context-compaction.js\"",
-            "timeout": 5000
+            "timeout": 10
           }
         ]
       }
@@ -136,7 +153,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/post-compaction.js\"",
-            "timeout": 5000
+            "timeout": 10
           }
         ]
       }
@@ -147,7 +164,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/pdca-task-completed.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -158,7 +175,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent-start-handler.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -169,7 +186,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop-handler.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -180,7 +197,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/team-idle-handler.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -191,7 +208,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-end-handler.js\"",
-            "timeout": 1500
+            "timeout": 2
           }
         ]
       }
@@ -203,7 +220,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/tool-failure-handler.js\"",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }
@@ -214,7 +231,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/instructions-loaded-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -226,7 +243,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/config-change-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -238,7 +255,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/permission-request-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -250,7 +267,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/notification-handler.js\"",
-            "timeout": 2000
+            "timeout": 3
           }
         ]
       }
@@ -261,7 +278,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/cwd-changed-handler.js\"",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }
@@ -272,19 +289,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/task-created-handler.js\"",
-            "timeout": 3000
-          }
-        ]
-      }
-    ],
-    "FileChanged": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/file-changed-handler.js\"",
-            "if": "Write|Edit(docs/**/*.md)",
-            "timeout": 3000
+            "timeout": 5
           }
         ]
       }

@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.34] - 2026-08-09
+
+> **Status**: Reachability release. v2.1.33 made bkit's defenses act when they
+> fired. This one is about the hooks that never fired at all.
+>
+> Every finding below was reproduced against a real Claude Code runtime with
+> `claude -p --plugin-dir`, not inferred from documentation. The reproduction
+> harness ships with the release so each claim can be re-run.
+
+### Fixed
+
+- **Hook timeouts were 1000x too large on every event.** `timeout` is measured
+  in **seconds**; bkit wrote milliseconds. `"timeout": 10000` on `Stop` meant
+  2 hours 46 minutes, not 10 seconds, so a hung hook had no effective
+  cancellation — the true root cause of issue #139, where a Stop hook stalled a
+  session for ~15 minutes while "exceeding its own 10s timeout". v2.1.30 fixed
+  that hook's blocking read; the unit error stayed armed on all 22 events.
+  Verified: a 5-second hook survives `timeout: 30` and is killed at 2.26s under
+  `timeout: 2`. All 28 handlers now declare 2–10s.
+
+- **The `FileChanged` hook never ran once, in any release since v2.1.1.** Three
+  independent causes, each confirmed: it declared `if: "Write|Edit(...)"`, but
+  `if` holds exactly one permission rule and rejects `|` alternation (the same
+  string suppresses a hook on a *valid* tool event too); `if` is evaluated only
+  on tool events, and `FileChanged` is not one; and `FileChanged`'s matcher
+  names literal files to watch, so the `docs/**/*.md` glob this handler needs
+  cannot be expressed on that event at all. The capability moved to
+  `PostToolUse(Write|Edit)` — the event that actually describes reacting to
+  Claude editing a document — as `scripts/pdca-doc-changed-handler.js`.
+
+- **`once: true` on `SessionStart` was silently ignored.** It is honoured only
+  in skill frontmatter, never in a plugin's `hooks.json`. Confirmed by resuming
+  a session and watching the hook fire a second time. The key is gone; it
+  promised a guarantee the host never made.
+
+- **`SKILL.md` edits were never linted and document edits were never
+  post-processed.** `if` accepts one rule, so `if: "Write(skills/**/SKILL.md)"`
+  under a `Write|Edit` matcher covered only `Write`; and `PostToolUse` matched
+  `Write` alone, so `unified-write-post.js` (PDCA tracking, template
+  validation, reachability ping) never ran when Claude used `Edit` — the common
+  case for an existing file. Both now declare one handler per tool.
+
+### Changed
+
+- **Hook counts now describe what is proven to fire, not what is registered.**
+  22 events / 25 blocks → **21 events / 24 blocks**, after `FileChanged` was
+  retired through an explicit `deprecation-registry.json` entry. Hook events may
+  now be removed only through that registry, mirroring ADR 0014 for
+  agents/skills/MCP tools: silent removal still fails the contract test, a
+  declared removal records why.
+
+### Added
+
+- `test/contract/hooks-config-contract.test.js` — validates `hooks/hooks.json`
+  against the Claude Code hook specification: timeout unit and bounds, `once`
+  placement, one-rule-per-`if`, `if` only on tool events, event names, matcher
+  support, handler resolution, and count parity with the SoT. Verified against
+  the v2.1.33 configuration, where it reports the three defects above.
+
 ## [2.1.33] - 2026-08-08
 
 > **Status**: Enforcement release. bkit had several defenses that detected

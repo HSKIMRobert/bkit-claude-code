@@ -256,11 +256,13 @@ function sc08() {
     const arr = hooks.hooks[k];
     if (Array.isArray(arr)) blockCount += arr.length;
   });
-  // v2.1.27 (ENH-371, #132): +UserPromptExpansion event/block → 21→22, 24→25.
-  assert.strictEqual(eventKeys.length, 22,
-    'hooks events expected 22, got ' + eventKeys.length);
-  assert.strictEqual(blockCount, 25,
-    'hooks blocks expected 25, got ' + blockCount);
+  // v2.1.34: read from the counts SoT. Hardcoding here made a declared,
+  // auditable hook retirement look identical to an accidental regression.
+  const { EXPECTED_COUNTS: EC } = require('../../lib/domain/rules/docs-code-invariants');
+  assert.strictEqual(eventKeys.length, EC.hookEvents,
+    'hooks events expected ' + EC.hookEvents + ', got ' + eventKeys.length);
+  assert.strictEqual(blockCount, EC.hookBlocks,
+    'hooks blocks expected ' + EC.hookBlocks + ', got ' + blockCount);
 }
 
 // === SC-09: master-plan invocation 4-layer chain (S4-UX v2.1.13) ===
@@ -895,7 +897,7 @@ async function sc14() {
   await record('SC-05 4-layer end-to-end chain (init → status → list)', sc05);
   record('SC-06 ACTION_TYPES enum 29 entries (incl scope_boundary_approved + gate_measured)', sc06);
   record('SC-07 SPRINT_AUTORUN_SCOPE inline ↔ lib/control mirror (5 levels)', sc07);
-  record('SC-08 hooks.json 22 events 25 blocks invariant', sc08);
+  record('SC-08 hooks.json event/block counts match the SoT', sc08);
   await record('SC-09 master-plan 4-layer chain (handler → state + markdown + audit)', sc09);
   record('SC-10 context-sizer pure function contract (5 assertions)', sc10);
   record('SC-11 Sprint 2 quality-gates logic invariant (v2.1.16 evolution, Issue #92)', sc11);

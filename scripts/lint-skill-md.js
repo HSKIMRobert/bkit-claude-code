@@ -16,7 +16,7 @@
  */
 
 const path = require('path');
-const fs = require('fs');
+const { readStdinSync } = require('../lib/core/io');
 
 // v2.1.32: resolve the checker from this script's own directory, not
 // `process.cwd()`.
@@ -44,10 +44,20 @@ function getChecker() {
   return _checker;
 }
 
+/*
+ * v2.1.34: use the shared bounded reader instead of `fs.readFileSync(0)`.
+ *
+ * `fs.readFileSync(0, 'utf8')` blocks until stdin reaches EOF, with no timeout.
+ * Claude Code can hold the write-end open well past a hook's own deadline —
+ * that is issue #139, where a hook stalled a session for ~15 minutes. v2.1.30
+ * replaced the pattern centrally in lib/core/io.js, but this handler kept its
+ * own copy and so kept the stall. Going through the shared reader also stamps
+ * the hook-dispatch ledger, which is what proves this hook is reachable at all.
+ */
 function readStdinJSON() {
   try {
-    const data = fs.readFileSync(0, 'utf8'); // stdin
-    return data ? JSON.parse(data) : null;
+    const payload = readStdinSync();
+    return payload && Object.keys(payload).length > 0 ? payload : null;
   } catch (_) { return null; }
 }
 

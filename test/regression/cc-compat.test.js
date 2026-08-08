@@ -110,17 +110,23 @@ for (const [event, entries] of Object.entries(hooksConfig.hooks)) {
 assert('CC-007', allWithinLimit,
   `All timeouts <= ${CC_MAX_TIMEOUT}ms${exceeding.length ? ' EXCEEDING: ' + exceeding.join(', ') : ''}`);
 
-// CC-008: SessionStart timeout reasonable (<10s)
+// CC-008/CC-009: hook timeouts are expressed in SECONDS.
+//
+// v2.1.34: both assertions read the field as milliseconds, and CC-009 actively
+// required the 1000x error — `>= 5000` on a seconds field demands that the Stop
+// hook be allowed to run for at least 83 minutes. That is how issue #139's real
+// cause survived while its symptom was patched in v2.1.30. Verified against a
+// real runtime: a 5-second hook survives `timeout: 30` and is killed at 2.26s
+// under `timeout: 2`.
 const sessionStart = hooksConfig.hooks.SessionStart;
 const ssTimeout = sessionStart?.[0]?.hooks?.[0]?.timeout || 0;
-assert('CC-008', ssTimeout > 0 && ssTimeout <= 10000,
-  `SessionStart timeout = ${ssTimeout}ms (<=10000ms)`);
+assert('CC-008', ssTimeout > 0 && ssTimeout <= 15,
+  `SessionStart timeout = ${ssTimeout}s (<=15s)`);
 
-// CC-009: Stop hook timeout allows completion
 const stopHook = hooksConfig.hooks.Stop;
 const stopTimeout = stopHook?.[0]?.hooks?.[0]?.timeout || 0;
-assert('CC-009', stopTimeout >= 5000,
-  `Stop hook timeout = ${stopTimeout}ms (>=5000ms for graceful shutdown)`);
+assert('CC-009', stopTimeout >= 5 && stopTimeout <= 30,
+  `Stop hook timeout = ${stopTimeout}s (5..30s — room for cleanup, still cancellable)`);
 
 // CC-010: No hardcoded absolute paths
 const hasHardcodedPaths = /\/Users\/|\/home\/|C:\\/i.test(hooksStr);
