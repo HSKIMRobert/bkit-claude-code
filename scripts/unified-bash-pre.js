@@ -233,21 +233,61 @@ if (!blocked) {
   try {
     const dd = require('../lib/control/destructive-detector');
     const toolInput = parseHookInput(input);
-    const result = dd.detect('Bash', { command: toolInput.command });
-    if (result.detected && result.rules.some(r => r.severity === 'critical')) {
-      const audit = require('../lib/audit/audit-logger');
-      audit.writeAuditLog({
-        actor: 'hook', actorId: 'unified-bash-pre',
-        action: 'destructive_blocked', category: 'control',
-        target: toolInput.command?.substring(0, 100) || '', targetType: 'file',
-        details: { rules: result.rules.map(r => r.id) },
-        result: 'blocked', destructiveOperation: true
-      });
+    // ENH-389 (v2.1.33): pass the command STRING, not `{ command }`.
+    //
+    // `detect(toolName, toolInput)` documents `@param {string} toolInput`
+    // (lib/control/destructive-detector.js:131) and falls back to
+    // `JSON.stringify(toolInput)` for anything else (:135). Passing an object
+    // therefore matched the rules against `{"command":"..."}` rather than the
+    // command, which silently defeats every anchored pattern. Measured:
+    //   detect('Bash', 'chmod 777 /')             -> G-008 critical
+    //   detect('Bash', { command: 'chmod 777 /' }) -> not detected
+    // because G-008 ends with `\/\s*$` and the JSON form ends with `"}`. The
+    // same held for `chown root /` and `mv /etc/passwd /` — commands aimed at
+    // the filesystem root were invisible to the detector in production.
+    const result = dd.detect('Bash', toolInput.command || '');
+    const criticalRules = (result.rules || []).filter((r) => r.severity === 'critical');
+    if (result.detected && criticalRules.length > 0) {
+      // ENH-388 (v2.1.33): actually block.
+      //
+      // This branch previously wrote an audit entry saying `result: 'blocked'`,
+      // incremented the `destructiveBlocked` counter, and then let the command
+      // run. Nothing here called an output helper or set `blocked`, so a
+      // critical destructive command was recorded as blocked and executed
+      // anyway — the audit trail and the session stats both asserted a
+      // protection that did not exist.
+      const ruleIds = criticalRules.map((r) => r.id);
+      const reason = `bkit Destructive Detector: this command matches ${ruleIds.length > 1 ? 'rules' : 'rule'} `
+        + `${ruleIds.join(', ')} (${criticalRules.map((r) => r.name).join('; ')}) and is blocked as critical.`;
+      const alternatives = [
+        'Scope the command to a specific path instead of a broad or root target',
+        'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
+        'Ask the user for explicit confirmation if this destruction is intended',
+      ];
+
+      // ENH-393 (v2.1.33): record the decision that was actually made.
+      // `result` was hardcoded to 'blocked' regardless of outcome; now the
+      // audit entry is written on the path that genuinely blocks, and the
+      // session counter increments only alongside a real block.
+      try {
+        const audit = require('../lib/audit/audit-logger');
+        audit.writeAuditLog({
+          actor: 'hook', actorId: 'unified-bash-pre',
+          action: 'destructive_blocked', category: 'control',
+          target: toolInput.command?.substring(0, 100) || '', targetType: 'file',
+          details: { rules: ruleIds, confidence: result.confidence },
+          result: 'blocked', destructiveOperation: true,
+          reason,
+        });
+      } catch (_) { /* graceful — auditing must never prevent the block */ }
       // v2.1.1 TC-02: Track destructive blocks in session stats
       try {
         const ac = require('../lib/control/automation-controller');
         ac.incrementStat('destructiveBlocked');
       } catch (_) {}
+
+      blocked = true;
+      outputBlockWithContext(reason, alternatives, 'PreToolUse');
     }
   } catch (_) {}
 }
@@ -287,7 +327,13 @@ if (!blocked) {
         const audit = require('../lib/audit/audit-logger');
         audit.writeAuditLog({
           actor: 'hook', actorId: 'unified-bash-pre',
-          action: 'heredoc_bypass_blocked', category: 'control',
+          // ENH-393 class (v2.1.33): this said `heredoc_bypass_blocked` on the
+          // path that deliberately ALLOWS the command. Reading the audit trail,
+          // an observed-but-permitted heredoc was indistinguishable from a
+          // blocked one — the same false-assurance pattern as the destructive
+          // detector's hardcoded `result: 'blocked'`. The action now names what
+          // actually happened; `result: 'success'` below was already correct.
+          action: 'heredoc_bypass_observed', category: 'control',
           target: (toolInput.command || '').substring(0, 200), targetType: 'file',
           details: { pattern: verdict.pattern, vector: verdict.vector, severity: 'warning' },
           result: 'success',
@@ -415,8 +461,18 @@ if (!blocked) {
         const verbose = effortLevel === 'high';
         const baseReason = `bkit Memory Enforcer: directive "${d.text.slice(0, 80)}" denied this command (rule: ${d.rule}, source: ${d.source}).`;
         const reason = verbose
-          ? baseReason + ` Matched pattern: /${d.pattern.slice(0, 60)}/i. Edit ${d.source} or scope the command if intentional.`
+          ? baseReason + ` Matched pattern: /${d.pattern.slice(0, 60)}/i.`
           : baseReason;
+        // ENH-410 (v2.1.33): give the model something to do instead of a dead end.
+        // Every other block site in this file already passes alternatives; this
+        // one did not, and its recovery hint was buried in a prose sentence that
+        // never reached the model at all (see the outputBlockWithContext call
+        // below for why).
+        const alternatives = [
+          `Narrow the command so it no longer matches /${d.pattern.slice(0, 60)}/i`,
+          `Edit the directive in ${d.source} if this command should be allowed`,
+          'Ask the user for explicit confirmation before retrying',
+        ];
         try {
           const audit = require('../lib/audit/audit-logger');
           audit.writeAuditLog({
@@ -436,7 +492,22 @@ if (!blocked) {
             reason,
           });
         } catch (_) { /* graceful */ }
-        outputBlock('deny', reason, 'PreToolUse');
+        // ENH-410 (v2.1.33): was `outputBlock('deny', reason, 'PreToolUse')`.
+        //
+        // `outputBlock(reason)` takes ONE parameter (lib/core/io.js:346), so
+        // `reason` bound to the literal 'deny' and the other two arguments were
+        // dropped on the floor. Everything computed above — the directive text,
+        // rule, source, matched pattern — was discarded, and the model received
+        // exactly `{"decision":"block","reason":"deny"}`. Verified by execution.
+        //
+        // That mattered beyond cosmetics: with no stated cause, the model's
+        // rational move is to retry the same command, and CC's auto mode pauses
+        // after 3 consecutive blocks (aborting outright in headless `-p` runs,
+        // per code.claude.com/docs/en/permission-modes.md:332-334).
+        //
+        // This is the Memory Enforcer path — bkit differentiation #1 — and the
+        // four other block sites in this file already called the right helper.
+        outputBlockWithContext(reason, alternatives, 'PreToolUse');
         blocked = true;
       } else if (verdict.warnings.length > 0 && effortLevel === 'high') {
         // High-effort mode surfaces soft warnings to the user via debug log.
@@ -448,17 +519,15 @@ if (!blocked) {
   } catch (_) { /* memory-enforcer unavailable — fail-open */ }
 }
 
-// ============================================================
-// v2.0.0: Scope Limiter (Control Module)
-// ============================================================
-if (!blocked) {
-  try {
-    const sl = require('../lib/control/scope-limiter');
-    const ac = require('../lib/control/automation-controller');
-    const level = ac.getCurrentLevel();
-    // Scope check available for path-targeting commands
-  } catch (_) {}
-}
+// v2.1.33 (D4): the v2.0.0 "Scope Limiter" placeholder block was removed here.
+// It required scope-limiter and automation-controller, called getCurrentLevel(),
+// discarded both results, and swallowed any error — a provable no-op, verified
+// on five points before removal (unused symbols, no module-load side effects, a
+// redundant require already satisfied at lines 248/314, a read-only
+// getCurrentLevel, and zero write primitives in automation-controller).
+// Archived with that reasoning at .backup/v2.1.33/ (git-ignored).
+// The genuine Bash-path scope enforcement gap it appeared to cover is tracked
+// as ENH-388 / ENH-398, which restore real blocking rather than a placeholder.
 
 // ============================================================
 // Sprint 4.5 Integration: CC regression attribution (ENH-262 / #51798)

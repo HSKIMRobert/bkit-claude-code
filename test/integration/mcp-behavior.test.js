@@ -47,8 +47,16 @@ assert('MB-005', pdcaContent.includes('readline') || pdcaContent.includes('stdin
 assert('MB-006', analysisContent.includes('readline') || analysisContent.includes('stdin'),
   'Analysis server uses stdio transport');
 
-// MB-007: PDCA server version
-assert('MB-007', pdcaContent.includes('2.0.4') || pdcaContent.includes('2.1.0'),
+// MB-007: PDCA server declares a version identifier
+// v2.1.33: this looked for the literals '2.0.4' or '2.1.0'. Both are long gone —
+// the server currently declares version "2.0" — so the assertion failed while
+// the property it was named for ("has version identifier") held fine. Pinning
+// literal version strings guarantees the test breaks on every release. Assert
+// the property instead.
+// NOTE: the server's own "2.0" is stale against plugin.json 2.1.32; that
+// version-sync drift is handled in the release doc-sync step, not here, because
+// this file tests MCP behaviour rather than release metadata.
+assert('MB-007', /version:\s*['"][0-9]+\.[0-9]+/.test(pdcaContent),
   'PDCA server has version identifier');
 
 // MB-008: Both servers handle initialize method

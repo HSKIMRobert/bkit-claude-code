@@ -315,12 +315,12 @@ test('EXPECTED_COUNTS.hookBlocks = 25', () => assert.strictEqual(invariants.EXPE
 test('EXPECTED_COUNTS.mcpServers = 2', () => assert.strictEqual(invariants.EXPECTED_COUNTS.mcpServers, 2));
 test('EXPECTED_COUNTS.mcpTools = 19', () => assert.strictEqual(invariants.EXPECTED_COUNTS.mcpTools, 19));
 test('diffCounts with correct counts returns []', () => {
-  const d = invariants.diffCounts({ skills: 44, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19 });
+  const d = invariants.diffCounts({ skills: 44, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19, actionTypes: 41 });
   assert.deepStrictEqual(d, []);
 });
 test('diffCounts detects skills drift', () => {
   // Drift case: pass measured=45 while SoT=44 (drift +1 should be detected)
-  const d = invariants.diffCounts({ skills: 45, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19 });
+  const d = invariants.diffCounts({ skills: 45, agents: 34, hookEvents: 22, hookBlocks: 25, mcpServers: 2, mcpTools: 19, actionTypes: 41 });
   assert.strictEqual(d.length, 1);
   assert.strictEqual(d[0].field, 'skills');
 });

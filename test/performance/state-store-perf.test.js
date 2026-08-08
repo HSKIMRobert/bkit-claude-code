@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 'use strict';
+
+/*
+ * v2.1.33: timing budgets widen when the suite runs under the aggregator.
+ *
+ * These assert wall-clock durations. `qa-aggregate.js` spawns 350+ test files
+ * back to back, which inflates every measurement here by a factor that has
+ * nothing to do with bkit's code — during this release, different perf files
+ * failed on each aggregate run while every one of them passed standalone.
+ * A timing test that fails at random is worse than none: it trains people to
+ * ignore a red suite, which is exactly the habit ENH-411 was fixing.
+ *
+ * The budgets remain smoke checks against pathological regressions, not
+ * benchmarks. `BKIT_TEST_AGGREGATE` is set by the aggregator.
+ */
+const PERF_SLACK = process.env.BKIT_TEST_AGGREGATE === '1' ? 4 : 1;
 /**
  * Performance Test: StateStore Operations (15 TC)
  * SP-001~005: write() completes in <10ms for small files
@@ -50,7 +65,7 @@ console.log('\n=== state-store-perf.test.js (15 TC) ===\n');
 // ============================================================
 console.log('--- StateStore write() Performance (<10ms) ---');
 
-const WRITE_THRESHOLD = 10;
+const WRITE_THRESHOLD = 10 * PERF_SLACK;
 
 // SP-001: Write small JSON object
 {
@@ -109,7 +124,7 @@ const WRITE_THRESHOLD = 10;
 // ============================================================
 console.log('\n--- StateStore lockedUpdate() Performance (<20ms) ---');
 
-const LOCKED_THRESHOLD = 20;
+const LOCKED_THRESHOLD = 20 * PERF_SLACK;
 
 // SP-006: Simple locked update
 {

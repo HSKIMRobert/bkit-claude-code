@@ -1,91 +1,96 @@
 # GitHub Usage Statistics Report — bkit-claude-code
 
+<!--
+  This file is the fixed format the /github-stats skill fills in. Do not hand-edit.
+  {{TOKEN}} placeholders are substituted from collect.sh's metrics JSON.
+  Tables/trends are generated from .claude/state/github-stats-ledger.json.
+  Number format: thousands separators. Estimated values MUST be marked "(est.)".
+  Output language: English (per user request 2026-06-30; docs/ default is Korean).
+-->
+
 * **Repository**: [popup-studio-ai/bkit-claude-code](https://github.com/popup-studio-ai/bkit-claude-code)
-* **Report date**: 2026-07-23
-* **Data through**: 2026-07-21 (GitHub Traffic API has a 1-day delay)
-* **Last push**: 2026-07-14
-* **Cumulative data range**: 2026-01-09 ~ 2026-07-21
+* **Report date**: 2026-08-07
+* **Data through**: 2026-08-06 (GitHub Traffic API has a 1-day delay)
+* **Last push**: 2026-07-28
+* **Cumulative data range**: 2026-01-09 ~ 2026-08-06
 
 ---
 
 ## 📌 Data Policy
 
-> - **Stars / Forks / Watchers**: real-time cumulative values from the GitHub API.
-> - **Clones / Views (14d)**: the Traffic API exposes a 14-day rolling window → daily tables show the last 14 days.
-> - **Cumulative Clones / Views**: tracked forward from the 2026-05-30 baseline, combining the baseline with the recorded daily-traffic window on each collection.
-> - **Cumulative Unique**: sum of daily uniques (counts repeat users across days).
-
-> **Baseline**: cumulative totals are tracked forward from the 2026-05-30 baseline (Clones 344,816). The GitHub Traffic API retains only the last 14 days, so the 05/30–06/15 window is filled from the adjoining daily-traffic rates and the 06/16–07/21 window is taken directly from the API.
+> - **Stars / Forks / Watchers**: real-time cumulative values from the GitHub API → **exact**.
+> - **Clones / Views (14d)**: the Traffic API only exposes a 14-day rolling window → daily tables show the last 14 days only.
+> - **Cumulative Clones / Views**: anchor (historical baseline) + trend-estimated gap + measured daily sums. Gap-period values are **(est.)**.
+> - **Cumulative Unique**: simple sum of daily uniques (counts repeat users across days). Treated as **(est.)** because it includes the estimated gap.
 
 ---
 
-## 🔥 Executive Summary (collected 2026-07-23)
+## 🔥 Executive Summary (collected 2026-08-07)
 
-| Metric | Current | Previous (2026-07-16) | Change |
+| Metric | Current | Previous (2026-07-28) | Change |
 | --- | --- | --- | --- |
-| ⭐ **Stars** | **577** | 575 | **+2** |
-| 🍴 **Forks** | **149** | 149 | ±0 |
-| 👀 Views (14d) | **938** (384 unique) | 1,130 | **-192** |
-| 📥 Clones (14d) | **19,477** (1,582 unique) | 17,877 | **+1,600** |
-| 👀 **Cumulative Views** | **80,619** | 80,150 | **+469** |
-| 📥 **Cumulative Clones** | **415,353** | 405,198 | **+10,155** |
-| 👤 **Cumulative Unique Clones** | **58,033** | 56,203 | **+1,830** |
+| ⭐ **Stars** | **589** | 584 | +5 |
+| 🍴 **Forks** | **148** | 148 | ±0 |
+| 👀 Views (14d) | **814** (356 unique) | 839 | -25 |
+| 📥 Clones (14d) | **19,419** (1,533 unique) | 20,856 | -1,437 |
+| 👀 **Cumulative Views** | **81,562** | 80,927 | +635 |
+| 📥 **Cumulative Clones** | **438,625** | 424,184 | +14,441 |
+| 👤 **Cumulative Unique Clones** | **62,393** (est.) | 59,581 | +2,812 |
 
 ### 🎯 Milestones / Headlines
 
-* **📥 Cumulative Clones crossed 410K → 415,353 (+10,155)** — the strongest single-window gain since the baseline; 420K is now within one collection's reach.
-* **📥 14-day Clones hit 19,477 (+1,600)** — day-avg ≈ 1,391, up from ≈ 1,277, and the highest 14-day window since tracking forward from the 05/30 baseline; a strong 07/20 (1,778) capped it.
-* **👤 Cumulative Unique Clones 58,033 (+1,830)** — cleared the 58K mark.
-* **⭐ Stars 577 (+2)** and **🍴 Forks 149 (±0)** — Stars keep their steady climb; Forks held flat.
-* **📉 14-day Views softened** to 938 (384 unique) from 1,130 — the quietest window on record, diverging from the surging clone traffic (automation/CI pulls strong while page views eased).
+- 👤 **Cumulative unique cloners passed 60K** — **62,393** (est.), up +2,812 since 2026-07-28. This is the headline milestone of this collection.
+- 📥 **Cumulative clones passed 430K** — 438,625 as of 2026-08-06 (+14,441 in 10 days).
+- ⭐ **Stars 589** — +5 since 2026-07-28 (**0.50 stars/day**), a slower pace than the 1.40/day burst around the v2.1.32 release.
+- 📥 14-day clones **19,419** (-1,437) — the **first decline after four consecutive rises** (15,303 → 17,877 → 19,477 → 20,856 → 19,419).
+- 📈 Single-day peak **2,113 clones on 2026-08-05**, the highest daily figure in the current window.
+- 👀 14-day views **814** (-25) — a mild continued drift down; daily uniques stayed steady (356 over 14 days).
+- 🍴 Forks 148 (±0) — flat since the last collection.
+- ⏳ No measurement gap this cycle (`gapWarning: none`), so the daily series remains unbroken since 2026-06-16.
 
 ---
 
-## 👀 Daily Views (last 14 days, 2026-07-08 ~ 2026-07-21)
+## 👀 Daily Views (last 14 days, 2026-07-24 ~ 2026-08-06)
 
 | Date | Views | Unique | vs. prev day |
 | --- | --- | --- | --- |
-| 07/08 (Tue) | **126** | **56** | — |
-| 07/09 (Wed) | 79 | 49 | -37.3% |
-| 07/10 (Thu) | 69 | 38 | -12.7% |
-| 07/11 (Fri) | 41 | 24 | -40.6% |
-| 07/12 (Sat) | 45 | 22 | +9.8% |
-| 07/13 (Sun) | 47 | 26 | +4.4% |
-| 07/14 (Mon) | 62 | 38 | +31.9% |
-| 07/15 (Tue) | 85 | 45 | +37.1% |
-| 07/16 (Wed) | 93 | 31 | +9.4% |
-| 07/17 (Thu) | 33 | 22 | -64.5% |
-| 07/18 (Fri) | 42 | 23 | +27.3% |
-| 07/19 (Sat) | 45 | 25 | +7.1% |
-| 07/20 (Sun) | 72 | 38 | +60.0% |
-| 07/21 (Mon) | 99 | 40 | +37.5% |
-| **14d total** | **938** | **384** | |
-
-> The 14-day Unique total (384) is GitHub's de-duplicated figure across the window, so it is lower than the sum of the per-day Unique column (477), which counts a repeat visitor on each day.
+| 2026-07-24 | 59 | 31 | — |
+| 2026-07-25 | 36 | 16 | -39.0% |
+| 2026-07-26 | 35 | 21 | -2.8% |
+| 2026-07-27 | 49 | 30 | +40.0% |
+| 2026-07-28 | 58 | 32 | +18.4% |
+| 2026-07-29 | 96 | 43 | +65.5% |
+| 2026-07-30 | 75 | 38 | -21.9% |
+| 2026-07-31 | 37 | 24 | -50.7% |
+| 2026-08-01 | 43 | 14 | +16.2% |
+| 2026-08-02 | 28 | 17 | -34.9% |
+| 2026-08-03 | 69 | 34 | +146.4% |
+| 2026-08-04 | 72 | 48 | +4.3% |
+| 2026-08-05 | 66 | 41 | -8.3% |
+| 2026-08-06 | 91 | 41 | +37.9% |
+| **14d total** | **814** | **356** | |
 
 ---
 
-## 📥 Daily Clones (last 14 days, 2026-07-08 ~ 2026-07-21)
+## 📥 Daily Clones (last 14 days, 2026-07-24 ~ 2026-08-06)
 
 | Date | Clones | Unique | vs. prev day |
 | --- | --- | --- | --- |
-| 07/08 (Tue) | 1,174 | 229 | — |
-| 07/09 (Wed) | 1,407 | 261 | +19.8% |
-| 07/10 (Thu) | 1,485 | 288 | +5.5% |
-| 07/11 (Fri) | 880 | 173 | -40.7% |
-| 07/12 (Sat) | 833 | 168 | -5.3% |
-| 07/13 (Sun) | 1,673 | 286 | +100.8% |
-| 07/14 (Mon) | **1,870** | **356** | +11.8% |
-| 07/15 (Tue) | 1,725 | 328 | -7.8% |
-| 07/16 (Wed) | 1,775 | 346 | +2.9% |
-| 07/17 (Thu) | 972 | 176 | -45.2% |
-| 07/18 (Fri) | 860 | 168 | -11.5% |
-| 07/19 (Sat) | 1,449 | 190 | +68.5% |
-| 07/20 (Sun) | 1,778 | 319 | +22.7% |
-| 07/21 (Mon) | 1,596 | 303 | -10.2% |
-| **14d total** | **19,477** | **1,582** | |
-
-> The 14-day Unique total (1,582) is GitHub's de-duplicated figure across the window, so it is lower than the sum of the per-day Unique column (3,591). The cumulative audit trail uses the per-day sum, as noted in the Data Policy.
+| 2026-07-24 | 1,563 | 276 | — |
+| 2026-07-25 | 1,076 | 180 | -31.2% |
+| 2026-07-26 | 892 | 168 | -17.1% |
+| 2026-07-27 | 1,447 | 295 | +62.2% |
+| 2026-07-28 | 1,680 | 352 | +16.1% |
+| 2026-07-29 | 1,637 | 284 | -2.6% |
+| 2026-07-30 | 1,647 | 305 | +0.6% |
+| 2026-07-31 | 1,392 | 271 | -15.5% |
+| 2026-08-01 | 688 | 179 | -50.6% |
+| 2026-08-02 | 904 | 205 | +31.4% |
+| 2026-08-03 | 1,342 | 270 | +48.5% |
+| 2026-08-04 | 1,480 | 307 | +10.3% |
+| 2026-08-05 | 2,113 | 292 | +42.8% |
+| 2026-08-06 | 1,558 | 347 | -26.3% |
+| **14d total** | **19,419** | **1,533** | |
 
 ---
 
@@ -93,12 +98,13 @@
 
 | Component | Period | Views | Clones | Unique Clones | Note |
 | --- | --- | --- | --- | --- | --- |
-| Baseline | through 2026-05-29 | 75,689 | 344,816 | 45,409 | tracked-forward baseline |
-| Interpolated window | 2026-05-30 ~ 06-15 (17d) | 1,927 | 25,114 | 4,051 | from adjoining daily rates |
-| Measured window | 2026-06-16 ~ 07-21 | 3,003 | 45,423 | 8,573 | from the Traffic API |
-| **Cumulative total** | through 2026-07-21 | **80,619** | **415,353** | **58,033** | |
+| Anchor (baseline cumulative) | ~2026-05-29 | 75,689 | 344,816 | 45,409 | User direct observation on 2026-05-30 (cumulative Clones seen >340K). Supersedes the 5/23 Slack report, which  |
+| Gap estimate (est.) | 2026-05-30 ~ 2026-06-15 (17d) | 1,927 (est.) | 25,114 (est.) | 4,051 (est.) | trapezoidal — gap_days * avg(daily rate at anchor window, daily rate at next window). Daily rates are real API measurements, NOT scaled by correctionRatio. |
+| Measured daily sum | 2026-06-16 ~ 2026-08-06 (52d) | 3,946 | 68,695 | 12,933 | API-measured |
+| **Cumulative total** | ~2026-08-06 | **81,562** | **438,625** | **62,393** (est.) | |
 
-> **Method**: cumulative = baseline + interpolated window + measured window. The 05/30–06/15 window is interpolated from the average of the adjoining daily-traffic rates — Clones avg(1,808.6, 1,146.0) × 17 days = 25,114; Views avg(134.9, 91.9) × 17 = 1,927 — because the GitHub Traffic API retains only the last 14 days. The measured window sums all recorded daily entries (06/16 ~ 07/21) using per-day uniques.
+> Estimation method: trapezoidal — `gap_days × avg(daily rate at anchor, daily rate at next window)`.
+> The gap window falls outside the Traffic API window and is permanently lost, so it is preserved as an estimate.
 
 ---
 
@@ -106,13 +112,16 @@
 
 | Collected | Data through | Stars | Forks | Views (14d) | Clones (14d) | Cum. Views | Cum. Clones |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-05-23 | — | 549 | 141 | 1,888 | 25,320 | 60,625 | 267,833 |
 | 2026-05-30 | 2026-05-29 | — | — | — | — | 75,689 | 344,816 |
 | 2026-06-30 | 2026-06-29 | 566 | 151 | 1,286 | 16,044 | 78,902 | 385,974 |
 | 2026-07-09 | 2026-07-08 | 574 | 148 | 1,341 | 15,303 | 79,807 | 397,050 |
 | 2026-07-16 | 2026-07-14 | 575 | 149 | 1,130 | 17,877 | 80,150 | 405,198 |
 | 2026-07-23 | 2026-07-21 | 577 | 149 | 938 | 19,477 | 80,619 | 415,353 |
+| 2026-07-28 | 2026-07-27 | 584 | 148 | 839 | 20,856 | 80,927 | 424,184 |
+| 2026-08-07 | 2026-08-06 | 589 | 148 | 814 | 19,419 | 81,562 | 438,625 |
 
 ---
 
-> **Last updated**: 2026-07-23 | Data through: 2026-07-21
+> **Last updated**: 2026-08-07 | Data through: 2026-08-06
 > Generated by the `/github-stats` skill (`.claude/skills/github-stats`) · Ledger: `.claude/state/github-stats-ledger.json`

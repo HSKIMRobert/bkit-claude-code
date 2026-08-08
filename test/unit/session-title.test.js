@@ -5,7 +5,7 @@
  * 6 TC: TC-A1 (opt-out), TC-A4 (cache hit), TC-A5 (phase change),
  *       TC-A6 (stale TTL), TC-A7 (PDCA absent), TC-A8 (action override)
  *
- * Pattern: console.assert based (matches existing tests/unit/*.test.js convention).
+ * Pattern: console.assert based (matches existing test/unit/*.test.js convention).
  */
 
 const path = require('path');

@@ -3,7 +3,7 @@
 /**
  * issue-118-cursor-pretooluse.test.js — Regression guard for GitHub #118.
  *
- * Mirrors tests/contract/cursor-pretooluse-json-118.test.js (the unit-level
+ * Mirrors test/contract/cursor-pretooluse-json-118.test.js (the unit-level
  * contract) but exercises the REAL hook scripts end-to-end via spawnSync, the
  * way test/integration/issue77-hook-e2e.test.js does. Placed under test/regression/
  * alongside issue-53-path-quoting.test.js so the issue-specific bug cannot recur

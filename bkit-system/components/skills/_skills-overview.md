@@ -4,6 +4,7 @@
 >
 > **Counting note**: CC's `/plugin` Skills count = `skills/` + `commands/` entries (same-name dedup); bkit's 44 skills + `commands/output-style-setup.md` display as **45** — expected, not a drift.
 >
+> **v2.1.33**: Enforcement release — skills count unchanged (44), no SKILL.md frontmatter change. User-visible effect comes from configuration and hooks rather than skills: `ui.sessionTitle.enabled` now defaults to false, so bkit no longer names your session (Issue #77), and blocked commands carry their reason and alternatives instead of the bare string `deny`. CC recommended: v2.1.220.
 > **v2.1.32**: CC v2.1.219/220 compatibility — skills count unchanged (44), no SKILL.md frontmatter change. The 8 `context: fork` producer skills keep their v2.1.31 `background: false` opt-out, and `qa-phase` remains outside the fork set. This release is scoped to hook handlers, team state and CC-version detection. CC recommended: v2.1.220.
 > **v2.1.30**: Stop-hook stdin-block hardening (#139) — skills unchanged (44); a runtime-reliability fix in `lib/core/io.js` / `scripts/unified-stop.js` (bounded stdin read so the Stop hook cannot stall on a held-open pipe). No SKILL.md or count change.
 > **v2.1.26**: MCP manifest relocation + Fable cost retune — skills unchanged (44; CC `/plugin` displays 45 = 44 skills + `commands/output-style-setup.md`, per the counting note below). Skill prose model references unchanged (cto-lead/pm-lead stay fable); the retuned verifiers (gap-detector/design-validator/pdca-iterator → opus) are agents, not skills. CC recommended: v2.1.198.

@@ -137,10 +137,28 @@ assert('HW-013',
   'unified-bash-pre.js handles Bash command operations'
 );
 
-// HW-014: unified-bash-pre.js contains block message generation
+// HW-014: unified-bash-pre.js wires blocks through the context-carrying emitter
+//
+// v2.1.33: this was
+//   /(?:block|deny|getBlockMessage|outputBlock|outputAllow)/.test(bashPre)
+// — a source-text regex so broad it matched the string literal `'deny'` that the
+// ENH-410 arity bug itself produced, and stayed green for the entire time the
+// Memory Enforcer was emitting `{"decision":"block","reason":"deny"}` with every
+// explanation discarded. A regex over source cannot see argument count,
+// reachability, or emitted shape.
+//
+// This file checks wiring, so it now asserts the wiring property: block sites go
+// through `outputBlockWithContext`, which carries reason + alternatives + hook
+// event. The emitted payload itself is verified behaviourally in
+// test/regression/enh-410-block-reason-contract.test.js.
+const bashPreCode = (bashPre || '').split('\n')
+  .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+  .join('\n');
 assert('HW-014',
-  bashPre !== null && /(?:block|deny|getBlockMessage|outputBlock|outputAllow)/.test(bashPre),
-  'unified-bash-pre.js contains block/allow decision logic'
+  bashPre !== null
+    && /outputBlockWithContext\s*\(/.test(bashPreCode)
+    && !/\boutputBlock\s*\(\s*[^)]*?,[^)]*?\)/.test(bashPreCode),
+  'unified-bash-pre.js routes blocks through outputBlockWithContext and never over-calls the one-parameter outputBlock'
 );
 
 // HW-015: unified-bash-pre.js checks for dangerous patterns

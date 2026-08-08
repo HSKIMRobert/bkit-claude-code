@@ -92,7 +92,7 @@ const contextParts = [];
 // ENH-226 Phase A: contextInjection opt-out — additional context 섹션만 스킵, sessionTitle은 유지.
 if (!contextInjectionEnabled) {
   // sessionTitle만 발행 (있을 때)
-  const sessionTitle = generateSessionTitle({ sessionId: input.session_id });
+  const sessionTitle = generateSessionTitle({ sessionId: input.session_id, currentTitle: input.session_title });
   if (sessionTitle) {
     console.log(JSON.stringify({
       success: true,
@@ -287,7 +287,7 @@ debugLog('UserPrompt', 'Hook completed', {
 });
 
 // ENH-227 (Issue #77 Phase A): single-source generator with opt-out + phase-change-only + stale TTL
-const sessionTitle = generateSessionTitle({ sessionId: input.session_id });
+const sessionTitle = generateSessionTitle({ sessionId: input.session_id, currentTitle: input.session_title });
 
 // v2.1.10 Sprint 7c (G-J-09): structured suggestions via IntentRouter (priority-resolved)
 // #132 (free win A): `onboardingContext` was referenced but never defined —

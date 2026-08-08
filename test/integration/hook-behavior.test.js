@@ -46,9 +46,19 @@ assert('HB-004', parsed.toolName === 'Write' && parsed.filePath === '/test/file.
   'parseHookInput extracts toolName and filePath correctly');
 
 // HB-005: parseHookInput handles empty input
+// v2.1.33: this expected empty strings. `parseHookInput` returns **null** for
+// every absent field — its `pick()` helper explicitly treats undefined, null and
+// '' as "absent" and returns null (lib/core/io.js:276-281). The two are
+// interchangeable for every consumer (all of them destructure and test for
+// truthiness), so this was a stale expectation rather than a behaviour change.
+// Assert the documented contract: absent fields come back null, not undefined
+// and not the empty string, so callers can rely on a single absent-marker.
 const emptyParsed = io.parseHookInput({});
-assert('HB-005', emptyParsed.toolName === '' && emptyParsed.filePath === '',
-  'parseHookInput returns empty strings for missing fields');
+assert('HB-005',
+  emptyParsed.toolName === null && emptyParsed.filePath === null
+    && emptyParsed.content === null && emptyParsed.command === null
+    && emptyParsed.oldString === null,
+  `parseHookInput returns null for missing fields (got ${JSON.stringify(emptyParsed)})`);
 
 // ============================================================
 // HB-006~010: lib/control/destructive-detector.js behavior
@@ -66,10 +76,18 @@ if (dd && typeof dd.detect === 'function') {
   assert('HB-006', rmResult && rmResult.detected === true,
     'detect("rm -rf /tmp/test") returns detected=true');
 
-  // HB-007: DROP TABLE is not in GUARDRAIL_RULES (handled by QA handler instead)
+  // HB-007: SQL destructive statements ARE in GUARDRAIL_RULES.
+  //
+  // v2.1.33: this asserted the opposite — that DROP TABLE was out of scope and
+  // left to the QA handler. That scope boundary moved when the rule set grew
+  // from 8 to 12: G-009 (DROP TABLE/DATABASE/SCHEMA/INDEX/VIEW), G-010
+  // (TRUNCATE / destructive ALTER), G-010b (DELETE FROM without WHERE) and
+  // G-011 (dropDatabase) were added deliberately. The assertion kept encoding
+  // the pre-expansion scope, so a real security improvement read as a failure.
+  // Inverted to lock the improvement in place.
   const dropResult = dd.detect('Bash', 'psql -c "DROP TABLE users"');
-  assert('HB-007', !dropResult || dropResult.detected === false,
-    'detect("DROP TABLE") not in GUARDRAIL_RULES (QA handler scope)');
+  assert('HB-007', !!dropResult && dropResult.detected === true,
+    'detect("DROP TABLE") is caught by GUARDRAIL_RULES (G-009, added post-v2.1.x)');
 
   // HB-008: safe command passes
   const safeResult = dd.detect('Bash', 'ls -la');

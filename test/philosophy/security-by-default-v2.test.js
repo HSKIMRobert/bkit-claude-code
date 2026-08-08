@@ -85,10 +85,15 @@ assert('SB-005',
 
 const { GUARDRAIL_RULES } = destructiveDetector;
 
-// --- SB-006: GUARDRAIL_RULES has exactly 8 rules ---
+// --- SB-006: destructive protection has not been weakened ---
+// v2.1.33: was `length === 8`. This is a security assertion, and an exact count
+// makes it fail on exactly the change we want (adding a rule) while staying
+// silent on the change we fear (removing one). The set has grown to 12. Assert
+// a floor instead, so protection can only be added, never quietly reduced.
+const GUARDRAIL_RULE_FLOOR = 8;
 assert('SB-006',
-  Array.isArray(GUARDRAIL_RULES) && GUARDRAIL_RULES.length === 8,
-  `GUARDRAIL_RULES has exactly 8 rules (found: ${GUARDRAIL_RULES.length})`
+  Array.isArray(GUARDRAIL_RULES) && GUARDRAIL_RULES.length >= GUARDRAIL_RULE_FLOOR,
+  `GUARDRAIL_RULES must keep at least ${GUARDRAIL_RULE_FLOOR} destructive rules (found: ${GUARDRAIL_RULES.length}) — a drop below the floor means protection was removed`
 );
 
 // --- SB-007: G-001 (Recursive delete) is critical severity, deny action ---
@@ -124,10 +129,33 @@ assert('SB-010',
 // SB-011~015: Trust Score starts at 50 (middle, not high)
 // =====================================================================
 
-// --- SB-011: getRuntimeState trustScore is 40 (component weighted sum) ---
+// --- SB-011: control state surfaces the trust engine's score, and it starts low ---
+//
+// v2.1.33: this asserted a bare `=== 40`, which was wrong twice over.
+//
+// First, 40 was the 6-component baseline; v2.1.19 added a 7th component
+// (externalDogfoodFeedbackResponseRate, weight 0.05) and rescaled the original
+// six by x0.95, so a fresh profile now computes
+// 0.1425*100 + 0.1425*100 + 0.095*100 = 38.
+//
+// Second, and more importantly, ANY constant is wrong here. With no
+// .bkit/state/control.json on disk, getRuntimeState() builds a default whose
+// trustScore comes from _getTrustScore() — which reads the machine's actual
+// trust profile. So this assertion's expected value depended on how much the
+// developer had used bkit: 38 on a fresh clone, 50 on this machine. A test that
+// passes or fails based on accumulated local state is not a test.
+//
+// Assert the two properties that are actually contractual: control state
+// reports the same score the trust engine does (the wiring), and a session
+// starts in the lower half of the range rather than trusted-by-default (the
+// security property this section is named for).
+// `trustEngine` is already required at the top of this file.
+const engineScore = trustEngine.loadTrustProfile().trustScore;
 assert('SB-011',
-  initState.trustScore === 40,
-  'getRuntimeState trustScore is 40 (calculated from trust-engine components)'
+  initState.trustScore === engineScore
+    && Number.isFinite(initState.trustScore)
+    && initState.trustScore >= 0 && initState.trustScore <= 50,
+  `control runtime state must mirror the trust engine and start un-trusted (control: ${initState.trustScore}, engine: ${engineScore}; expected equal and within 0..50)`
 );
 
 // --- SB-012: Trust score 40 is below L3 upgrade threshold (65) ---

@@ -7,7 +7,7 @@
  *
  * Layer 2 검증: extractFeatureFromContext → extractFeature 위임 (DRY)
  *
- * @module tests/unit/extract-feature-from-context
+ * @module test/unit/extract-feature-from-context
  */
 
 const test = require('node:test');

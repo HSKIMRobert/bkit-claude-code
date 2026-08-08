@@ -1477,8 +1477,14 @@ if (checkFiles(/console\.log/, ['.ts', '.tsx'])) {
   process.exit(0);
 }
 
-// All checks passed
-console.log(JSON.stringify({ decision: "allow" }));
+// All checks passed — say nothing and let the tool proceed.
+//
+// v2.1.33 (ENH-397): this example previously printed `{"decision":"allow"}`.
+// PreToolUse has no `"allow"` decision; only `"block"` is meaningful, and an
+// unrecognized value is ignored. Copying that line gave the impression of an
+// explicit approval that never existed. To permit a call, emit nothing (or an
+// empty object) and exit 0. See code.claude.com/docs/en/hooks.md.
+process.exit(0);
 ```
 
 ---

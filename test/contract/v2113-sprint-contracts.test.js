@@ -12,7 +12,7 @@
  *   - Sprint 4 sprint-handler signature + audit + control mirror
  *   - Sprint 1+2+3+4 hooks.json invariant
  *
- * Run: node tests/contract/v2113-sprint-contracts.test.js
+ * Run: node test/contract/v2113-sprint-contracts.test.js
  *
  * Exit code 0 = all contracts hold. Non-zero = drift detected.
  *
@@ -193,8 +193,14 @@ function sc06() {
   // dogfood/bootstrap, sqm baseline, self-dogfood override, external feedback,
   // gate-fail resolution, context import, KPI divergence). The enum is the
   // source of truth; this assertion had simply stopped tracking it.
-  assert.strictEqual(al.ACTION_TYPES.length, 40,
-    'ACTION_TYPES expected 29 entries, got ' + al.ACTION_TYPES.length +
+  // v2.1.33: read the expected count from the counts SoT instead of restating
+  // it here. This literal had already drifted repeatedly — the assertion said
+  // 40 while its own failure message still said 29 — and it was the fifth place
+  // carrying an independent ACTION_TYPES number (docs 19, AL-007 29, NG-006 16,
+  // here 29/40, implementation 41). One number, one home.
+  const { EXPECTED_COUNTS } = require(path.join(projectRoot, 'lib/domain/rules/docs-code-invariants'));
+  assert.strictEqual(al.ACTION_TYPES.length, EXPECTED_COUNTS.actionTypes,
+    'ACTION_TYPES expected ' + EXPECTED_COUNTS.actionTypes + ' entries (per docs-code-invariants), got ' + al.ACTION_TYPES.length +
     ' — entries: [' + al.ACTION_TYPES.join(', ') + ']');
   const required = [
     'sprint_paused',                // v2.1.13

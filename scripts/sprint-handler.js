@@ -211,7 +211,7 @@ async function handleSprintAction(action, args, deps) {
   }
   const a = args || {};
   // v2.1.26 (I-11, test isolation): a projectRoot injected via `deps` (the
-  // pattern used by tests/contract/v2113-sprint-contracts.test.js SC-05) was
+  // pattern used by test/contract/v2113-sprint-contracts.test.js SC-05) was
   // previously DROPPED here — `getInfra(a)` only consulted `args`, so state,
   // registry, and audit writes leaked into the real .bkit. Resolve the
   // injected root from deps first, then args; default (no injection) is

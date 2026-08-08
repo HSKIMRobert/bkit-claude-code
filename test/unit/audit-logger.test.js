@@ -68,7 +68,12 @@ assert('AL-005', typeof entry.timestamp === 'string' && entry.timestamp.includes
 // + v2.1.16 2 (scope_boundary_approved [#95 F2], gate_measured [#94 F3]) = 29.
 
 assert('AL-006', Array.isArray(mod.ACTION_TYPES), 'ACTION_TYPES is an array');
-assert('AL-007', mod.ACTION_TYPES.length === 29, `ACTION_TYPES has 29 entries (got ${mod.ACTION_TYPES.length})`);
+// v2.1.33 (D1): assert against the counts SoT instead of a locally hardcoded
+// number. A literal here is the stale-baseline class docs-code-invariants.js
+// was created to eliminate; AL-007 drifted to 29 while the module shipped 40.
+const { EXPECTED_COUNTS } = require('../../lib/domain/rules/docs-code-invariants');
+assert('AL-007', mod.ACTION_TYPES.length === EXPECTED_COUNTS.actionTypes,
+  `ACTION_TYPES has ${EXPECTED_COUNTS.actionTypes} entries per docs-code-invariants (got ${mod.ACTION_TYPES.length})`);
 assert('AL-008', mod.ACTION_TYPES.includes('phase_transition'), 'Includes phase_transition');
 assert('AL-009', mod.ACTION_TYPES.includes('destructive_blocked'), 'Includes destructive_blocked');
 assert('AL-010', mod.ACTION_TYPES.includes('checkpoint_created'), 'Includes checkpoint_created');
