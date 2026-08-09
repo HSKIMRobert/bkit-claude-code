@@ -238,8 +238,21 @@ if (LAYERS.includes('skills')) {
    * installed build already matches latest. At the default budget it was killed
    * mid-flight (SIGTERM, exit 143) and looked broken.
    */
+  /*
+   * Skills that legitimately take minutes, with the measurement behind each.
+   * A SIGTERM from this harness is impatience, not a defect, and calling it a
+   * failure would train the reader to discount the whole report.
+   */
   const LONG_RUNNING = {
+    // Reaches the network to compare the installed CC version against npm.
     'cc-version-analysis': 600000,
+    /*
+     * v2.1.34: measured 136 s in isolation (exit 0, correct behaviour — it
+     * reports that the throwaway directory has nothing to QA, and its PRE-SCAN
+     * passes with 0 CRITICAL). Under the load of 121 sequential live sessions it
+     * crossed the 180 s default. It runs five scanners over the whole repository.
+     */
+    'qa-phase': 600000,
   };
 
   for (const skill of skills) {

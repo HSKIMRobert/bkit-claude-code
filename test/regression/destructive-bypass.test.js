@@ -219,6 +219,55 @@ test('heredoc stripping keeps the delimiter line visible', () => {
 
 
 // ---------------------------------------------------------------------------
+// A heredoc pattern must not span past its own terminator (v2.1.34)
+//
+// The pipe-shell rule matches `<<TAG` … `| <interpreter>` with `[\s\S]*?`
+// between them, and that crosses newlines, terminator lines, and any number of
+// later commands. So a heredoc that opened and closed cleanly, followed further
+// down by an unrelated pipe, was graded CRITICAL and refused.
+//
+// Reproduced against the session writing this release: a quoted python heredoc
+// followed four lines later by `echo done | python3 -c "…"` was blocked as
+// "pipe to a shell/interpreter". Same defect class as `deleteTargetIsBroad`
+// reading to end-of-input — a pattern looking past the construct it analyses —
+// this time in a guard that refuses the user's own correct commands.
+// ---------------------------------------------------------------------------
+
+const { detect: heredocDetect } = require(path.join(PROJECT_ROOT, 'lib/defense/heredoc-detector'));
+
+test('HEREDOC-REGION an unrelated later pipe does not make a closed heredoc critical', () => {
+  const cmd = [
+    "python3 - " + HD,
+    'print("hi")',
+    'EOF',
+    'echo done ' + PIPE + ' python3 -c "import sys"',
+  ].join('\n');
+  const v = heredocDetect(cmd);
+  assert.notStrictEqual(
+    v.severity, 'critical',
+    'a heredoc that closed two lines earlier was refused because of a pipe belonging ' +
+    'to a different command. A guard that refuses correct work gets switched off, ' +
+    'and then it protects nothing.'
+  );
+});
+
+test('HEREDOC-REGION the pipe-to-interpreter bypass still denies', () => {
+  // The counterweight: scoping the scan must not open a hole. Both known exec
+  // vectors live on the opener and terminator lines, which stay inside the region.
+  const SHELL = "bash";
+  const cases = [
+    ['opener line', ['cat ' + HD + ' ' + PIPE + ' ' + SHELL, 'whoami', 'EOF'].join('\n')],
+    ['terminator line', ['cat ' + HD, 'whoami', 'EOF-1 ' + PIPE + ' ' + SHELL].join('\n')],
+  ];
+  for (const [label, cmd] of cases) {
+    assert.strictEqual(
+      heredocDetect(cmd).severity, 'critical',
+      `the ${label} bypass is no longer refused — the region split opened a hole`
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Issue #145 — quoted-tag heredoc bodies are inert (BrightGold70 / Hawk Kim)
 //
 // Reported independently while writing documentation *about this guard*, which

@@ -19,11 +19,11 @@ an unsampled one.** So this pass enumerates every surface bkit ships.
 
 | Layer | Cases | Pass | Notes |
 |---|---|---|---|
-| **Hook events** | 23 | **23** | includes explicit `Write`/`Edit` coverage checks |
-| **MCP tools** | 19 | **19** | real stdio JSON-RPC handshake, both servers |
-| **Skills** | 45 | **44** | 1 long-running, verified working in isolation (below) |
+| **Hook events** | 23 | **23** | 14 of 21 events observed dispatching; 7 carry a measured reason |
+| **MCP tools** | 38 | **38** | real stdio JSON-RPC `tools/call`, both servers |
+| **Skills** | 45 | **44** | 1 long-running, verified correct in isolation (below) |
 | **Agents** | 34 | **34** | verified by `SubagentStart` evidence, not by prose |
-| **Total** | **121** | **120** | |
+| **Total** | **140** | **139** | re-run in full after every change in this release |
 
 ## What each layer actually proves
 
@@ -100,7 +100,7 @@ when the defect is reintroduced, not merely to pass today:
 | `deprecation-registry-schema` | 26 | — |
 | `ci-host-integration-wiring` | 7 | a workflow claiming CI runs a live session → 1 failure |
 
-**Totals: 369 files, 6,898 assertions, 0 failures, 0 errored files.**
+**Totals: 369 files, 6,900 assertions, 0 failures, 0 errored files.**
 
 The assertion count jumped by 481 without a single new assertion being written:
 `qa-aggregate` had no pattern for the `pass:N fail:N skip:N` summary that 36
@@ -148,8 +148,16 @@ Two further findings were real and in bkit's data.
 
 **39 keywords ended in a sentence period** (`"제어."`, `"롤백."`), captured from
 the last entry on each `Triggers:` line. They looked alive and could never
-match. After cleanup, `제어 레벨 바꿔줘` → `bkit:control` and `롤백 해줘` →
-`bkit:rollback` route for the first time.
+match.
+
+A correction to an earlier draft of this report, which claimed those prompts
+routed "for the first time" after the cleanup. **They did not — they already
+worked.** The defect was in the GENERATED table this release introduces, not in
+the hand-curated table users have been running, and it was caught before
+shipping. Measured against origin/main: `제어 레벨 바꿔줘` → `bkit:control` and
+`롤백 해줘` → `bkit:rollback` on both sides. The claim was unearned and is
+withdrawn; what is real is that a generator now exists, so `TL-CLEAN` rejects a
+trailing period outright before it can reach a release.
 
 That cleanup then exposed a second: the vendor-specific `bkend-*` skills had
 lost their vendor token on the non-English side, leaving bare `인증`, `로그인`,

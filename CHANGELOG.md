@@ -102,8 +102,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     must never be the greediest matcher.
   - **39 keywords ended in a sentence period** — `"제어."`, `"롤백."` — captured
     from the last entry on each `Triggers:` line. They looked alive and could
-    never match. After the fix, "제어 레벨 바꿔줘" routes to `/control` and
-    "롤백 해줘" to `/rollback` for the first time.
+    never match. This was a defect in the GENERATED table, introduced by the
+    extraction and caught before release; the hand-curated table already carried
+    those keywords correctly, so no user was ever affected. Recorded because the
+    generator is the thing that will run again, and `TL-CLEAN` now rejects a
+    trailing period outright.
   - The vendor-specific `bkend-*` skills had lost their vendor token on the
     non-English side, leaving bare `인증`, `로그인`, `회원가입`, `테이블`. Once
     the period cleanup made those matchable, a generic signup request routed to
@@ -271,7 +274,7 @@ in the code, looks configured, and reaches nothing.
   the gate never went green over a real failure; what it misreported was how much
   verification stood behind a green one. `node test/run-all.js` had the same blind
   spot from the other side, and never opened six regression files at all. Both
-  runners now agree: 6,898 assertions across 369 files.
+  runners now agree: 6,900 assertions across 369 files.
 
 - **`.bkit/runtime/hook-dispatch.ndjson` compaction destroyed failure records,**
   keying on `(event, tool)` so every failure against one event collapsed to a
@@ -353,6 +356,36 @@ repair was done paid for itself immediately.
   the exclusion written for README/CHANGELOG release snapshots had silently
   generalised to two files stating current fact.
   `test/contract/component-inventory.test.js` now measures them.
+
+### Found by the full-surface live QA re-run
+
+All four layers were re-run as real `claude -p --plugin-dir` sessions after the
+changes above, because the earlier pass predated them: **139 of 140** cases
+(skills 44/45, agents 34/34, hook events 23/23, MCP tools 38/38). The one
+non-pass is `qa-phase`, measured at 136 s and exit 0 in isolation — slow under
+121 sequential sessions, not broken — now registered as long-running with that
+measurement recorded beside it.
+
+- **A heredoc pattern scanned past its own terminator.** The pipe-shell rule
+  spans from `<<TAG` to `| <interpreter>` with a lazy
+  any-character run between them, and that crosses newlines, terminator lines
+  and any number of later commands. A heredoc that opened and closed cleanly,
+  followed further down by an unrelated pipe, was therefore graded CRITICAL and
+  refused. Reproduced against the session writing this release: a quoted python
+  heredoc followed four lines later by an unrelated pipe into `python3 -c` was
+  blocked as "pipe to a shell/interpreter". Same class as `deleteTargetIsBroad`
+  reading to end-of-input, this time in a guard that refuses the user's own
+  correct commands. Patterns now match per heredoc region; all three known
+  bypasses — opener line, terminator line, quoted tag — still deny.
+
+- **A routing claim in this release's own notes was unearned, and is withdrawn.**
+  An earlier draft said `제어 레벨 바꿔줘` and `롤백 해줘` routed correctly "for the
+  first time" after the trailing-period cleanup. Measured against origin/main:
+  **they already worked.** The 39 broken keywords were in the GENERATED table
+  this release introduces — a defect in new code, caught before shipping — not
+  in the hand-curated table users have been running. Corrected here, in the PR,
+  and in both QA reports. A release about unverifiable claims does not get to
+  make one.
 
 ### Fixed — GitHub issues
 
