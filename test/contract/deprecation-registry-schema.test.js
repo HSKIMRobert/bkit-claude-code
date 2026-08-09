@@ -85,14 +85,48 @@ for (const section of SECTIONS) {
 
     if (typeof entry.verifiedBy === 'string' && entry.verifiedBy.length > 0) {
       test(`DRS-5 ${label} verifiedBy points at a file that exists`, () => {
-        const target = path.join(PROJECT_ROOT, entry.verifiedBy.replace(/\*.*$/, ''));
-        const dir = path.dirname(target);
-        const exists = fs.existsSync(target)
-          || (fs.existsSync(dir) && fs.readdirSync(dir).length > 0);
+        /*
+         * v2.1.34 — the directory fallback is gone.
+         *
+         * This used to accept the citation when the *containing directory* held
+         * any file at all, so `verifiedBy: "test/contract/does-not-exist.js"`
+         * passed because `test/contract/` is not empty. A check that green-lights
+         * a citation resolving to nothing is the same defect it was written to
+         * catch, one level up.
+         *
+         * A glob still resolves against real entries — but it must MATCH one.
+         */
+        const citation = entry.verifiedBy;
+        const abs = path.join(PROJECT_ROOT, citation);
+
+        if (!/[*?]/.test(citation)) {
+          assert.ok(
+            fs.existsSync(abs),
+            `verifiedBy cites ${citation}, which does not exist — a citation that `
+              + 'resolves to nothing is worse than no citation'
+          );
+          assert.ok(
+            fs.statSync(abs).isFile(),
+            `verifiedBy cites ${citation}, which is a directory. Name the file that `
+              + 'holds the verification, not the folder it lives in.'
+          );
+          return;
+        }
+
+        const dir = path.dirname(abs);
+        const pattern = new RegExp(
+          '^' + path.basename(citation)
+            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+            .replace(/\*/g, '.*')
+            .replace(/\?/g, '.') + '$'
+        );
+        const matches = fs.existsSync(dir)
+          ? fs.readdirSync(dir).filter((f) => pattern.test(f))
+          : [];
         assert.ok(
-          exists,
-          `verifiedBy cites ${entry.verifiedBy}, which does not exist — a citation that `
-            + 'resolves to nothing is worse than no citation'
+          matches.length > 0,
+          `verifiedBy cites ${citation}, which matches no file. A glob that matches `
+            + 'nothing is a citation to nothing.'
         );
       });
     }

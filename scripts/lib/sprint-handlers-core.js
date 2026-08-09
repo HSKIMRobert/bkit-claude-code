@@ -417,9 +417,24 @@ async function handleArchive(args, infra) {
   });
   if (result.ok && result.sprint) {
     await infra.stateStore.save(result.sprint);
-    // V#4 — best-effort MEMORY.md auto-update (non-blocking, isolated failure)
+    /*
+     * V#4 — best-effort MEMORY.md auto-update (non-blocking, isolated failure)
+     *
+     * v2.1.34: the path was `./sprint-memory-writer`, resolved from
+     * `scripts/lib/`. The module lives at `scripts/sprint-memory-writer.js`,
+     * one directory up, so every call threw MODULE_NOT_FOUND — into a catch
+     * that set `memoryReason` and moved on. The sprint archive therefore never
+     * wrote its entry to MEMORY.md, for as long as the feature has existed, and
+     * the only trace was a field nobody reads.
+     *
+     * Two of this release's own themes in one line: a best-effort catch hiding
+     * a hard failure, and a feature that is registered, tested at the unit
+     * level, and unreachable in production. Found by running `/pdca qa` — the
+     * orchestrator surfaced it among five false positives that had kept the
+     * whole gate red.
+     */
     try {
-      const writer = require('./sprint-memory-writer');
+      const writer = require('../sprint-memory-writer');
       const projectRoot = (args && args.projectRoot) || process.cwd();
       const memResult = await writer.appendSprintToMemory(result.sprint, { projectRoot: projectRoot });
       result.memoryUpdated = memResult.ok && memResult.appended;

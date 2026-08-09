@@ -320,7 +320,16 @@ try {
 // ENH-227 (Issue #77 Phase A): single-source generator with opt-out + phase-change-only + stale TTL
 const { generateSessionTitle } = require('../lib/pdca/session-title');
 const primaryFeature = onboardingContext.onboardingData.primaryFeature || pdcaStatus?.primaryFeature || null;
-const currentPhase = onboardingContext.onboardingData.phase || pdcaStatus?.currentPhase || null;
+/*
+ * v2.1.34: `pdcaStatus?.currentPhase` — a key the v3 schema does not have. The
+ * line directly above already reads `primaryFeature` correctly, so one fallback
+ * worked and the next silently did not: the phase component of the session
+ * title was null unless onboarding happened to supply it. The phase lives on
+ * the feature entry, which is where it is now read from.
+ */
+const currentPhase = onboardingContext.onboardingData.phase
+  || (primaryFeature ? pdcaStatus?.features?.[primaryFeature]?.phase : null)
+  || null;
 // GitHub #119: Claude Code exposes CLAUDE_CODE_SESSION_ID (not CLAUDE_SESSION_ID).
 // Reading the legacy name made sessionId null on SessionStart → the per-session
 // `·a1b2` title tag from #111 never applied → concurrent same-repo sessions

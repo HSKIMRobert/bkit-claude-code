@@ -328,9 +328,6 @@ if (LAYERS.includes('hooks')) {
    */
   session('say ok', { cwd: work, settingSources: 'default', timeout: 180000 });
 
-  const ledger = readDispatch(work);
-  const seen = ledger.events || {};
-
   /*
    * Deliberately provoke the events an ordinary session does not reach.
    *
@@ -346,8 +343,16 @@ if (LAYERS.includes('hooks')) {
       + 'Then run /bkit:control to expand a slash command. Then say done.'],
     ['CwdChanged',
       'Create a subdirectory called probe-subdir, then use the Bash tool to cd into it and run pwd. Say done.'],
+    /*
+     * TaskCreate, not Task. Measured: dispatching a subagent with the `Task`
+     * tool fires SubagentStart/SubagentStop and NOTHING else — it does not
+     * create a tracked task, so neither TaskCreated nor TaskCompleted reaches
+     * a hook. Driving `TaskCreate` + `TaskUpdate` fires both.
+     */
     ['TaskCreated + TaskCompleted',
-      'Use the Task tool with subagent_type "Explore" to list the files here, then say done.'],
+      'Use the TaskCreate tool to create one task with subject "probe task" and '
+      + 'description "verify the task hooks dispatch". Then use TaskUpdate to set that '
+      + 'task to completed. Then say done.'],
     ['ConfigChange',
       'Use the Write tool to create .claude/settings.json containing exactly {"env":{"BKIT_PROBE":"1"}}. Then say done.'],
   ];
@@ -386,11 +391,37 @@ if (LAYERS.includes('hooks')) {
    * ledger) in `work`.
    */
   process.stdout.write('~');
-  session(
-    'Read every file under lib/core and lib/application in the added directory '
-    + 'and summarise each one in a sentence. Be exhaustive.',
-    { cwd: work, addDir: PROJECT_ROOT, autocompact: '100k', timeout: 900000 }
-  );
+  (() => {
+    /*
+     * 100k tokens is the smallest --autocompact window the CLI accepts, so the
+     * session has to genuinely accumulate that much before compaction runs.
+     *
+     * Two earlier shapes failed, both measured. Pointing the session at one
+     * large file made the model decline — correctly — rather than overflow
+     * itself ("reading it once would overflow my context"). Reading lib/ through
+     * --add-dir never got close to the threshold. Twelve ~40 KB chunk files read
+     * in order accumulate past it while no single Read is big enough to refuse:
+     * PreCompact and PostCompact both fire, in 243 s.
+     */
+    const chunkDir = path.join(work, 'compaction-probe');
+    fs.mkdirSync(chunkDir, { recursive: true });
+    for (let f = 1; f <= 12; f++) {
+      const lines = [];
+      for (let i = 0; i < 700; i++) {
+        lines.push(`chunk ${f} line ${i} filler text consuming context window space here`);
+      }
+      fs.writeFileSync(
+        path.join(chunkDir, `chunk${String(f).padStart(2, '0')}.txt`),
+        lines.join('\n')
+      );
+    }
+    session(
+      'Read compaction-probe/chunk01.txt through compaction-probe/chunk12.txt, one at a '
+      + 'time, in order. After each file, state its first and last line verbatim. '
+      + 'Do not skip any.',
+      { cwd: work, autocompact: '100k', timeout: 900000 }
+    );
+  })();
   process.stdout.write('\n');
 
   /*
@@ -406,30 +437,54 @@ if (LAYERS.includes('hooks')) {
    */
   const NEEDS_TRIGGER = {
     StopFailure:
-      'requires a real API-level failure (rate limit, overload, billing) that cannot be manufactured',
+      'requires an API-level failure (rate limit, overload, billing) on the model '
+      + 'request itself, which a test cannot manufacture without breaking the account',
     UserPromptExpansion:
-      'a slash command named inside a -p prompt is not expanded as a command; needs an interactive expansion',
-    PreCompact:
-      'the probe session did not reach the compaction threshold even under --autocompact 100k',
-    PostCompact:
-      'follows PreCompact, which the probe session did not reach',
-    TaskCreated:
-      'the Task tool dispatching a subagent does not create a TRACKED task; needs TaskCreate',
-    TaskCompleted:
-      'follows TaskCreated, which a subagent dispatch does not produce',
-    TeammateIdle:
-      'requires Agent Teams with a teammate that goes idle; a single subagent dispatch never idles',
+      'a slash command named inside a -p prompt is passed through as text; expansion '
+      + 'happens in the interactive prompt box, which -p does not have',
     PostToolUseFailure:
-      'the failing command was refused or handled before the tool itself reported failure',
+      'measured: Claude Code rejects an invalid tool call BEFORE dispatching any hook. '
+      + 'A successful Edit produced PreToolUse:Edit then PostToolUse:Edit in the ledger; '
+      + 'the same Edit with a non-matching old_string produced neither, and no '
+      + 'PostToolUseFailure. A non-zero exit from a Bash command is an ordinary '
+      + 'PostToolUse, not a tool failure — the tool ran and returned',
     ConfigChange:
-      'writing .claude/settings.json mid-session did not register as a settings change in -p mode',
+      'measured: writing .claude/settings.json with the Write tool during the session '
+      + 'does not register as a settings change, with default setting sources. The '
+      + 'matcher watches project_settings|skills and the watcher appears not to observe '
+      + 'in-session writes to them',
     PermissionRequest:
-      'non-interactive -p has no permission prompt surface, in any permission mode',
+      'measured: -p auto-approves under every permission mode tried (default, '
+      + 'acceptEdits) and never raises a prompt, so there is no request to hook',
     Notification:
-      'non-interactive -p raises neither a permission prompt nor an idle prompt',
+      'follows PermissionRequest: -p raises neither a permission prompt nor an idle '
+      + 'prompt, and those are the two matchers this event carries',
+    TeammateIdle:
+      'measured: with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 a dispatched subagent runs '
+      + 'to completion and exits. Idleness needs a teammate that is alive and waiting, '
+      + 'which a one-shot -p session never produces',
     CwdChanged:
-      'cd inside a Bash tool call does not change the SESSION working directory',
+      'measured: cd inside a Bash tool call changes that command chain only, not the '
+      + 'SESSION working directory. The model confirmed the same in its own reply',
   };
+
+  /*
+   * Read the ledger AFTER the triggers — this was the bug that made the whole
+   * trigger section pointless.
+   *
+   * The read used to sit above `const triggers = [...]`, so `seen` was a
+   * snapshot taken BEFORE anything was provoked. Every trigger ran, several
+   * genuinely fired their event, and the evaluation below judged from a view of
+   * the world captured beforehand. Measured: isolated probes fired
+   * TaskCreated, TaskCompleted, PreCompact and PostCompact, and this harness
+   * reported all four "never dispatched" in the same repository minutes later.
+   *
+   * A harness that provokes an event and then reads a stale snapshot is the
+   * defect this release is named for, sitting inside the tool built to detect
+   * it. Nothing about the triggers was wrong; the evidence was being discarded.
+   */
+  const ledger = readDispatch(work);
+  const seen = ledger.events || {};
 
   for (const event of hookEvents) {
     const fired = seen[event] && seen[event].count > 0;

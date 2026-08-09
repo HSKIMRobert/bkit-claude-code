@@ -59,7 +59,13 @@ if (notificationType === 'idle_prompt') {
 
     if (pdcaStatus) {
       const feature = pdcaStatus.feature || pdcaStatus.featureName || 'none';
-      const phase = pdcaStatus.phase || pdcaStatus.currentPhase || 'none';
+      // v2.1.34: `currentPhase` is a v1 schema key and always undefined, so this
+      // fallback chain ended at 'none'. The phase lives on the feature entry.
+      const phase = pdcaStatus.phase
+        || (pdcaStatus.primaryFeature && pdcaStatus.features
+          && pdcaStatus.features[pdcaStatus.primaryFeature]
+          && pdcaStatus.features[pdcaStatus.primaryFeature].phase)
+        || 'none';
       const progress = pdcaStatus.progress || 'unknown';
       fragments.push(`PDCA: feature="${feature}", phase=${phase}, progress=${progress}`);
       debugLog('Notification', 'PDCA context enriched', { feature, phase });

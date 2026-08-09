@@ -271,7 +271,7 @@ in the code, looks configured, and reaches nothing.
   the gate never went green over a real failure; what it misreported was how much
   verification stood behind a green one. `node test/run-all.js` had the same blind
   spot from the other side, and never opened six regression files at all. Both
-  runners now agree: 6,875 assertions across 366 files.
+  runners now agree: 6,898 assertions across 369 files.
 
 - **`.bkit/runtime/hook-dispatch.ndjson` compaction destroyed failure records,**
   keying on `(event, tool)` so every failure against one event collapsed to a
@@ -286,6 +286,73 @@ in the code, looks configured, and reaches nothing.
   one release earlier, one layer down. A source-integrity check now rejects raw
   control bytes across every shipped text file, and is proven against the real
   defect.
+
+### Found by running bkit's own orchestrators
+
+Requirement to use `/pdca` and `/sprint` had been deferred on the grounds that
+the quality gate they depend on was itself under repair. Running them once the
+repair was done paid for itself immediately.
+
+- **`/pdca qa` had been permanently BLOCKED, and that hid a real defect.**
+  `scripts/qa/pre-release-check.sh` exits 1 on any CRITICAL, and the dead-code
+  scanner reported six. Five were the scanner reading COMMENTS as code: a JSDoc
+  block documenting a module's calling site
+  (`const { detect } = require('../lib/defense/heredoc-detector')`) was resolved
+  as a real require against the wrong file, and `scripts/check-deadcode.js`
+  failed against itself twice because the comment explaining its own regex
+  carries `require('./foo')` as an example. **A gate that is permanently red is
+  as uninformative as one that is permanently green** — and this one was
+  concealing the sixth finding, which was genuine:
+  `scripts/lib/sprint-handlers-core.js` required `./sprint-memory-writer` while
+  the module sits at `scripts/sprint-memory-writer.js`, one directory up. Every
+  sprint archive threw MODULE_NOT_FOUND into a best-effort catch, so the
+  MEMORY.md auto-update never ran once. Both halves fixed; the scan now passes.
+
+- **Thirteen production sites read PDCA state keys the v3 schema does not have.**
+  Reading a renamed key is not a crash — it is `undefined`, which flows on as a
+  falsy fallback and the feature it guards simply stops happening. The worst is
+  in the busiest hook bkit has: `scripts/unified-stop.js` extracted `feature`,
+  `currentPhase`, `nextPhase`, `matchRate` and `projectLevel` from keys that are
+  all absent, so `feature` and `currentPhase` were permanently null — and they
+  gate **four** module integrations: checkpoint creation before a phase
+  transition, quality-gate recording, the state-machine transition, and the
+  workflow-engine advance. All four have been unreachable since the v3
+  migration, and nothing logged it, because a skipped `if (feature && phase)` is
+  indistinguishable from having no active cycle. Also fixed: the manual-compaction
+  guard that protects a live do/check/act cycle (never engaged), the
+  `file_change_count` metric (never collected), the next-action engine's PDCA
+  hints (never produced), the session-title phase component, and the
+  code-review-stop suggestions.
+
+  `scripts/pre-write.js` had carried a comment since v2.1.15 stating outright
+  that `currentFeature` does not exist on v2/v3. Someone knew, fixed one site,
+  and left twelve. `test/contract/state-schema-keys.test.js` now bans reads of
+  retired keys across all 274 production files, scoped to status-object
+  receivers so the state machine's own legitimate `currentState` is untouched.
+
+- **`ctx.sprintStatus` in the next-action engine has no producer** anywhere in
+  the repository, and its field names disagree with the sprint entity besides.
+  Left in place and documented rather than deleted or cosmetically renamed —
+  wiring a caller is a feature decision, and renaming fields would make dead
+  code look alive without making it run.
+
+- **The live-QA harness read its evidence before producing it.** The hooks layer
+  provoked twelve events with deliberate triggers and then evaluated a ledger
+  snapshot taken *above* the trigger block. Isolated probes fired TaskCreated,
+  TaskCompleted, PreCompact and PostCompact; the harness reported all four
+  "never dispatched" minutes later in the same repository. With the read moved
+  after the triggers — and with the triggers corrected (TaskCreate rather than
+  the Task tool; twelve chunked reads rather than one large file) — observed
+  events went from **9 of 21 to 14 of 21**. The seven that remain each carry a
+  measured reason rather than a guess, e.g. *"cd inside a Bash tool call changes
+  that command chain only, not the SESSION working directory"*.
+
+- **The Component Inventory in `CUSTOMIZATION-GUIDE.md` was four releases stale**
+  (scripts 61 vs 62, lib/ 195 vs 198, test files "118+" vs 366, BKIT_VERSION
+  2.1.13). `docs-code-sync.js` defaults to a single target, `plugin.json`, and
+  the exclusion written for README/CHANGELOG release snapshots had silently
+  generalised to two files stating current fact.
+  `test/contract/component-inventory.test.js` now measures them.
 
 ### Fixed — GitHub issues
 

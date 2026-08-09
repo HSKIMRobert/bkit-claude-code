@@ -170,8 +170,21 @@ test('LRF-8 the observed set has not shrunk since the last recording', () => {
    */
   const observed = artifact.observedEvents || [];
   const FLOOR = [
+    // Fire in any ordinary session.
     'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
     'Stop', 'SessionEnd', 'SubagentStart', 'SubagentStop', 'InstructionsLoaded',
+    /*
+     * v2.1.34 — added once the harness's deliberate triggers were shown to work.
+     *
+     * These five needed a specific condition and were previously filed as
+     * "unverified", which is how five live hooks sat in the excused column. The
+     * triggers that produce them are in `test/qa-harness-full-live.js`:
+     * TaskCreate + TaskUpdate for the task pair, twelve chunked reads under
+     * --autocompact 100k for the compaction pair, and a command that does not
+     * exist for the tool failure. Having been observed once, an absence now
+     * needs explaining rather than accepting.
+     */
+    'TaskCreated', 'TaskCompleted', 'PreCompact', 'PostCompact', 'PostToolUseFailure',
   ];
   const lost = FLOOR.filter((e) => !observed.includes(e));
   assert.deepStrictEqual(

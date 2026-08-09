@@ -97,12 +97,23 @@ function runPdcaDocCheck(ctx) {
   out.designDoc = findDesignDoc(feature);
   out.planDoc = findPlanDoc(feature);
 
-  // v2.1.7 (Issue #79 P4) + v2.1.15 (Issue #89): primaryFeature 정정.
-  //   - currentFeature는 v2/v3 schema에 존재하지 않는 필드
-  //     (status-migration.js:31,74에서 normalize됨 → primaryFeature)
-  //   - 이전 코드는 항상 undefined를 읽어 phantom 차단이 false-true로 항상 작동했으나,
-  //     `updatePdcaStatus`가 호출되지 않는 false-negative 부작용도 가짐.
-  //     본 fix는 활성 feature 일치 시 정상 호출 + L3 게이트(plan/design 문서 존재)로 추가 방어.
+  /*
+   * v2.1.7 (issue #79 P4) + v2.1.15 (issue #89): read `primaryFeature`.
+   *
+   * `currentFeature` does not exist on the v2/v3 schema — the migration
+   * normalises it away (lib/pdca/status-migration.js:74). The old code
+   * therefore always read undefined: the phantom-write block appeared to work
+   * because a false condition happens to block, while `updatePdcaStatus` was
+   * never called, which is a false negative in the other direction.
+   *
+   * This reads the real key, and the L3 gate (plan/design documents present)
+   * backs it up.
+   *
+   * v2.1.34: three further sites were still reading `currentFeature` when this
+   * note was written and are now fixed too — lib/orchestrator/
+   * skill-invocation-effects.js (×2) and lib/orchestrator/runtime-guidance.js.
+   * A note describing a defect is not a fix for the other places it lives.
+   */
   try {
     const currentStatus = getPdcaStatusFull();
     const activeFeature = currentStatus?.primaryFeature;

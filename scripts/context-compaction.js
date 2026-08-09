@@ -37,15 +37,25 @@ const pdcaStatus = getPdcaStatusFull(true);
 try {
   const reason = (input && input.reason) ? String(input.reason) : 'unknown';
   const isManual = reason === 'manual';
-  const criticalPhase = pdcaStatus
-    && pdcaStatus.primaryFeature
-    && ['do', 'check', 'act'].includes(pdcaStatus.currentPhase);
+  /*
+   * v2.1.34: read the phase from the feature entry.
+   *
+   * `pdcaStatus.currentPhase` is a v1 schema key, so `criticalPhase` was
+   * permanently false and this guard has never once engaged. Its whole purpose
+   * is to refuse a MANUAL compaction while a do/check/act cycle is live —
+   * exactly when losing that context costs the most — and it has been inert
+   * since the v3 migration.
+   */
+  const activePhase = (pdcaStatus && pdcaStatus.primaryFeature
+    && pdcaStatus.features && pdcaStatus.features[pdcaStatus.primaryFeature]
+    && pdcaStatus.features[pdcaStatus.primaryFeature].phase) || null;
+  const criticalPhase = !!activePhase && ['do', 'check', 'act'].includes(activePhase);
 
   if (isManual && criticalPhase) {
     const blockMsg =
-      `[bkit] PDCA ${String(pdcaStatus.currentPhase).toUpperCase()} phase 진행 중 (${pdcaStatus.primaryFeature}). ` +
-      `Manual compaction은 컨텍스트 손실 위험이 있어 차단됨. ` +
-      `먼저 \`/pdca status\`로 진행 상황을 확인하거나, \`/pdca report\` 후 진행하세요.`;
+      `[bkit] PDCA ${String(activePhase).toUpperCase()} phase in progress (${pdcaStatus.primaryFeature}). ` +
+      `Manual compaction risks losing that context, so it is blocked. ` +
+      `Check progress with \`/pdca status\`, or run \`/pdca report\` first.`;
     // v2.1.10 Sprint 5.5: PreCompact counter (ENH-247/257 2-week measurement)
     try {
       const cc = require('../lib/cc-regression');
@@ -53,7 +63,7 @@ try {
         blocked: true,
         reason: reason || 'unknown',
         ccVersion: cc.detectCCVersion() || 'unknown',
-        phase: pdcaStatus.currentPhase,
+        phase: activePhase,
         sessionId: input && input.session_id ? input.session_id : null,
       });
     } catch (_e) { /* fail-silent */ }
@@ -63,7 +73,7 @@ try {
       reason: blockMsg,
       hookSpecificOutput: { hookEventName: 'PreCompact', additionalContext: blockMsg },
     }));
-    debugLog('ContextCompaction', 'PreCompact blocked', { reason, phase: pdcaStatus.currentPhase, feature: pdcaStatus.primaryFeature });
+    debugLog('ContextCompaction', 'PreCompact blocked', { reason, phase: activePhase, feature: pdcaStatus.primaryFeature });
     process.exit(2); // CC: exit 2 == block
   }
 
@@ -74,7 +84,7 @@ try {
       blocked: false,
       reason: reason || 'unknown',
       ccVersion: cc.detectCCVersion() || 'unknown',
-      phase: (pdcaStatus && pdcaStatus.currentPhase) || null,
+      phase: activePhase || null,
       sessionId: input && input.session_id ? input.session_id : null,
     });
   } catch (_e) { /* fail-silent */ }

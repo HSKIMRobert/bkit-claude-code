@@ -100,7 +100,7 @@ when the defect is reintroduced, not merely to pass today:
 | `deprecation-registry-schema` | 26 | — |
 | `ci-host-integration-wiring` | 7 | a workflow claiming CI runs a live session → 1 failure |
 
-**Totals: 366 files, 6,875 assertions, 0 failures, 0 errored files.**
+**Totals: 369 files, 6,898 assertions, 0 failures, 0 errored files.**
 
 The assertion count jumped by 481 without a single new assertion being written:
 `qa-aggregate` had no pattern for the `pass:N fail:N skip:N` summary that 36

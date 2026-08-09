@@ -91,7 +91,7 @@ bkit의 참조 스킬(`bkend-*`, `phase-1~9` 파이프라인 가이드, `bkit-ru
 | `deprecation-registry-schema` | 26 | — |
 | `ci-host-integration-wiring` | 7 | 워크플로가 "CI가 라이브 세션을 돌린다"고 주장 → 1건 실패 |
 
-**합계: 366개 파일, 6,875개 단언, 실패 0, 오류 파일 0.**
+**합계: 369개 파일, 6,898개 단언, 실패 0, 오류 파일 0.**
 
 단언 수가 481개 늘었지만 **새로 작성한 단언은 하나도 없다.** `qa-aggregate`에
 `pass:N fail:N skip:N` 요약 패턴이 없어서, 그 형식을 쓰는 36개 스위트가 각각
