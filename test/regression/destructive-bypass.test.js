@@ -124,7 +124,19 @@ const STILL_BLOCKED = [
 
 for (const [name, command] of STILL_BLOCKED) {
   test(`STILL BLOCKS ${name}`, () => {
-    assert.ok(verdict(command).detected, 'previously-caught payload now passes');
+    /*
+     * Severity, not just detection. Asserting `detected` alone would stay green
+     * if a rule were downgraded to `warning` — and warning is audit-only, so the
+     * command would no longer be refused while the test still said "STILL
+     * BLOCKS". Detection without enforcement is the v2.1.33 defect verbatim.
+     */
+    const v = verdict(command);
+    assert.ok(v.detected, 'previously-caught payload now passes');
+    assert.ok(
+      v.severities.includes('critical'),
+      `detected as [${v.severities.join(', ')}] — only critical is refused; `
+        + 'warning is audit-only and would let this run'
+    );
   });
 }
 
@@ -203,6 +215,54 @@ test('heredoc stripping keeps the delimiter line visible', () => {
   const stripped = stripHeredocBodies(['sh ' + HD, danger, 'EOF'].join('\n'));
   assert.ok(stripped.includes(HD), 'the heredoc opener must survive for structural rules');
   assert.ok(!stripped.includes('-rf /'), 'the body must be elided');
+});
+
+
+// ---------------------------------------------------------------------------
+// Issue #145 — quoted-tag heredoc bodies are inert (BrightGold70 / Hawk Kim)
+//
+// Reported independently while writing documentation *about this guard*, which
+// is also how it was hit during this release. The reporter's analysis is exact:
+// a quoted tag (`<<'TAG'`) disables all expansion in the body, which is a bash
+// language guarantee rather than a heuristic, so `$(cmd <<TAG … TAG)` appearing
+// there is prose and cannot become shell syntax.
+//
+// Verified against both branches: the reproduction below returns
+// `critical`/`sub` before the fix and `warning`/`lone-heredoc` after — and
+// `warning` is audit-only, so the command is no longer refused.
+// ---------------------------------------------------------------------------
+
+const { detect: detectHeredoc } = require(path.join(PROJECT_ROOT, 'lib/defense/heredoc-detector'));
+
+test('ISSUE-145 a quoted heredoc body mentioning $(cmd <<TAG) is not critical', () => {
+  // Verbatim from the issue.
+  const cmd = [
+    "python3 - <<'PY'",
+    `s = "$(cat <<'EOF' ... EOF)"`,
+    'PY',
+  ].join('\n');
+  const v = detectHeredoc(cmd);
+  assert.notStrictEqual(
+    v.severity,
+    'critical',
+    'a quoted-tag heredoc body cannot become shell syntax, so denying it is a false '
+      + 'positive that bites hardest when documenting this very guard'
+  );
+});
+
+test('ISSUE-145 a terminator lookalike inside the body is still inert', () => {
+  const cmd = ["cat <<'PY'", '  PY_NOT_REALLY', '$(echo INJECTED)', 'PY'].join('\n');
+  assert.notStrictEqual(detectHeredoc(cmd).severity, 'critical');
+});
+
+test('ISSUE-145 the real heredoc-to-shell bypass still blocks', () => {
+  const shell = 's' + 'h';
+  const cmd = ["cat <<'EOF' | " + shell, 'echo hi', 'EOF'].join('\n');
+  assert.strictEqual(
+    detectHeredoc(cmd).severity,
+    'critical',
+    'narrowing the false positive must not open the vector ENH-310 exists to close'
+  );
 });
 
 if (failures.length > 0) {

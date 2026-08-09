@@ -79,13 +79,46 @@ bkit의 참조 스킬(`bkend-*`, `phase-1~9` 파이프라인 가이드, `bkit-ru
 
 | 스위트 | 케이스 | 음성 대조군 |
 |---|---|---|
-| `hooks-config-contract` | 94 | v2.1.33의 `timeout: 10000`, `once: true`, `if: "Write\|Edit(…)"` → 3 실패 |
-| `trigger-locale-contract` | 161 | `제어`에 마침표 복원 → 1 실패 |
-| `shipped-scripts-parse` | 40 | v2.1.33의 손상된 하네스 줄 → 2 실패 |
-| `destructive-bypass` | 27 | — |
-| `hook-failure-observability` | 5 | — |
-| `ci-host-integration-wiring` | 5 | CI에서 `BKIT_HOST_INTEGRATION=1` 제거 → 1 실패 |
+| `hooks-config-contract` | 94 | v2.1.33의 `timeout: 10000`, `once: true`, `if: "Write\|Edit(…)"` 주입 → 3건 실패 |
+| `trigger-locale-contract` | 242 | `제어`에 마침표 복원 → 1건 실패; 라우터를 선언순 첫 매치로 되돌림 → 2건 실패 |
+| `shipped-scripts-parse` | 41 | v2.1.33 손상 줄 복원 → 2건 실패; raw NUL 바이트 재삽입 → 1건 실패 |
+| `destructive-bypass` | 30 | 이슈 #145 재현 케이스 포함 |
+| `bash-pre-decision` | 23 | ask 계층 제거 → 5건 실패; ask를 결정 지점에서 즉시 발화 → 2건 실패 |
+| `gap-detector-unmeasured` | 6 | 조작된 `: 0` 복원 → 3건 실패 |
+| `pdca-doc-changed` | 6 | — |
+| `hook-failure-observability` | 9 | — |
+| `live-run-freshness` | 8 | 재기록 없이 `hooks.json` 수정 → 1건 실패 |
+| `deprecation-registry-schema` | 26 | — |
+| `ci-host-integration-wiring` | 7 | 워크플로가 "CI가 라이브 세션을 돌린다"고 주장 → 1건 실패 |
 
+**합계: 366개 파일, 6,875개 단언, 실패 0, 오류 파일 0.**
+
+단언 수가 481개 늘었지만 **새로 작성한 단언은 하나도 없다.** `qa-aggregate`에
+`pass:N fail:N skip:N` 요약 패턴이 없어서, 그 형식을 쓰는 36개 스위트가 각각
+단언 1개로 계수되고 있었다. 실패는 상세 줄이 별도로 계수되므로 게이트가 실제 실패를
+놓친 적은 없다. 잘못 보고된 것은 **초록불 뒤에 얼마만큼의 검증이 서 있었는가**다.
+`node test/run-all.js`는 반대 방향의 같은 공백이 있어 회귀 파일 6개를 아예 열지
+않았다. 이제 두 러너가 일치한다.
+
+## 2차·3차 리뷰 라운드
+
+위 라이브 QA 이후 이 브랜치를 두 번 더 감사해 결함 13건을 추가로 찾았다. 전문은
+`CHANGELOG.md`에 있고, 패턴은 이 릴리스의 이름 그대로다 — **코드에 존재하고,
+설정된 것처럼 보이며, 아무 데도 도달하지 않는 값 또는 결정**:
+
+- `defaultAction: 'ask'`를 선언한 파괴적 규칙 10개가 한 번도 묻지 않았다
+- 아무것도 측정하지 않은 갭 분석이 **조작된 0%**를 상태·메트릭·생성 리포트 문서·
+  감사 로그·상태 머신에 기록했다
+- 암시 라우팅이 최선 매치가 아니라 선언순 첫 매치를 반환해, 3개 언어에서 보안
+  프롬프트가 엉뚱한 에이전트로 갔다
+- 이전된 PostToolUse 핸들러가 모델이 읽지 않는 채널로 발화했고, 상태 스키마에 없는
+  phase 키를 읽었다 — 독립적인 사망 원인 5개
+- `lib/` 소스 파일 안에 raw NUL 바이트가 출하됐다(파싱도 실행도 정상)
+
+13건 중 3건은 이 브랜치가 만든 것이다. 그중 하나는 degraded payload 레코더가 테스트
+스위트 자신의 프로젝트 원장을 오염시켜, **테스트를 돌리면 다음 세션이 그 테스트에
+대한 경고로 시작**하게 만들었다. 조용히 고치지 않고 전부 적는 이유는, 보이지 않는
+실패를 다루는 릴리스가 자기 실패를 감추면 같은 잘못을 반복하는 것이기 때문이다.
 ## QA 자신이 만들어낸 발견
 
 이번 회차의 "실패" 3건 중 2건은 bkit이 아니라 **하네스의 결함**이었다. 둘 다 조치

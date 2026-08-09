@@ -113,6 +113,33 @@ function parseSummary(stdout) {
   if (!stdout) return { pass: 0, fail: 0, skip: 0 };
   let pass = 0, fail = 0, skip = 0;
 
+  /*
+   * Pattern 0: "pass:N fail:N skip:N" — a suite's own explicit self-report.
+   *
+   * v2.1.34. This pattern did not exist, and 36 suites use that format,
+   * including every contract and regression suite added for this release. They
+   * print a single summary line beginning with "✓", so Pattern 2's line
+   * counting matched exactly one "✓" and recorded ONE passing assertion for a
+   * file that had just run thirty. The aggregate's headline — the number quoted
+   * as evidence that the release is verified — was short by hundreds.
+   *
+   * Failures were still caught (their "✗" detail lines are counted), so the
+   * gate never went green over a real failure. What it did was misreport the
+   * amount of verification behind a green result, which is the same category of
+   * false assurance this release is about: a number that reads as coverage and
+   * is not.
+   *
+   * An explicit self-report outranks every heuristic below it, so it goes first.
+   */
+  const m0 = stdout.match(/\bpass:(\d+)\s+fail:(\d+)\s+skip:(\d+)/i);
+  if (m0) {
+    return {
+      pass: parseInt(m0[1], 10),
+      fail: parseInt(m0[2], 10),
+      skip: parseInt(m0[3], 10),
+    };
+  }
+
   // Pattern 1: "Tests: NN/NN PASS, NN FAIL, NN SKIP" or "X/Y passed, Z failed"
   const m1 = stdout.match(/(\d+)\s*\/\s*(\d+)\s*(?:PASS(?:ED)?|passed)\s*,\s*(\d+)\s*(?:FAIL(?:ED)?|failed)(?:\s*,\s*(\d+)\s*(?:SKIP(?:PED)?|skipped))?/i);
   if (m1) {
@@ -150,6 +177,32 @@ function parseSummary(stdout) {
   return { pass: 0, fail: 0, skip: 0 };
 }
 
+/**
+ * Suites that drive a real Claude Code session and therefore need a wall-clock
+ * budget measured in minutes, not seconds.
+ */
+const LONG_RUNNING = /host-integration[\\/]/;
+
+/**
+ * Per-file wall-clock budget.
+ *
+ * v2.1.34 — raised from a flat 30 s, which was below what this runner's own
+ * workload produces. `test/integration/sprint-alpha-e2e.test.js` measures
+ * 14.2 s standalone on an idle machine; running it as one of 365 sequential
+ * node spawns pushed it past 30 s and it was recorded as an ERROR
+ * (`spawnSync /bin/sh ETIMEDOUT`) rather than as a slow pass. A runner that
+ * fails a healthy suite because of its own scheduling teaches people that red
+ * means nothing.
+ *
+ * 120 s is ~8× the slowest observed standalone suite, so genuine hangs are
+ * still caught quickly while load variance is not mistaken for a defect.
+ */
+const DEFAULT_TIMEOUT_MS = 120000;
+const LONG_RUNNING_TIMEOUT_MS = 600000;
+
+/** Warn when a suite consumes this share of its budget — drift, before failure. */
+const BUDGET_WARN_RATIO = 0.5;
+
 function main() {
   const results = [];
   let total = { files: 0, pass: 0, fail: 0, skip: 0, errors: 0, expectedFail: 0 };
@@ -171,7 +224,19 @@ function main() {
         out = execSync(`node "${file}" 2>&1`, {
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 30000,
+          /*
+           * v2.1.34 — a flat 30 s budget silently capped what this runner could
+           * ever verify.
+           *
+           * The host-integration suites spawn real `claude -p` sessions, which
+           * take minutes. Under the flat budget they could not have finished
+           * here even with BKIT_HOST_INTEGRATION=1 set: SIGTERM at 30 s, and the
+           * result recorded as an error rather than as "this needs longer".
+           * Today they skip fast without the flag, so the cap was invisible —
+           * an aggregate that structurally cannot run a suite while reporting
+           * on it is the same shape as a CI step that always skips.
+           */
+          timeout: LONG_RUNNING.test(file) ? LONG_RUNNING_TIMEOUT_MS : DEFAULT_TIMEOUT_MS,
           // v2.1.33: tell timing-sensitive suites they are running under load.
           // Spawning 350+ processes back to back inflates wall-clock enough that
           // an MCP handshake measured 570-598 ms against a 500 ms budget while

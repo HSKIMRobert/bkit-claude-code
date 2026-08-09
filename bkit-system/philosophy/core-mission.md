@@ -186,7 +186,7 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 - **Audit Trail**: JSONL logging with decision traces for full AI transparency
 - **Quality Gates**: 7-stage gates with configurable thresholds per project level
 - **Checkpoint/Rollback**: Automatic checkpoint on phase transitions, manual rollback support
-- **Destructive Detection**: 8 rules (rm -rf, git push --force, etc.) with blast radius analysis
+- **Destructive Detection**: 16 known-pattern rules graded by target — a broad target denies, a specific one asks. A denylist holds only for the shapes someone wrote down.
 - **MCP Servers**: bkit-pdca (10 tools) + bkit-analysis (6 tools) for external integration
 - **Multi-Language Support**: 8 languages (EN, KO, JA, ZH, ES, FR, DE, IT)
 

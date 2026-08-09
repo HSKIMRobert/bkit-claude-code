@@ -452,10 +452,19 @@ if (feature && transitionSuccess) {
       if (nextPhase === 'report' || nextPhase === 'completed' || nextPhase === 'archived') {
         te.recordEvent('pdca_complete', { feature, from: currentPhase, to: nextPhase });
       }
-      // Record gate pass/fail based on quality gate results
+      // Record gate pass/fail based on quality gate results.
+      //
+      // v2.1.34: an UNMEASURED rate records neither. This read
+      // `matchRate >= 90 ? 'gate_pass' : 'gate_fail'`, and with matchRate now
+      // legitimately null it filed a trust-lowering `gate_fail` for a
+      // measurement that never ran — the user permanently paying for work bkit
+      // did not do. Nothing was found wanting, so nothing is recorded.
       if (currentPhase && currentPhase.toLowerCase() === 'check') {
-        const gateEventType = matchRate >= 90 ? 'gate_pass' : 'gate_fail';
-        te.recordEvent(gateEventType, { feature, matchRate });
+        const { classify } = require('../lib/quality/match-rate');
+        const verdict = classify(matchRate, 90);
+        if (verdict !== 'unmeasured') {
+          te.recordEvent(verdict === 'pass' ? 'gate_pass' : 'gate_fail', { feature, matchRate });
+        }
       }
       // v2.1.1 TC-01: Sync trust score to control-state.json
       te.syncToControlState();

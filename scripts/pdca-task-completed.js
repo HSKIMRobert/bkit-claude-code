@@ -147,7 +147,11 @@ function main() {
   if (detectedPhase === 'plan' || detectedPhase === 'report') {
     const featureStatus = getPdcaStatusFull()?.features?.[featureName] || {};
     const questionPayload = buildNextActionQuestion(detectedPhase, featureName, {
-      matchRate: featureStatus.matchRate || 0,
+      // v2.1.34: showing a fabricated 0% to the user is worse than showing
+      // nothing — it looks like a measurement that failed.
+      matchRate: require('../lib/quality/match-rate').isMeasured(featureStatus.matchRate)
+        ? featureStatus.matchRate
+        : null,
       iterCount: featureStatus.iterationCount || 0
     });
     const formatted = formatAskUserQuestion(questionPayload);

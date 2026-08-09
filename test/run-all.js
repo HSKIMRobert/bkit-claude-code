@@ -165,7 +165,7 @@ const CATEGORIES = {
       'regression/agents-effort.test.js',
       'regression/v162-compat.test.js',
       'regression/common-removal.test.js',
-      'regression/hooks-22.test.js',
+      'regression/hook-events.test.js',
       'regression/skills-35.test.js',
       'regression/agents-29.test.js',
       'regression/status-v3-migration.test.js',
@@ -179,8 +179,18 @@ const CATEGORIES = {
       'regression/agents-32.test.js',
       'regression/skills-37.test.js',
       'regression/agents-effort-32.test.js',
+      // v2.1.34 — these ran only under qa-aggregate's directory walk, so
+      // `node test/run-all.js` reported a green suite while six regression
+      // files it never opened held the locks for this release's defects.
+      // Two runners disagreeing about what "all tests" means is how a gap hides.
+      'regression/destructive-bypass.test.js',
+      'regression/bkit-state-isolation.test.js',
+      'regression/hook-failure-observability.test.js',
+      'regression/bash-pre-decision.test.js',
+      'regression/pdca-doc-changed.test.js',
+      'regression/gap-detector-unmeasured.test.js',
     ],
-    expected: 531,
+    expected: 610,
   },
   performance: {
     name: 'Performance Tests',
@@ -302,6 +312,26 @@ function parseTestOutput(output, filePath) {
   //          "--- Results: 15/15 passed, 0 failed ---" (behavioral/contract)
   const summaryMatch = output.match(/Total:\s*(\d+)\s*\|\s*Pass(?:ed)?:\s*(\d+)\s*\|\s*Fail(?:ed)?:\s*(\d+)/i);
   const resultsMatch = output.match(/Results:\s*(\d+)\s*\/\s*(\d+)\s*passed,\s*(\d+)\s*failed/i);
+  /*
+   * v2.1.34 — "pass:N fail:N skip:N", the format qa-aggregate reads.
+   *
+   * This runner and qa-aggregate had different output contracts, so six
+   * regression suites written in the aggregate's format contributed roughly ten
+   * assertions here instead of seventy-four: the per-line fallback happened to
+   * catch a few "✓" lines and dropped the rest. `run-all` printed a green
+   * summary while under-counting the very suites that hold this release's
+   * regression locks.
+   *
+   * Two runners disagreeing about what "all tests" means is how a coverage gap
+   * hides in plain sight, which is the subject of this whole release.
+   */
+  const compactMatch = output.match(/\bpass:(\d+)\s+fail:(\d+)\s+skip:(\d+)/i);
+  if (compactMatch) {
+    passed = parseInt(compactMatch[1]);
+    failed = parseInt(compactMatch[2]);
+    skipped = parseInt(compactMatch[3]);
+    return { passed, failed, skipped, total: passed + failed + skipped, failures };
+  }
   if (summaryMatch) {
     const total = parseInt(summaryMatch[1]);
     passed = parseInt(summaryMatch[2]);
@@ -368,7 +398,16 @@ function runTestFile(filePath) {
       cwd: ROOT,
       encoding: 'utf8',
       timeout: 120000,
-      env: { ...process.env, NODE_PATH: ROOT },
+      /*
+       * v2.1.34 — BKIT_TEST_AGGREGATE, which this runner never set.
+       *
+       * It spawns every suite back to back, so cold-start budgets pay for the
+       * contention exactly as they do under qa-aggregate: the same four
+       * hook-cold-start assertions failed here and passed standalone. The flag
+       * is what timing-sensitive suites read to widen their bound, and this
+       * runner qualifies for it by definition — it is an aggregate run.
+       */
+      env: { ...process.env, NODE_PATH: ROOT, BKIT_TEST_AGGREGATE: '1' },
     });
 
     return parseTestOutput(output, filePath);

@@ -4,7 +4,9 @@
 /**
  * Contract Test: Hook Input Schema
  *
- * Validates that all 22 hook entries in hooks.json reference existing scripts
+ * Validates that every hook entry in hooks.json references an existing script
+ * (the count is read from the file, not asserted here — it was written as 22 and
+ * was wrong from the moment FileChanged was retired)
  * and that those scripts can handle the expected JSON stdin schema from Claude Code.
  */
 

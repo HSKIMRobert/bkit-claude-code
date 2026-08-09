@@ -6,6 +6,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const preflight = require('../../hooks/startup/preflight');
 
@@ -109,10 +112,24 @@ test('run: returns a non-empty section when env unset', () => {
 });
 
 test('run: returns empty string when everything is healthy and updates disabled', () => {
+  /*
+   * v2.1.34 — pinned to a clean project root.
+   *
+   * `preflight.run()` now also reports recorded hook failures, which it reads
+   * from CLAUDE_PROJECT_DIR (falling back to cwd). Without the pin this
+   * asserted "healthy" against whatever the DEVELOPER's own ledger happened to
+   * contain, so it went red the first time anything in the repo recorded a
+   * failure — including the suites that deliberately exercise the failure path.
+   * A test whose result depends on the machine it runs on teaches people to
+   * re-run until green.
+   */
   const origTeams = process.env[preflight.AGENT_TEAMS_ENV];
   const origDis = process.env.DISABLE_UPDATES;
+  const origRoot = process.env.CLAUDE_PROJECT_DIR;
+  const cleanRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-preflight-clean-'));
   process.env[preflight.AGENT_TEAMS_ENV] = '1';
   process.env.DISABLE_UPDATES = '1';
+  process.env.CLAUDE_PROJECT_DIR = cleanRoot;
   try {
     const section = preflight.run();
     assert.equal(section, '');
@@ -121,5 +138,8 @@ test('run: returns empty string when everything is healthy and updates disabled'
     else process.env[preflight.AGENT_TEAMS_ENV] = origTeams;
     if (origDis === undefined) delete process.env.DISABLE_UPDATES;
     else process.env.DISABLE_UPDATES = origDis;
+    if (origRoot === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = origRoot;
+    fs.rmSync(cleanRoot, { recursive: true, force: true });
   }
 });

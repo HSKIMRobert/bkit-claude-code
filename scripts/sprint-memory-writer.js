@@ -58,12 +58,29 @@ function formatEntry(sprint) {
   const name = sprint && sprint.name ? sprint.name : '';
   const archivedAt = sprint && sprint.archivedAt ? sprint.archivedAt : new Date().toISOString();
   const features = sprint && Array.isArray(sprint.features) ? sprint.features.length : 0;
-  const kpi = sprint && sprint.kpi ? sprint.kpi : {};
-  const matchRate = (kpi.finalMatchRate !== undefined && kpi.finalMatchRate !== null)
-    ? kpi.finalMatchRate
-    : 'n/a';
-  const iter = (kpi.iterations !== undefined && kpi.iterations !== null)
-    ? kpi.iterations
+  /*
+   * v2.1.34 — this read  and . Neither key
+   * exists on a sprint.  carries  and
+   * ;  is a field on the ITERATE use
+   * case's return value, which is never persisted here. So every sprint ever
+   * archived wrote "matchRate n/a · 0 iterations" into MEMORY.md regardless of
+   * what it actually achieved — a permanent-memory record of nothing, and the
+   * fallback branch made it look deliberate.
+   *
+   * Resolved through kpi-resolver so the qualityGates SoT wins over the legacy
+   * kpi mirror, exactly as it does everywhere else.
+   */
+  let kpi = (sprint && sprint.kpi) || {};
+  try {
+    const resolved = require('../lib/application/sprint-lifecycle/kpi-resolver').resolveKpi(sprint);
+    if (resolved) kpi = { ...kpi, ...resolved };
+  } catch (_) { /* resolver unavailable — fall back to the raw kpi block */ }
+
+  const matchRate = (kpi.matchRate !== undefined && kpi.matchRate !== null)
+    ? kpi.matchRate
+    : 'not measured';
+  const iter = (kpi.cumulativeIterations !== undefined && kpi.cumulativeIterations !== null)
+    ? kpi.cumulativeIterations
     : 0;
   return '- `' + id + '` — ' + name + ' · archived ' + archivedAt
     + ' · ' + features + ' feature(s) · matchRate ' + matchRate + ' · ' + iter + ' iterations';

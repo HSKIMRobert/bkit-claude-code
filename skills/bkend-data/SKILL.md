@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   bkend.ai database — CRUD, column types, filtering, sorting, relations, indexing.
-  Triggers: bkend table, CRUD, column, filter, sort, relation
+  Triggers: bkend table, bkend CRUD, bkend column, bkend relation, bkend data
 user-invocable: false
 agent: bkit:bkend-expert
 allowed-tools:

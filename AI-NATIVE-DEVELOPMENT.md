@@ -107,7 +107,7 @@ Based on research from industry leaders (Addy Osmani, Sapphire Ventures, DevOps.
 - **Quality Gates (7 stages)**: Configurable thresholds per phase transition
 - **Audit trail**: JSONL logging + decision tracer for full transparency
 - **Emergency stop**: Immediate pause with checkpoint/rollback support
-- **Destructive detection**: 8 rules (rm -rf, git push --force, etc.) with blast radius analysis
+- **Destructive detection**: 16 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops) graded by target — a broad target denies, a specific one asks. A denylist holds only for the shapes someone wrote down, so it is a known-pattern guard, not a complete defense.
 
 ---
 
@@ -153,7 +153,7 @@ State Management (195 modules / 22 subdirs, Clean Arch 4-Layer + Application pil
 Workflow Engine (3 presets) ─────────┤
 Controllable AI (L0-L4 + fast-track Daniel-mode) ────────────────┤
 Defense-in-Depth 4-Layer (CC→bkit→audit-logger→Token Ledger) ──┤
-Invocation Contract L1~L5 (226 CI-gated + L2 + L3 MCP + L5 E2E)┤
+Invocation Contract L1~L6 (202 CI-gated + L2 + L3 MCP + L5 E2E + L6 host)┤
 7 Port↔Adapter pairs (cc-payload, state-store, regression-registry, audit-sink, token-meter, docs-code-index, mcp-tool) ──┤
 Quality Gates M1-M10 (catalog + check-quality-gates-m1-m10.js) ─┤
 i18n (KO/EN full + 6-lang fallback, error-friendly localization) ┤

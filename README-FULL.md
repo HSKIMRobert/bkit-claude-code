@@ -96,7 +96,7 @@ The software industry refined how *humans* write code over decades — version c
 |---|---|---|
 | **Process** | Output | One feature through proper planning + design + implementation + verification beats ten hacked-together features. The PDCA cycle *is* the product. |
 | **Verification** | Trust | AI generates plausible code. Plausible is not correct. Every implementation goes through gap analysis. Below 90 % match, the system iterates. We do not ship hope. |
-| **Context** | Prompts | A clever prompt helps once. A systematic context system helps every time. 44 skills + 34 agents + 195 lib modules exist so the AI receives the right context at the right moment. |
+| **Context** | Prompts | A clever prompt helps once. A systematic context system helps every time. 44 skills + 34 agents + 198 lib modules exist so the AI receives the right context at the right moment. |
 | **Constraints** | Features | Three project levels, not infinite configuration. Fixed 9-phase PDCA and 8-phase Sprint, not a customizable workflow builder. Opinionated defaults eliminate decision fatigue. |
 
 > *"We do not offer a hundred features. We engineer each one through proper design and verification. That is the difference between a tool and a discipline."*
@@ -142,7 +142,7 @@ These come from [`AI-NATIVE-DEVELOPMENT.md`](AI-NATIVE-DEVELOPMENT.md). They are
 
 ## 2. The Three Commands
 
-Everything else in bkit — 44 skills, 34 agents, 21 hooks, 11 quality gates, 226+ contract assertions — exists to make these three commands work reliably.
+Everything else in bkit — 44 skills, 34 agents, 21 hooks, 11 quality gates, 202 contract assertions — exists to make these three commands work reliably.
 
 | Command | One-line purpose | When you use it |
 |---|---|---|
@@ -713,17 +713,33 @@ flowchart TB
     WSM --> Phases["PDCA + Sprint phases"]
 ```
 
-### 9.5 Invocation Contract L1–L5
+### 9.5 Invocation Contract L1–L6
 
-| Level | What | Count | Where |
-|---|---|---|---|
-| L1 | Contract baseline JSON | 94 | `tests/contract/baseline.json` |
-| L2 | Hook attribution smoke | 98 TC | `tests/integration/hooks/` |
-| L3 | MCP stdio runtime | 42 TC | `tests/contract/l3-mcp-stdio.test.js` |
-| L3 (v2.1.13) | Sprint cross-sprint contracts | 10 TC (SC-01~10) | `tests/contract/v2113-sprint-contracts.test.js` |
-| L5 | E2E shell scenarios | 5 | `tests/e2e/run-all.sh` |
+| Level | What | Where |
+|---|---|---|
+| L1 | Contract baseline snapshots (44 skills · 40 agents · 21 hook events) | `test/contract/baseline/` |
+| L2 | Hook attribution smoke | `test/contract/l2-smoke.test.js`, `l2-hook-attribution.test.js` |
+| L3 | MCP stdio runtime | `test/contract/l3-mcp-compat.test.js`, `l3-mcp-runtime.test.js` |
+| L4 | Cross-version drift vs two baselines (v2.1.9, v2.1.16) | `test/contract/scripts/contract-test-run.js` |
+| L5 | E2E shell scenarios | `test/e2e/` |
+| L6 | **Host integration (v2.1.34)** — a real `claude -p --plugin-dir` run, recorded | `test/contract/host-integration/` |
 
-CI gate `contract-check.yml` enforces 226+ assertions.
+CI gate `contract-check.yml` enforces 202 L1+L4 assertions, plus L6.
+
+**L6 is what v2.1.34 adds, and it exists because L1–L5 could not have caught the
+defects this release fixes.** Every level above it asks whether bkit's own files
+say the right thing. None of them asks whether Claude Code ever *invokes* what
+those files declare — which is how eight registered features shipped dead across
+releases while the contract stayed green. L6 records what a real session
+observed, together with the hash of the `hooks.json` it observed it against, so
+`hooks.json` cannot change without fresh evidence. CI needs no CLI and no
+credentials to enforce that; it needs the artefact to still describe what is
+being shipped.
+
+The L1+L4 count fell from 226 in v2.1.33 because FileChanged was retired. That is
+a *declared* removal, recorded in `test/contract/deprecation-registry.json`: the
+runner accepts a drop only when the registry explains it, so a contract that
+silently loses coverage still fails.
 
 ---
 

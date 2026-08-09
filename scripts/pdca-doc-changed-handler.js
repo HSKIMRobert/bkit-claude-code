@@ -31,9 +31,9 @@
  * test/contract/host-integration/*.
  */
 
-const { readStdinSync, outputAllow, outputEmpty } = require('../lib/core/io');
+const { readStdinSync, outputContext, outputEmpty } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
-const { getPdcaStatusFull } = require('../lib/pdca/status');
+const { getPdcaStatusFull, getFeatureStatus } = require('../lib/pdca/status');
 
 // PDCA doc directories that trigger the gap-detector suggestion.
 const PDCA_DOC_DIRS = ['docs/01-plan/', 'docs/02-design/'];
@@ -62,11 +62,33 @@ if (!isPdcaDoc) {
   process.exit(0);
 }
 
+/*
+ * v2.1.34 — the third independent reason this handler produced nothing.
+ *
+ * It read `pdcaStatus.currentPhase` and `pdcaStatus.session.currentPhase`.
+ * Neither key exists on the v3.0 state schema: the phase lives at
+ * `features[primaryFeature].phase`. Measured against the live state file,
+ * `getPdcaStatusFull()` returns keys [version, lastUpdated, activeFeatures,
+ * primaryFeature, features, pipeline, session, history, stateMachine,
+ * automation, team, taskHistory] and BOTH lookups resolve to `undefined`, so
+ * `currentPhase` was always null and the `ACTIVE_PHASES` test could never pass.
+ *
+ * Fixing the event (FileChanged → PostToolUse) and the output channel
+ * (plain text → additionalContext) would still have left the handler silent.
+ */
 const pdcaStatus = getPdcaStatusFull();
-const currentPhase = pdcaStatus?.currentPhase || pdcaStatus?.session?.currentPhase || null;
+const primaryFeature = pdcaStatus?.primaryFeature || null;
+const currentPhase = primaryFeature
+  ? (getFeatureStatus(primaryFeature)?.phase || null)
+  : null;
 
 if (currentPhase && ACTIVE_PHASES.includes(currentPhase.toLowerCase())) {
-  outputAllow(
+  // v2.1.34 — `outputAllow(msg, 'PostToolUse')` printed bare text, and bare
+  // stdout from a PostToolUse hook reaches the transcript only. The suggestion
+  // this handler exists to make was never delivered to the model. Moving the
+  // handler off the dead FileChanged event and then emitting on a channel the
+  // model does not read would have replaced one silence with another.
+  outputContext(
     `Design document changed: ${filePath}. Consider running gap-detector to check design-implementation alignment.`,
     'PostToolUse'
   );
@@ -74,4 +96,4 @@ if (currentPhase && ACTIVE_PHASES.includes(currentPhase.toLowerCase())) {
   outputEmpty();
 }
 
-debugLog('PdcaDocChanged', 'Hook completed', { filePath, currentPhase, isPdcaDoc });
+debugLog('PdcaDocChanged', 'Hook completed', { filePath, primaryFeature, currentPhase, isPdcaDoc });

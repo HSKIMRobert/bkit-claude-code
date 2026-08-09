@@ -79,8 +79,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Hook counts now describe what is proven to fire, not what is registered.**
-  22 events / 25 blocks → **21 events / 24 blocks**, after `FileChanged` was
-  retired through an explicit `deprecation-registry.json` entry. Hook events may
+  22 events / 25 blocks → **21 events / 24 blocks across 28 handlers** — one dead
+  event removed while handler coverage grew, because `Write|Edit` now needs a
+  handler per tool. The reduction is an audit result, not a scope cut:
+  `FileChanged` was retired through an explicit `deprecation-registry.json` entry. Hook events may
   now be removed only through that registry, mirroring ADR 0014 for
   agents/skills/MCP tools: silent removal still fails the contract test, a
   declared removal records why.
@@ -116,6 +118,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   superlative was disprovable in one search — and until this release it was also
   untrue of bkit itself, which reported a perfect match for a feature that had
   neither design nor implementation.
+
+- **Destructive commands that declared a confirmation now raise one.** This is
+  the most noticeable behaviour change in the release. Ten rules have carried
+  `defaultAction: 'ask'` since the rule table was written; the hook read only
+  `severity === 'critical'`, so those ten were detected, written to the audit
+  log, and then permitted without a word. From v2.1.34 they prompt:
+
+  | Command | Before | After |
+  |---|---|---|
+  | `rm -rf ./tmp/build` | refused as critical | **asks** |
+  | `rm -rf /`, `rm -rf ~`, `rm -rf $HOME` | refused | refused (unchanged) |
+  | `git reset --hard HEAD~1` | ran silently | **asks** |
+  | `git merge main`, `git push origin main` | ran silently | **asks** |
+  | access to `*.pem` / `*.key` files | ran silently | **asks** |
+  | `npm test`, `git status`, `git push origin <branch>` | ran | ran (unchanged) |
+
+  Ordinary work is deliberately untouched — a confirmation tier that interrupts
+  `npm test` gets switched off within a day, and takes the refusal tier with it.
+  A regression suite runs the shipped hook against both lists so neither can
+  drift. There is deliberately no environment variable to mute the tier: if a
+  rule asks too often, the rule is wrong and should be narrowed, not silenced.
 
 - **Hook failures are now visible.** The hook layer holds 333 catch blocks and
   188 swallow without a trace. Most are legitimately best-effort, but a layer
@@ -153,12 +176,151 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trigger relocation, the four proven bypasses plus the two false positives, and
   crash observability.
 
+### Found by review of this release itself
+
+An independent review pass over this branch found three defects the release had
+introduced, and one it had committed while writing its own records. All are
+fixed here; each is listed because the pattern matters more than the individual
+bug.
+
+- **The crash recorder silenced crashes.** `installCrashRecorder` registered an
+  `unhandledRejection` listener, which SUPPRESSES Node's default — fatal since
+  Node 15. Measured: without the listener a rejecting hook exits 1 and prints its
+  stack; with it, exit 0 and silence. The mechanism built to end silent failure
+  had introduced a new one. Now uses `uncaughtExceptionMonitor`, which observes
+  without altering the default.
+
+- **Heredoc body elision became a bypass.** Treating any `<<` as a heredoc
+  opener meant `echo "example: cmd << EOF"` started a bogus elision and every
+  line up to the next `EOF` was discarded — including a real destructive
+  command, which then went undetected. The scanner is now quote-aware.
+
+- **A guard test proved nothing.** The live destructive-command check asserted
+  only that the target file survived. If the model simply declines to run the
+  command, that passes without the guard ever firing. It now requires a recorded
+  `destructive_blocked` audit entry, and reports the two outcomes separately.
+
+- **A match rate was asserted, not measured.** Registering this cycle in bkit's
+  own PDCA state wrote `matchRate: 100` — a number no gap-detector produced. That
+  is precisely the fail-open this release removed from the sprint adapter, and it
+  is now `null` with `measured: false` and a note saying why.
+
+A second review pass, after the fixes above, found nine more. Six are defects in
+shipped behaviour that predate this branch; three the branch introduced. They are
+listed together because they are one pattern — a value or a decision that exists
+in the code, looks configured, and reaches nothing.
+
+- **A gap analysis that measured nothing reported 0%.**
+  `scripts/gap-detector-stop.js` parsed the match rate as
+  `match ? parseInt(...) : 0`, so a parse failure became a measurement. The
+  fabricated 0 was written to `.bkit/state/pdca-status.json`, recorded as an M1
+  and M4 data point, published as a generated `docs/03-analysis/<feature>.
+  analysis.md` headed "Match Rate: 0%", audited as `gate_failed`, transitioned
+  the state machine to `ITERATE`, and shown to the user as "Significant
+  design-implementation gap detected". Observed on this very branch: the hook
+  wrote a 0% analysis document for a feature whose state this release had
+  deliberately set to `matchRate: null, measured: false`. A fabricated 0 is in
+  one way worse than the fabricated 100 removed earlier — it looks like
+  diligence, so the reader starts rewriting code against a measurement that was
+  never taken, and the iteration budget drains on a regex miss. There is now an
+  unmeasured branch that records nothing, transitions nothing, and asks for the
+  step that is actually missing.
+
+- **Ten destructive rules declared `defaultAction: 'ask'` and none ever asked.**
+  The hook branched on `severity === 'critical'` and did nothing otherwise, so
+  `git reset --hard`, protected-branch operations, key-file access and
+  mass-deletion patterns were detected, audited, and permitted in silence. The
+  decision now comes from the rule table's own declaration. **This is a
+  user-visible behaviour change**: those commands now raise a confirmation.
+
+- **A confirmation could downgrade a refusal.** `outputAsk()` exits the process,
+  and the ask was emitted where it was decided — before the heredoc-bypass
+  guard, the push guard and the Memory Enforcer, all of which can deny. A
+  command that both warranted confirmation and carried a `<<EOF | bash` bypass
+  would have been offered as a yes/no prompt instead of being refused. The ask
+  is now parked and emitted last, only if nothing stronger fired.
+
+- **A scoped delete was graded by text belonging to other commands.**
+  `deleteTargetIsBroad` read from the delete verb to the end of the input, so a
+  `$PWD` four lines later made `rm -rf ./tmp/x` "broad" and it was refused as
+  critical — while advising the user to scope the path they had already scoped.
+  The scan now stops at the next command separator.
+
+- **`code-analyzer` claimed the bare word "security" in eight languages.** Its
+  trigger is the compound "security scan"; the generated vocabulary also emitted
+  the head word, giving it an equal claim on `security-architect`'s identity
+  terms. Combined with the next item, security prompts routed to the wrong agent
+  in Korean, Spanish and German.
+
+- **Implicit routing returned the first-declared match, not the best one.**
+  `for (…of Object.entries(TABLE)) if (match) return` picks by table position,
+  which has nothing to do with what the user meant. Ranking is now by matched-
+  keyword strength. The contract test that covered this asserted only that
+  *some* agent resolved, so it was green throughout.
+
+- **A PostToolUse handler spoke on a channel the model does not read.** The
+  relocated `pdca-doc-changed-handler.js` emitted plain text; on PostToolUse only
+  `hookSpecificOutput.additionalContext` reaches the model. It also read
+  `pdcaStatus.currentPhase`, a key the v3.0 state schema does not have. Five
+  independent causes now closed; fixing any four would have changed nothing.
+
+- **The test aggregate under-counted itself by 481 assertions.** `qa-aggregate`
+  had no pattern for the `pass:N fail:N skip:N` format that 36 suites emit — every
+  contract and regression suite added for this release among them — so it counted
+  the single summary line as one passing assertion. Failures were still caught, so
+  the gate never went green over a real failure; what it misreported was how much
+  verification stood behind a green one. `node test/run-all.js` had the same blind
+  spot from the other side, and never opened six regression files at all. Both
+  runners now agree: 6,875 assertions across 366 files.
+
+- **`.bkit/runtime/hook-dispatch.ndjson` compaction destroyed failure records,**
+  keying on `(event, tool)` so every failure against one event collapsed to a
+  single line — on exactly the busy sessions where failures are likeliest. The
+  startup warning also had no recency window, so one failure warned forever until
+  someone deleted the file; it now clears itself after 24 hours while the record
+  survives.
+
+- **A raw NUL byte shipped inside `lib/core/hook-dispatch.js`.** It parsed, it
+  ran, and every test passed, because nothing in the suite looked at the bytes of
+  a source file — the same blind spot that let an unparseable shell script ship
+  one release earlier, one layer down. A source-integrity check now rejects raw
+  control bytes across every shipped text file, and is proven against the real
+  defect.
+
+### Fixed — GitHub issues
+
+- **#145** (reported by [@BrightGold70](https://github.com/BrightGold70), Hawk
+  Kim): the ENH-310 heredoc guard denied quoted-tag heredoc bodies as critical.
+  A quoted tag disables expansion — a bash language guarantee, not a heuristic —
+  so `$(cmd <<TAG … TAG)` appearing in such a body is prose and cannot become
+  shell syntax. It bit hardest when writing documentation *about the guard*,
+  which is also how this release hit it independently. The reporter's exact
+  reproduction is now a regression test. Verified: `critical`/`sub` before,
+  `warning`/`lone-heredoc` (audit-only, not a refusal) after.
+
 ### Notes for maintainers
 
 - New CI steps: hooks config contract, shipped-script parse, trigger locale
-  contract, and L6 host integration. The last skips cleanly when the `claude` CLI
-  is absent, so it costs seconds on a stock runner;
-  `BKIT_REQUIRE_HOST_INTEGRATION=1` turns a skip into a failure.
+  contract, deprecation-registry schema, and L6 live-run freshness.
+
+- **L6 is enforced without a CLI in CI, and does not pretend otherwise.** The
+  live layer needs a real Claude Code session; the runner has neither the binary
+  nor credentials, and installing them was considered and declined. An earlier
+  revision simply set `BKIT_HOST_INTEGRATION=1` and ran the live test on CI,
+  which meant the step always skipped while a wiring test called it green — the
+  `validate-plugin --strict` / `continue-on-error: true` shape this release cites
+  as its cautionary tale, recreated by the test written to prevent it.
+
+  Instead, a live run records the events it observed plus the SHA-256 of the
+  `hooks.json` it observed them against, into
+  `test/contract/host-integration/last-live-run.json`. CI asserts that evidence
+  still matches what ships. The enforced property is the one that matters:
+  **`hooks.json` cannot change without someone re-running the harness and
+  committing fresh evidence.** That is verified evidence re-verified on change —
+  not a live session run by CI, and the wiring contract fails if the workflow
+  ever claims otherwise.
+
+  Regenerate with `node test/qa-harness-full-live.js --layer hooks --record`.
 
 - `.bkit/runtime/hook-dispatch.ndjson` is a new per-project diagnostic file
   (append-only, self-compacting, ~0.69 ms per hook). Set

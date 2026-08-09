@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   bkend.ai authentication — email/social login, JWT tokens, RBAC, session management.
-  Triggers: bkend auth, login, signup, JWT, RBAC
+  Triggers: bkend auth, bkend login, bkend signup, bkend JWT, bkend RBAC
 user-invocable: false
 agent: bkit:bkend-expert
 allowed-tools:

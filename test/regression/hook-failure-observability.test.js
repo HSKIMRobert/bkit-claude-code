@@ -19,9 +19,13 @@
  *   HFO-1  a crash is RECORDED
  *   HFO-2  a crash still behaves exactly as before (observation, not control)
  *   HFO-3  what was recorded is SHOWN to the user at the next session start
+ *   HFO-5  a crash BEFORE the first stdin read is recorded too
+ *   HFO-6  an unparseable payload is recorded as `degraded`
+ *   HFO-8  the warning ages out rather than becoming permanent furniture
  *
  * HFO-3 is the one that matters most. A record nobody reads is the same silence
- * in a different file.
+ * in a different file. HFO-8 is its counterweight: a warning that never clears
+ * is a record nobody reads either, for the opposite reason.
  */
 
 const assert = require('node:assert');
@@ -108,6 +112,138 @@ test('HFO-4 a healthy project produces no warning', () => {
     );
   } finally {
     fs.rmSync(clean, { recursive: true, force: true });
+  }
+});
+
+test('HFO-5 a crash BEFORE any stdin read is still recorded', () => {
+  /*
+   * The recorder used to be armed inside `withDispatchRecord`, which runs only
+   * after a handler has already called `readStdinSync()`. Everything earlier
+   * was unobservable: a `require` that throws, a syntax error in a lib module,
+   * a throw inside the reader itself. Those are exactly the failures that kill
+   * a hook outright and leave nothing behind — and they are the ones a "hook
+   * failure observability" feature most needs to catch.
+   *
+   * Arming happens at module load of lib/core/io now, so requiring it is enough.
+   */
+  const early = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-hfo-early-'));
+  try {
+    const script = path.join(early, 'early.js');
+    fs.writeFileSync(
+      script,
+      `require(${JSON.stringify(path.join(PROJECT_ROOT, 'lib/core/io'))});\n`
+      + "throw new Error('threw before reading stdin');\n"
+    );
+    const r = spawnSync('node', [script], {
+      encoding: 'utf8', timeout: 30000, cwd: early,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: early, CLAUDE_HOOK_EVENT: 'PreToolUse' },
+    });
+    assert.strictEqual(r.status, 1, 'the crash must still be fatal');
+
+    const recorded = readFailures(early, { windowMs: null });
+    assert.ok(
+      recorded.some((f) => /threw before reading stdin/.test(f.detail)),
+      'a crash that happened before the first stdin read left no trace — '
+        + `recorded: ${JSON.stringify(recorded.slice(0, 2))}`
+    );
+  } finally {
+    fs.rmSync(early, { recursive: true, force: true });
+  }
+});
+
+test('HFO-6 an unparseable payload is recorded as degraded, not as success', () => {
+  /*
+   * The most dangerous silent state in the layer. `readStdinSync` returns `{}`
+   * when the envelope will not parse — correctly, since a hook must not take
+   * down the session over a malformed payload — but every guard downstream then
+   * inspects an empty object, finds no command and no file path, and ALLOWS.
+   * The hook exits 0 having enforced nothing, and until v2.1.34 it left no
+   * trace whatsoever.
+   */
+  const degraded = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-hfo-degraded-'));
+  try {
+    const script = path.join(degraded, 'reader.js');
+    fs.writeFileSync(
+      script,
+      `const { readStdinSync } = require(${JSON.stringify(path.join(PROJECT_ROOT, 'lib/core/io'))});\n`
+      + 'const p = readStdinSync();\n'
+      + "process.stdout.write(JSON.stringify(p));\n"
+    );
+    const r = spawnSync('node', [script], {
+      input: '{"hook_event_name": "PreToolUse", "tool_inp',  // truncated on purpose
+      encoding: 'utf8', timeout: 30000, cwd: degraded,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: degraded, CLAUDE_HOOK_EVENT: 'PreToolUse' },
+    });
+    assert.strictEqual(r.stdout.trim(), '{}', 'the reader must still degrade to {} rather than throw');
+
+    const recorded = readFailures(degraded, { windowMs: null });
+    assert.ok(
+      recorded.some((f) => f.status === 'degraded'),
+      'a hook ran with an empty payload and enforced nothing, and nothing recorded it — '
+        + `recorded: ${JSON.stringify(recorded.slice(0, 2))}`
+    );
+  } finally {
+    fs.rmSync(degraded, { recursive: true, force: true });
+  }
+});
+
+test('HFO-7 an empty stdin is NOT recorded as a degradation', () => {
+  // Direct invocation — a test, a CLI run — is not a failure. Recording it
+  // would fill the ledger with noise from the tooling and bury real signal.
+  const quiet = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-hfo-quiet-'));
+  try {
+    const script = path.join(quiet, 'reader.js');
+    fs.writeFileSync(
+      script,
+      `const { readStdinSync } = require(${JSON.stringify(path.join(PROJECT_ROOT, 'lib/core/io'))});\n`
+      + 'readStdinSync();\n'
+    );
+    spawnSync('node', [script], {
+      input: '', encoding: 'utf8', timeout: 30000, cwd: quiet,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: quiet },
+    });
+    assert.deepStrictEqual(
+      readFailures(quiet, { windowMs: null }), [],
+      'an empty stdin was recorded as a degradation — every test run would add noise'
+    );
+  } finally {
+    fs.rmSync(quiet, { recursive: true, force: true });
+  }
+});
+
+test('HFO-8 the startup warning ages out instead of becoming permanent', () => {
+  /*
+   * The ledger is append-only and has no notion of "fixed". Without a window,
+   * one failure means every session from then on opens with a warning about it,
+   * which trains the user to skip the line — turning the fix for silent failure
+   * into a different flavour of silent failure.
+   */
+  const { FAILURE_WINDOW_MS } = require(path.join(PROJECT_ROOT, 'lib/core/hook-dispatch'));
+  assert.ok(
+    typeof FAILURE_WINDOW_MS === 'number' && FAILURE_WINDOW_MS > 0,
+    'there is no recency window — the startup warning is permanent'
+  );
+
+  const aged = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-hfo-aged-'));
+  try {
+    const dir = path.join(aged, '.bkit', 'runtime');
+    fs.mkdirSync(dir, { recursive: true });
+    const old = new Date(Date.now() - FAILURE_WINDOW_MS - 60000).toISOString();
+    fs.writeFileSync(
+      path.join(dir, 'hook-dispatch.ndjson'),
+      JSON.stringify({ event: 'Stop', status: 'threw', detail: 'ancient', at: old }) + '\n'
+    );
+    const preflight = require(path.join(PROJECT_ROOT, 'hooks/startup/preflight'));
+    assert.strictEqual(
+      preflight.renderHookFailureWarning(aged), '',
+      'a failure older than the window still warns — the line never clears'
+    );
+    assert.strictEqual(
+      readFailures(aged, { windowMs: null }).length, 1,
+      'the record itself must survive; only the WARNING ages out'
+    );
+  } finally {
+    fs.rmSync(aged, { recursive: true, force: true });
   }
 });
 

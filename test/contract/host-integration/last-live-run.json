@@ -1,0 +1,41 @@
+{
+  "_comment": "Evidence from a real `claude -p --plugin-dir` run. Regenerate with `node test/qa-harness-full-live.js --layer hooks --record` whenever hooks.json changes. This is verified evidence re-verified on change, NOT a live session run by CI.",
+  "recordedAt": "2026-08-09T04:06:13.624Z",
+  "claudeVersion": "2.1.226 (Claude Code)",
+  "hooksJsonSha256": "de6693ce82ddbe6bec4f5d286df185729a80ed4cb51da457e4a74f706f666d86",
+  "observedEvents": [
+    "InstructionsLoaded",
+    "PostToolUse",
+    "PreToolUse",
+    "SessionEnd",
+    "SessionStart",
+    "Stop",
+    "SubagentStart",
+    "SubagentStop",
+    "UserPromptSubmit"
+  ],
+  "postToolUseTools": [
+    "Bash",
+    "Edit",
+    "Write"
+  ],
+  "preToolUseTools": [
+    "Bash",
+    "Edit",
+    "Write"
+  ],
+  "unverifiedEvents": {
+    "ConfigChange": "writing .claude/settings.json mid-session did not register as a settings change in -p mode",
+    "CwdChanged": "cd inside a Bash tool call does not change the SESSION working directory",
+    "Notification": "non-interactive -p raises neither a permission prompt nor an idle prompt",
+    "PermissionRequest": "non-interactive -p has no permission prompt surface, in any permission mode",
+    "PostCompact": "follows PreCompact, which the probe session did not reach",
+    "PostToolUseFailure": "the failing command was refused or handled before the tool itself reported failure",
+    "PreCompact": "the probe session did not reach the compaction threshold even under --autocompact 100k",
+    "StopFailure": "requires a real API-level failure (rate limit, overload, billing) that cannot be manufactured",
+    "TaskCompleted": "follows TaskCreated, which a subagent dispatch does not produce",
+    "TaskCreated": "the Task tool dispatching a subagent does not create a TRACKED task; needs TaskCreate",
+    "TeammateIdle": "requires Agent Teams with a teammate that goes idle; a single subagent dispatch never idles",
+    "UserPromptExpansion": "a slash command named inside a -p prompt is not expanded as a command; needs an interactive expansion"
+  }
+}

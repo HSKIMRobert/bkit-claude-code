@@ -89,12 +89,48 @@ when the defect is reintroduced, not merely to pass today:
 | Suite | Cases | Negative control |
 |---|---|---|
 | `hooks-config-contract` | 94 | v2.1.33's `timeout: 10000`, `once: true` and `if: "Write\|Edit(…)"` → 3 failures |
-| `trigger-locale-contract` | 161 | a restored trailing period on `제어` → 1 failure |
-| `shipped-scripts-parse` | 40 | the v2.1.33 corrupted harness line → 2 failures |
-| `destructive-bypass` | 27 | — |
-| `hook-failure-observability` | 5 | — |
-| `ci-host-integration-wiring` | 5 | removing `BKIT_HOST_INTEGRATION=1` from CI → 1 failure |
+| `trigger-locale-contract` | 242 | a restored trailing period on `제어` → 1 failure; reverting the router to first-match-wins → 2 failures |
+| `shipped-scripts-parse` | 41 | the v2.1.33 corrupted harness line → 2 failures; a reintroduced raw NUL byte → 1 failure |
+| `destructive-bypass` | 30 | includes the issue #145 reproduction |
+| `bash-pre-decision` | 23 | removing the ask tier → 5 failures; emitting the ask inline → 2 failures |
+| `gap-detector-unmeasured` | 6 | restoring the fabricated `: 0` → 3 failures |
+| `pdca-doc-changed` | 6 | — |
+| `hook-failure-observability` | 9 | — |
+| `live-run-freshness` | 8 | editing `hooks.json` without re-recording → 1 failure |
+| `deprecation-registry-schema` | 26 | — |
+| `ci-host-integration-wiring` | 7 | a workflow claiming CI runs a live session → 1 failure |
 
+**Totals: 366 files, 6,875 assertions, 0 failures, 0 errored files.**
+
+The assertion count jumped by 481 without a single new assertion being written:
+`qa-aggregate` had no pattern for the `pass:N fail:N skip:N` summary that 36
+suites emit, so each of them was counted as one passing assertion. Failures were
+still caught — their detail lines are counted separately — so the gate never went
+green over a real failure. What it misreported was how much verification stood
+behind a green result. `node test/run-all.js` had the mirror-image gap and never
+opened six regression files at all. Both runners now agree.
+
+## Second and third review rounds
+
+Two review passes over this branch, after the live QA above, found thirteen more
+defects. They are recorded in full in `CHANGELOG.md`; the pattern is the same one
+this release is named for — a value or a decision that exists in the code, looks
+configured, and reaches nothing:
+
+- ten destructive rules declared `defaultAction: 'ask'` and none ever asked
+- a gap analysis that measured nothing recorded a **fabricated 0%** into state,
+  metrics, a generated report document, the audit trail and the state machine
+- implicit routing returned the first-declared match rather than the strongest,
+  so security prompts reached the wrong agent in three languages
+- a relocated PostToolUse handler spoke on a channel the model does not read,
+  and read a phase key the state schema does not have — five independent causes
+- a raw NUL byte shipped inside a `lib/` source file, parsing and running fine
+
+Three of the thirteen were introduced by this branch, including one where the
+degraded-payload recorder polluted the test suite's own project ledger, so
+running the tests made the next session open with a warning about the tests.
+Each is listed rather than quietly fixed, because a release about invisible
+failure that hides its own would be making the same mistake.
 ## Findings raised by QA itself
 
 Two of this pass's three "failures" were defects in the harness, not in bkit.

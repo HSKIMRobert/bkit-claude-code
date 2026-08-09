@@ -194,7 +194,7 @@ bkit is not just a collection of prompts—it's a **production-grade plugin arch
 | **Test Files** | 118+ (qa-aggregate scope) | 4,000+ TC total (3,762 baseline + 261 v2.1.11 + 8 v2.1.13 contract SC-01~08) |
 | **BKIT_VERSION** | 2.1.13 | `bkit.config.json` single source of truth; 5-location invariant enforced by `scripts/docs-code-sync.js` (PASS 9-streak: v2.1.120/121/123/129/132/133/137/139, F9-120 closure carryover monitoring complete) |
 
-**Total: 730+ components** working in harmony across **Clean Architecture 4-Layer + Defense-in-Depth 4-Layer + Invocation Contract L1~L5 + 3-Layer Orchestration + Application Layer pilot (v2.1.11 γ2 introduction; v2.1.12 hardens the evals path; v2.1.13 GA introduces Sprint Management as the first non-PDCA workflow primitive: +1 skill + 4 agents + 7 templates + 3 MCP tools + 2 core infrastructure adapters + 9 application-layer modules + 8 contract test cases = 27+ new components, plus −2,333 LOC tech debt cleanup)**.
+**Total: 730+ components** working in harmony across **Clean Architecture 4-Layer + Defense-in-Depth 4-Layer + Invocation Contract L1~L6 + 3-Layer Orchestration + Application Layer pilot (v2.1.11 γ2 introduction; v2.1.12 hardens the evals path; v2.1.13 GA introduces Sprint Management as the first non-PDCA workflow primitive: +1 skill + 4 agents + 7 templates + 3 MCP tools + 2 core infrastructure adapters + 9 application-layer modules + 8 contract test cases = 27+ new components, plus −2,333 LOC tech debt cleanup)**.
 
 ### v2.1.11 Integrated Enhancement Features (4 Sprints × 20 FRs)
 
@@ -209,7 +209,7 @@ bkit is not just a collection of prompts—it's a **production-grade plugin arch
 |---------|----------|---------|
 | **Clean Architecture 4-Layer** | `lib/domain/` (ports 7 + guards 4 + rules 1) + `lib/infra/` adapters + `lib/application/pdca-lifecycle/` pilot + `lib/cc-regression/` + hooks/scripts | 0 forbidden imports CI-enforced via `scripts/check-domain-purity.js` |
 | **Defense-in-Depth 4-Layer** | Layer 1 (CC Built-in sandbox) → Layer 2 (`pre-write.js` + `unified-bash-pre.js` + defense-coordinator) → Layer 3 (audit-logger OWASP A03/A08 sanitizer, 7-key PII) → Layer 4 (Token Ledger NDJSON) | Formalized in `docs/03-analysis/security-architecture.md` |
-| **Invocation Contract L1~L5** | `test/contract/baseline/` (94+ JSON = 43 skills + 36 agents + 16 MCP tools + 24 hook blocks) + L2 smoke + L3 MCP stdio + L5 E2E shell | 226 L1+L4 assertions CI-gated via `.github/workflows/contract-check.yml` |
+| **Invocation Contract L1~L6** | `test/contract/baseline/` (44 skills + 40 agents + 21 hook events per snapshot) + L2 smoke + L3 MCP stdio + L5 E2E shell + L6 host integration | 202 L1+L4 assertions CI-gated via `.github/workflows/contract-check.yml`, plus L6 live-run freshness — a recorded `claude -p --plugin-dir` run whose observed events CI checks against the shipped `hooks.json` hash |
 | **Guard Registry** | `lib/cc-regression/registry.js` — 21 guards + `expectedFix` seed | Daily cron `cc-regression-reconcile.yml` auto-releases guards via `lifecycle.reconcile()` |
 | **3-Layer Orchestration** | `lib/orchestrator/` 5 modules (intent-router + next-action-engine + team-protocol + workflow-state-machine + index) | Feature > skill > agent priority, SKILL_TRIGGER_PATTERNS 15, matchRate SSoT 90 |
 | **BKIT_VERSION 5-location Invariant** | `bkit.config.json` (canonical) → `plugin.json` + `hooks.json` + `session-start.js` + `README.md` + `CHANGELOG.md` | `scripts/docs-code-sync.js scanVersions()` enforces 0 drift |
@@ -1317,53 +1317,74 @@ Hooks are event-triggered callbacks that run at specific points in Claude's life
 
 ### hooks.json Format
 
-Create `hooks/hooks.json`:
+Create `hooks/hooks.json`. Every event maps to an **array of blocks**; each block
+carries an optional `matcher` and a list of handlers.
 
 ```json
 {
   "$schema": "https://json.schemastore.org/claude-code-hooks.json",
-  "SessionStart": [
-    {
-      "once": true,
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\"",
-          "timeout": 5000
-        }
-      ]
-    }
-  ],
-  "PreToolUse": {
-    "Bash": {
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/validate-bash.js\""
-        }
-      ]
-    },
-    "Write": {
-      "hooks": [
-        {
-          "type": "prompt",
-          "prompt": "Before writing, verify the file follows our coding standards."
-        }
-      ]
-    }
-  },
-  "PostToolUse": {
-    "Write": {
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npm run lint:fix -- $TOOL_INPUT_PATH"
-        }
-      ]
-    }
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/validate-bash.js\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lint.js\"",
+            "timeout": 5,
+            "if": "Write(src/**/*.ts)"
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lint.js\"",
+            "timeout": 5,
+            "if": "Edit(src/**/*.ts)"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
+
+### Four rules that silently break hooks
+
+Each of these cost bkit a shipped release. They fail quietly — the hook is
+registered, counted, and never runs — so they are worth knowing before you write
+your own.
+
+| Rule | Why |
+|---|---|
+| **`timeout` is in SECONDS** | Not milliseconds. `"timeout": 5000` is 83 minutes, so a hung hook has no effective cancellation. Claude Code's default is 600. Verified: a 5-second hook survives `"timeout": 30` and is killed at 2.26s under `"timeout": 2`. |
+| **`if` holds exactly ONE permission rule** | There is no `\|` alternation, no `&&`, no list. `"if": "Write\|Edit(src/**)"` matches nothing and the handler never runs. Declare one handler per tool, as above. |
+| **`if` only works on tool events** | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `PermissionDenied`. On any other event, a handler that declares `if` never runs at all. |
+| **`once` is ignored here** | It is honoured only for hooks declared in skill frontmatter. In a plugin's `hooks.json` it promises a guarantee the host never makes — confirmed by resuming a session and watching the hook fire again. |
+
+Also worth knowing: `matcher` means different things per event. On tool events it
+filters by tool name; on `FileChanged` it names literal files to watch (letters,
+digits, `_`, `|` only — no path globs); on `PreCompact` it is `auto|manual`.
+Several events accept no matcher at all.
 
 ### Hook Types
 
@@ -1372,8 +1393,8 @@ Execute scripts (Node.js recommended for cross-platform):
 ```json
 {
   "type": "command",
-  "command": "/path/to/script.js",
-  "timeout": 5000
+  "command": "node /path/to/script.js",
+  "timeout": 5
 }
 ```
 
@@ -1391,11 +1412,27 @@ Inject instructions into Claude's context:
 | Variable | Description |
 |----------|-------------|
 | `${CLAUDE_PLUGIN_ROOT}` | Plugin installation directory |
-| `$TOOL_INPUT` | Input passed to the tool |
-| `$TOOL_INPUT_PATH` | File path (for file operations) |
-| `$TOOL_OUTPUT` | Output from the tool (PostToolUse) |
-| `$CLAUDE_SESSION_ID` | Current session ID |
-| `$CLAUDE_ENV_FILE` | File for persisting environment variables |
+| `${CLAUDE_PROJECT_DIR}` | The user's project directory, even when the hook process starts elsewhere |
+| `$CLAUDE_CODE_SESSION_ID` | Current session ID. Note the `CODE_` — bkit read `$CLAUDE_SESSION_ID` for several releases, which Claude Code never sets, so the feature depending on it never applied (issue #119). |
+
+Hook input arrives as **JSON on stdin**, not as environment variables. Read it
+with a bounded reader: `fs.readFileSync(0)` blocks until EOF with no timeout, and
+Claude Code can hold the write-end open well past your hook's own deadline
+(issue #139). bkit's `lib/core/io.js` `readStdinSync` is a worked example.
+
+### Verifying your hook actually fires
+
+A hook that is registered but never dispatched looks identical to one that
+works. bkit records every dispatch it receives into
+`.bkit/runtime/hook-dispatch.ndjson`, so you can check directly:
+
+```bash
+cat .bkit/runtime/hook-dispatch.ndjson | jq -r '.event' | sort | uniq -c
+```
+
+Set `BKIT_HOOK_DISPATCH_RECORD=0` to disable the recording (roughly 0.7 ms per
+hook fire). If a bkit hook crashes, the next session start reports it in the
+Preflight section rather than staying silent.
 
 ### Customization Example: Pre-commit Validation
 
@@ -1403,25 +1440,32 @@ Inject instructions into Claude's context:
 
 ```json
 {
-  "PreToolUse": {
-    "Bash(git commit:*)": {
-      "hooks": [
-        {
-          "type": "command",
-          "command": ".claude/hooks/pre-commit.js"
-        }
-      ]
-    }
-  },
-  "PostToolUse": {
-    "Write": {
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npx prettier --write $TOOL_INPUT_PATH 2>/dev/null || true"
-        }
-      ]
-    }
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit.js",
+            "timeout": 10,
+            "if": "Bash(git commit *)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/format.js",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -1664,26 +1708,35 @@ Provide senior-level guidance on architecture and best practices.
 
 ```json
 {
-  "SessionStart": [
-    {
-      "once": true,
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/init.js\""
-        }
-      ]
-    }
-  ],
-  "PreToolUse": {
-    "Write(src/**/*.ts)": {
-      "hooks": [
-        {
-          "type": "prompt",
-          "prompt": "Ensure TypeScript strict mode compliance."
-        }
-      ]
-    }
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/init.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Ensure TypeScript strict mode compliance.",
+            "if": "Write(src/**/*.ts)"
+          },
+          {
+            "type": "prompt",
+            "prompt": "Ensure TypeScript strict mode compliance.",
+            "if": "Edit(src/**/*.ts)"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
