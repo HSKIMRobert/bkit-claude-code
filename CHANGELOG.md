@@ -25,7 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session for ~15 minutes while "exceeding its own 10s timeout". v2.1.30 fixed
   that hook's blocking read; the unit error stayed armed on all 22 events.
   Verified: a 5-second hook survives `timeout: 30` and is killed at 2.26s under
-  `timeout: 2`. All 28 handlers now declare 2–10s.
+  `timeout: 2`. All 28 handlers now declare 3–10s, and every one of them was
+  measured against its own budget rather than assigned a number: five runs each,
+  worst case 5.7%–38.4% of budget. The two guards where a timeout would matter
+  most have the most room — `unified-bash-pre` uses 13.3% of its 5 s and
+  `pre-write` 18.4%.
+
+  **A shorter budget does not make hooks fire more often.** It decides how long
+  a hook that has stopped responding is waited for. Measured on a throwaway
+  probe plugin: a PreToolUse hook that is killed by its timeout **fails open**
+  under `bypassPermissions` — the tool runs — and a hook that answers in time
+  denies correctly in every permission mode. So a hung hook was never going to
+  protect anyone; before this change it also stalled the session for up to
+  166 minutes while failing to. That stall is issue #139.
+
+  The one genuine trade-off: on a pathologically slow machine a handler that
+  previously completed late now gets killed, and in auto mode that is a silent
+  fail-open. `SessionEnd` was the only budget thin enough to worry about — 768 ms
+  measured against 2 s, and this release's own performance suite had already
+  caught that handler crossing 1 s under load — so it was widened to 5 s. Losing
+  the session record silently is worse than waiting five seconds to close.
 
 - **The `FileChanged` hook never ran once, in any release since v2.1.1.** Three
   independent causes, each confirmed: it declared `if: "Write|Edit(...)"`, but
