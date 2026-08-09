@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   Daniel-mode fast-track auto-approves Checkpoint 1-8 when Trust ≥ 80, fastTrack on, Design doc exists. Else L2 + manual gates.
-  Triggers: pdca fast-track, skip checkpoints, auto approve, 패스트 트랙, ファストトラック, 快速通道, vía rápida.
+  Triggers: pdca fast-track, skip checkpoints, auto approve
 argument-hint: "<feature>"
 user-invocable: true
 allowed-tools:

@@ -8,10 +8,7 @@ deprecation-risk: none
 effort: high
 description: |
   Verify codebase quality — architecture consistency, convention compliance, gap analysis.
-  Triggers: code review, architecture check, quality, gap analysis, 코드 리뷰, 품질 검증.
-imports:
-  - ${PLUGIN_ROOT}/templates/pipeline/phase-8-review.template.md
-agents:
+  Triggers: code review, architecture check, quality, gap analysis
   default: bkit:code-analyzer
   validate: bkit:design-validator
   gap: bkit:gap-detector

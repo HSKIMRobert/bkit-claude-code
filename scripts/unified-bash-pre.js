@@ -20,7 +20,7 @@
  *   reformulated command automatically (agent resilience boost).
  */
 
-const { readStdinSync, parseHookInput, outputAllow, outputBlock, outputBlockWithContext } = require('../lib/core/io');
+const { readStdinSync, parseHookInput, outputAllow, outputBlockWithContext, outputAsk } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getActiveSkill, getActiveAgent } = require('../lib/task/context');
 
@@ -216,6 +216,20 @@ debugLog('UnifiedBashPre', 'Context', { activeSkill, activeAgent });
 
 let blocked = false;
 
+/*
+ * A pending confirmation request, if one was raised.
+ *
+ * An `ask` must NOT be emitted where it is decided. `outputAsk()` exits the
+ * process, so emitting inline would skip every guard that runs after the
+ * destructive detector — heredoc bypass, the push guard and the Memory
+ * Enforcer, all of which can DENY. A command that both warrants confirmation
+ * and contains a `<<EOF | bash` bypass would have been offered to the user as a
+ * yes/no prompt instead of being refused outright, turning a block into a
+ * click-through. So the ask is parked here and emitted at the very end, only if
+ * nothing stronger fired.
+ */
+let pendingAsk = null;
+
 // Phase 9 deployment checks
 if (activeSkill === 'phase-9-deployment') {
   blocked = handlePhase9DeployPre(input);
@@ -288,6 +302,38 @@ if (!blocked) {
 
       blocked = true;
       outputBlockWithContext(reason, alternatives, 'PreToolUse');
+    }
+
+    /*
+     * v2.1.34 (D9) — high-severity findings ask instead of passing silently.
+     *
+     * Before this, only `critical` did anything, so a rule was either an
+     * absolute refusal or invisible. That is why G-001 refused `rm -rf` on any
+     * target at all: making it proportionate would have meant making it
+     * toothless. With a grading step (see `severityFor` on G-001) a scoped
+     * recursive delete lands on `high`, and `high` must reach the user rather
+     * than slip past — grading it down to a silent allow would be a relaxation
+     * dressed up as a fix.
+     */
+    if (!blocked && result.detected) {
+      // Driven by the rule's own declared action, not by severity. Ten rules
+      // have carried `defaultAction: 'ask'` since the table was written and not
+      // one of them ever asked, because this hook only ever branched on
+      // `critical`. Reading `action` is what makes the declaration true.
+      const askRules = (result.rules || []).filter((r) => r.action === 'ask');
+      if (askRules.length > 0) {
+        const ids = askRules.map((r) => r.id);
+        pendingAsk = {
+          ids,
+          confidence: result.confidence,
+          command: toolInput.command || '',
+          reason:
+            `bkit Destructive Detector: this command matches ${ids.length > 1 ? 'rules' : 'rule'} `
+            + `${ids.join(', ')} (${askRules.map((r) => r.name).join('; ')}). `
+            + 'This is a confirmation, not a refusal — the operation is reversible or narrowly '
+            + 'scoped enough that refusing it outright would be the wrong call.',
+        };
+      }
     }
   } catch (_) {}
 }
@@ -561,7 +607,31 @@ if (!blocked) {
   }
 }
 
-// Allow if not blocked
+// A parked confirmation is emitted only here, once every deny-capable guard
+// above has run and declined to fire. Audited at the point of emission so the
+// trail records the decision that was actually taken — an `ask` entry written
+// where the ask was merely *considered* would be the same false-assurance the
+// hardcoded `result: 'blocked'` used to produce (ENH-393).
+if (!blocked && pendingAsk) {
+  try {
+    const audit = require('../lib/audit/audit-logger');
+    audit.writeAuditLog({
+      actor: 'hook', actorId: 'unified-bash-pre',
+      action: 'destructive_confirmation_requested', category: 'control',
+      target: pendingAsk.command.substring(0, 100), targetType: 'file',
+      details: { rules: pendingAsk.ids, confidence: pendingAsk.confidence },
+      result: 'ask', destructiveOperation: true,
+      reason: pendingAsk.reason,
+    });
+  } catch (_) { /* graceful — auditing must never prevent the prompt */ }
+  debugLog('UnifiedBashPre', 'Hook completed', { blocked, ask: pendingAsk.ids });
+  outputAsk(pendingAsk.reason, [
+    'Confirm the exact target is the one you mean',
+    'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
+  ]);
+}
+
+// Allow if neither blocked nor awaiting confirmation
 if (!blocked) {
   const contextMsg = activeSkill || activeAgent
     ? `Bash command validated for ${activeSkill || activeAgent}.`
@@ -569,4 +639,4 @@ if (!blocked) {
   outputAllow(contextMsg + ccRegressionAttr, 'PreToolUse');
 }
 
-debugLog('UnifiedBashPre', 'Hook completed', { blocked });
+debugLog('UnifiedBashPre', 'Hook completed', { blocked, ask: null });

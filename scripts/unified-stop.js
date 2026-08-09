@@ -268,13 +268,49 @@ if (!handled && activeSkill && SKILL_HANDLERS[activeSkill]) {
 // v2.0.0 Module Integrations
 // ============================================================
 
-// Extract PDCA context for v2.0.0 modules
+/*
+ * Extract PDCA context for the v2.0.0 module integrations below.
+ *
+ * v2.1.34 — every one of these read a key the v3 schema does not have, and the
+ * damage was proportional to what they gate. Measured against the live status
+ * object:
+ *
+ *   pdcaStatus.feature                → undefined  (it is `primaryFeature`)
+ *   pdcaStatus.session.feature        → undefined  (session holds only
+ *                                        startedAt / onboardingCompleted /
+ *                                        lastActivity)
+ *   pdcaStatus.currentPhase           → undefined  (v1 key; the phase lives on
+ *                                        the feature entry)
+ *   pdcaStatus.session.currentPhase   → undefined
+ *   pdcaStatus.session.nextPhase      → undefined
+ *   pdcaStatus.session.matchRate      → undefined
+ *   pdcaStatus.projectLevel           → undefined  (it is `pipeline.level`)
+ *
+ * `feature` and `currentPhase` were therefore always null, and they guard FOUR
+ * module integrations in this file — checkpoint creation before a phase
+ * transition, quality-gate recording, the state-machine transition, and the
+ * workflow-engine advance. All four were unreachable, in bkit's busiest hook,
+ * for as long as the v3 schema has existed. Nothing logged it, because
+ * `if (feature && currentPhase)` skipping is indistinguishable from there being
+ * no active cycle.
+ *
+ * `nextPhase` has no home in the schema at all; it is derived, so it is derived
+ * here rather than read from a field that was never written.
+ */
 const pdcaStatus = getPdcaStatusFull();
-const feature = pdcaStatus?.feature || pdcaStatus?.session?.feature || null;
-const currentPhase = pdcaStatus?.currentPhase || pdcaStatus?.session?.currentPhase || null;
-const nextPhase = pdcaStatus?.session?.nextPhase || null;
-const matchRate = pdcaStatus?.session?.matchRate || null;
-const level = pdcaStatus?.projectLevel || null;
+const feature = pdcaStatus?.primaryFeature || null;
+const featureEntry = feature ? pdcaStatus?.features?.[feature] : null;
+const currentPhase = featureEntry?.phase || null;
+const nextPhase = (() => {
+  if (!currentPhase) return null;
+  try {
+    return require('../lib/pdca/phase').getNextPdcaPhase(currentPhase) || null;
+  } catch (_) { return null; }
+})();
+const matchRate = require('../lib/quality/match-rate').isMeasured(featureEntry?.matchRate)
+  ? featureEntry.matchRate
+  : null;
+const level = pdcaStatus?.pipeline?.level || null;
 const agentName = activeAgent || activeSkill || null;
 
 // v2.0.0: Checkpoint creation before phase transitions
@@ -452,10 +488,19 @@ if (feature && transitionSuccess) {
       if (nextPhase === 'report' || nextPhase === 'completed' || nextPhase === 'archived') {
         te.recordEvent('pdca_complete', { feature, from: currentPhase, to: nextPhase });
       }
-      // Record gate pass/fail based on quality gate results
+      // Record gate pass/fail based on quality gate results.
+      //
+      // v2.1.34: an UNMEASURED rate records neither. This read
+      // `matchRate >= 90 ? 'gate_pass' : 'gate_fail'`, and with matchRate now
+      // legitimately null it filed a trust-lowering `gate_fail` for a
+      // measurement that never ran — the user permanently paying for work bkit
+      // did not do. Nothing was found wanting, so nothing is recorded.
       if (currentPhase && currentPhase.toLowerCase() === 'check') {
-        const gateEventType = matchRate >= 90 ? 'gate_pass' : 'gate_fail';
-        te.recordEvent(gateEventType, { feature, matchRate });
+        const { classify } = require('../lib/quality/match-rate');
+        const verdict = classify(matchRate, 90);
+        if (verdict !== 'unmeasured') {
+          te.recordEvent(verdict === 'pass' ? 'gate_pass' : 'gate_fail', { feature, matchRate });
+        }
       }
       // v2.1.1 TC-01: Sync trust score to control-state.json
       te.syncToControlState();

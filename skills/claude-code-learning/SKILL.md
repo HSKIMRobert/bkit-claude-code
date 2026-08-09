@@ -6,7 +6,7 @@ deprecation-risk: high
 effort: low
 description: |
   Claude Code learning — configure and optimize Claude Code settings, tips, and workflows.
-  Triggers: learn, setup, claude code, optimize, 학습, 설정, 최적화.
+  Triggers: learn, setup, claude code, optimize
 argument-hint: "[learn|setup|upgrade] [level]"
 agent: claude-code-guide
 allowed-tools:

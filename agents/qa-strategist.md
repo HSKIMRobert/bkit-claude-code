@@ -7,9 +7,7 @@ description: |
   Use proactively when user needs test strategy, quality planning,
   or coordinated verification across multiple aspects.
 
-  Triggers: test strategy, QA plan, quality metrics, test plan, verification strategy,
-  테스트 전략, QA 계획, 품질 기준, 검증 전략, 테스트 계획,
-  テスト戦略, 测试策略, estrategia de pruebas, stratégie de test, Teststrategie, strategia di test
+  Triggers: test strategy, QA plan, quality metrics, test plan, verification strategy
 model: sonnet
 effort: medium
 maxTurns: 20

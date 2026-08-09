@@ -7,9 +7,7 @@ description: |
   Use proactively when user discusses microservices, kubernetes, terraform, enterprise
   architecture, or asks about strategic technical decisions for large-scale systems.
 
-  Triggers: CTO, AI Native, enterprise strategy, microservices, architecture decision,
-  전략, 아키텍처, 마이크로서비스,
-  マイクロサービス, 微服务, microservicios, stratégie d'entreprise, Unternehmensstrategie, architettura
+  Triggers: CTO, AI Native, enterprise strategy, microservices, architecture decision
 model: opus
 effort: high
 maxTurns: 30

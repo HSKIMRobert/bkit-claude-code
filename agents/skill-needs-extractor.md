@@ -1,9 +1,9 @@
 ---
 name: skill-needs-extractor
 description: |
-  PRD 분석 결과에서 프로젝트 특화 스킬 니즈를 자동 추출하고,
-  기존 bkit 28개 core 스킬과 매칭하여 갭 분석을 수행하는 에이전트.
-  pm-lead Phase 4 완료 후 자동 호출되어 skill-create 파이프라인에 연결.
+  Derives the skills a project needs from its PRD analysis, matches them against
+  bkit's existing core skills, and reports the gap.
+  Runs after pm-lead Phase 4 and feeds the skill-create pipeline.
 model: sonnet
 effort: medium
 maxTurns: 20

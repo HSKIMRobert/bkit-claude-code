@@ -8,7 +8,7 @@ deprecation-risk: none
 effort: medium
 description: |
   Define coding rules, conventions, and standards for AI collaboration.
-  Triggers: convention, coding style, lint, rules, 코딩 규칙, 컨벤션.
+  Triggers: convention, coding style, lint, rules
 agent: bkit:pipeline-guide
 allowed-tools:
   - Read

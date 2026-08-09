@@ -7,9 +7,7 @@ description: |
 
   Use proactively when a new CC CLI version is released and impact analysis is needed.
 
-  Triggers: CC version, CLI update, version research, changelog, release notes,
-  CC 버전, CLI 업데이트, 버전 조사, 변경사항, 릴리스 노트,
-  CCバージョン, CC版本, versión CC, version CC, CC-Version, versione CC
+  Triggers: CC version, CLI update, version research, changelog, release notes
 model: opus
 effort: high
 maxTurns: 40

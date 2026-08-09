@@ -6,10 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   Core rules for bkit — PDCA methodology, level detection, agent triggering, quality standards, Sprint management (8-phase container with 4 auto-pause triggers, v2.1.13), and Trust Level scope (L0-L4 gates PDCA + Sprint auto-run).
-  Triggers: bkit rules, core rules, methodology, 핵심 규칙, PDCA 규칙.
-imports:
-  - ${PLUGIN_ROOT}/templates/shared/naming-conventions.md
-# hooks: Managed by hooks/hooks.json (pre-write.js, unified-write-post.js) - GitHub #9354 workaround
+  Triggers: bkit rules, core rules, methodology
 user-invocable: false
 allowed-tools:
   - Read

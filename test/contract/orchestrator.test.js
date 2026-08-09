@@ -61,15 +61,27 @@ assert(orch.generatePhaseNext('qa', 'y') === '/pdca report y', 'qa → /pdca rep
 assert(orch.generatePhaseNext('archived', 'z') === null, 'archived → null');
 
 // 6. NextActionEngine — generic suggestion
-const genHint = orch.generateGeneric({ pdcaStatus: { currentPhase: 'plan', primaryFeature: 'feat-x' } });
+/*
+ * v2.1.34 — fixtures moved to the real v3 schema shape.
+ *
+ * These passed `{ currentPhase: 'plan', primaryFeature: 'feat-x' }`, which no
+ * live status object has ever looked like: `currentPhase` is a v1 key the v3
+ * migration removed, and the phase lives at `features[<feature>].phase`. The
+ * production code read the same absent key, so test and code agreed — on a
+ * shape neither the schema nor reality produces, and the hints these functions
+ * exist to emit were never emitted for a real user.
+ *
+ * Feeding the real shape is what makes these assertions mean anything.
+ */
+const genHint = orch.generateGeneric({ pdcaStatus: { primaryFeature: 'feat-x', features: { 'feat-x': { phase: 'plan' } } } });
 assert(genHint && genHint.includes('/pdca design feat-x'), 'generateGeneric emits phase-aware hint');
 
 // 7. NextActionEngine — SessionEnd resume hint
-const seHint = orch.generateSessionEnd({ pdcaStatus: { currentPhase: 'do', primaryFeature: 'feat-y' } });
+const seHint = orch.generateSessionEnd({ pdcaStatus: { primaryFeature: 'feat-y', features: { 'feat-y': { phase: 'do' } } } });
 assert(seHint && seHint.includes('/pdca analyze feat-y'), 'generateSessionEnd emits resume hint');
 
 // 8. NextActionEngine — SubagentStop hint
-const ssHint = orch.generateSubagentStop({ agentName: 'pm-discovery', status: 'completed', pdcaStatus: { currentPhase: 'pm', primaryFeature: 'f' } });
+const ssHint = orch.generateSubagentStop({ agentName: 'pm-discovery', status: 'completed', pdcaStatus: { primaryFeature: 'f', features: { f: { phase: 'pm' } } } });
 assert(ssHint && ssHint.includes('/pdca plan f'), 'generateSubagentStop emits next phase hint');
 
 // 9. TeamProtocol — canSpawn respects env var

@@ -8,7 +8,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   Define project terminology, data structures, entities, and relationships.
-  Triggers: schema, data model, entity, terminology, 스키마, 데이터 모델, 용어.
+  Triggers: schema, data model, entity, terminology
 agent: bkit:pipeline-guide
 allowed-tools:
   - Read

@@ -101,7 +101,20 @@ function generateReport(allResults) {
 
   report += `## Verdict\n\n`;
   if (totalFailed === 0) {
-    report += `**ALL TESTS PASSED** - bkit v2.0.4 is ready for release.\n`;
+    /*
+     * v2.1.34 — read from the manifest, never typed here.
+     *
+     * This line said "bkit v2.0.4 is ready for release" through thirty
+     * releases: a hardcoded version in the one sentence people quote when
+     * declaring a release ready. Any statement a suite makes about the artefact
+     * has to come from the artefact.
+     */
+    let version = 'unknown';
+    try {
+      version = require(path.join(__dirname, '..', '..', '.claude-plugin', 'plugin.json')).version
+        || version;
+    } catch (_) { /* keep 'unknown' rather than assert a version we cannot read */ }
+    report += `**ALL TESTS PASSED** - bkit v${version} is ready for release.\n`;
   } else {
     report += `**${totalFailed} TESTS FAILED** - Issues must be resolved before release.\n`;
   }

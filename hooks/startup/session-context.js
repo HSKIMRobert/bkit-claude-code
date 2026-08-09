@@ -1,5 +1,5 @@
 /**
- * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.33)
+ * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.34)
  *
  * Builds the additionalContext string for the SessionStart hook response.
  * Includes PDCA status injection, Feature Usage rules, Executive Summary rules,
@@ -526,9 +526,9 @@ function buildVersionEnhancementsContext(detectedLevel) {
   // v2.1.1: Consolidated version summary (reduced from 4 blocks to 1)
   // v2.1.10 (ENH-167): removed hard-coded strings, uses BKIT_VERSION
   ctx += `\n## bkit v${BKIT_VERSION} (Current)\n`;
-  ctx += `- CC recommended: v2.1.218 (fork background-default handled; Claude 5 alias resolution) | model floor: v2.1.170+ for Fable-pinned agents | install floor: v2.1.143 (displayName schema)\n`;
-  ctx += `- Architecture: 44 Skills, 34 Agents, 22 Hook Events (25 blocks), 195 Lib Modules (22 subdirs, 8 Port↔Adapter pairs), 2 MCP Servers (19 tools), Sprint Management (v2.1.13 GA)\n`;
-  ctx += `- v2.1.14 differentiations: #1 Memory Enforcer + #2 Layer 6 Defense + #3 Sequential Dispatch + #4 Effort-aware + #5 PostToolUse continueOnBlock + #6 Heredoc-bypass\n`;
+  ctx += `- CC recommended: v2.1.220 (fork background-default handled; Claude 5 alias resolution) | verified against v2.1.226 | model floor: v2.1.170+ for Fable-pinned agents | install floor: v2.1.143 (displayName schema)\n`;
+  ctx += `- Architecture: 44 Skills, 34 Agents, 21 Hook Events (24 blocks / 28 handlers), 198 Lib Modules (22 subdirs, 8 Port↔Adapter pairs), 2 MCP Servers (19 tools), Sprint Management (v2.1.13 GA)\n`;
+  ctx += `- v2.1.34: hook timeouts are SECONDS (were 1000x too large); an unmeasured quality gate fails closed; L6 host integration proves hooks actually dispatch; destructive rules grade by target (broad denies, specific asks)\n`;
   // ENH-265: ENABLE_PROMPT_CACHING_1H hint (CC v2.1.108+, 30-40% token savings on long sessions)
   const _caching1h = process.env.ENABLE_PROMPT_CACHING_1H === '1' || process.env.ENABLE_PROMPT_CACHING_1H === 'true';
   if (_caching1h) {

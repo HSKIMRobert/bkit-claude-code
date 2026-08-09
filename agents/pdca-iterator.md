@@ -7,9 +7,7 @@ description: |
   Use proactively when gap analysis reports Match Rate below 90%, /pdca-iterate is executed,
   or user requests automatic fixing or iterative improvement.
 
-  Triggers: iterate, optimize, auto-fix, improve, fix this, make it better, automatically fix,
-  반복 개선, 자동 수정, 고쳐줘, 개선해줘, 고쳐, 더 좋게, 문제 해결해줘,
-  自動修正, 迭代优化, mejorar, améliorer, verbessern, migliorare
+  Triggers: iterate, optimize, auto-fix, improve, fix this, make it better, automatically fix
 model: opus
 effort: high
 maxTurns: 20

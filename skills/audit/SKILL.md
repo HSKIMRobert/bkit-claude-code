@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: medium
 description: |
   View audit logs, decision traces, and session history for AI transparency. ACTION_TYPES (19 entries) include PDCA events (phase_transition, gate_passed/failed, agent_spawned/completed/failed, rollback_executed, destructive_blocked) and Sprint events (sprint_paused, sprint_resumed, master_plan_created — v2.1.13).
-  Triggers: audit, log, decision trace, history, 감사 로그, 결정 추적.
+  Triggers: audit, log, decision trace, history
 argument-hint: "[log|trace|summary|search] [query]"
 user-invocable: true
 allowed-tools:

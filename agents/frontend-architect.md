@@ -7,9 +7,7 @@ description: |
   Use proactively when user needs UI architecture decisions, component design,
   Design System setup, or frontend code review.
 
-  Triggers: frontend, UI architecture, component, React, Next.js, design system,
-  프론트엔드, UI 아키텍처, 컴포넌트, 디자인 시스템, 리액트,
-  フロントエンド, 前端架构, sistema de diseño, système de design, UI-Architektur, architettura UI
+  Triggers: frontend, UI architecture, component, React, Next.js, design system
 model: sonnet
 effort: medium
 maxTurns: 20

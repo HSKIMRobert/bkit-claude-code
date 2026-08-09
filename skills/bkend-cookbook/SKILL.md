@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   bkend.ai project tutorials (todo to SaaS) and common error troubleshooting.
-  Triggers: bkend tutorial, cookbook, troubleshooting, 튜토리얼, 에러 해결.
+  Triggers: bkend tutorial, bkend cookbook, bkend troubleshooting
 user-invocable: false
 agent: bkit:bkend-expert
 allowed-tools:

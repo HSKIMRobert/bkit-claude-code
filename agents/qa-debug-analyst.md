@@ -4,8 +4,7 @@ description: |
   Designs debug logging systems and analyzes runtime errors.
   Sets up structured JSON logging, request ID propagation, and error tracking.
 
-  Triggers: debug analysis, runtime error, logging, debug log, 디버그 분석,
-  デバッグ分析, 调试分析, analisis de debug, analyse de debug, Debug-Analyse, analisi debug
+  Triggers: debug analysis, runtime error, logging, debug log
 model: sonnet
 effort: medium
 maxTurns: 20

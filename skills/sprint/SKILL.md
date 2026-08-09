@@ -8,10 +8,8 @@ description: |
   Sprint Management — generic sprint capability for ANY bkit user.
   16 sub-actions: init, start, status, watch, phase, iterate, qa, report,
   archive, list, feature, pause, resume, fork, help, master-plan.
-  Triggers: sprint, sprint start, sprint init, sprint status, sprint list,
-  master plan, multi-sprint plan, sprint master plan,
-  스프린트, 스프린트 시작, 스프린트 상태, 마스터 플랜, 멀티 스프린트 계획, 스프린트 마스터 플랜,
-  スプリント, 冲刺, iniciar sprint, demarrer sprint, Sprint starten, avviare sprint.
+  Triggers: sprint, sprint start, sprint init, sprint status, sprint list, master plan, multi-sprint plan,
+  sprint master plan
 argument-hint: "[action] [name] [--trust L0-L4] [--from <phase>]"
 user-invocable: true
 allowed-tools:

@@ -8,10 +8,7 @@ description: |
   Use proactively when sprint phase advances to report or when user invokes
   /sprint report <id>.
 
-  Triggers: sprint report, sprint completion, sprint kpi, sprint carry items,
-  스프린트 보고서, 스프린트 완료, 스프린트 KPI, 인계 항목,
-  スプリントレポート, 冲刺报告, reporte sprint, rapport sprint,
-  Sprint-Bericht, rapporto sprint
+  Triggers: sprint report, sprint completion, sprint kpi, sprint carry items
 model: sonnet
 effort: medium
 maxTurns: 20

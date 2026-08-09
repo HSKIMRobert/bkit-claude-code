@@ -240,9 +240,12 @@ try {
 try {
   const { getPdcaStatusFull } = require('../lib/pdca/status');
   const pdcaStatus = getPdcaStatusFull();
-  if (pdcaStatus && pdcaStatus.currentFeature) {
+  // v2.1.34: `currentFeature` is a v1 schema key the v3 migration renamed to
+  // `primaryFeature`, so this condition was permanently false and the
+  // file_change_count metric was never collected once.
+  if (pdcaStatus && pdcaStatus.primaryFeature) {
     const mc = require('../lib/quality/metrics-collector');
-    mc.collectMetric('file_change_count', pdcaStatus.currentFeature, 1, 'unified-write-post');
+    mc.collectMetric('file_change_count', pdcaStatus.primaryFeature, 1, 'unified-write-post');
   }
 } catch (_) {}
 

@@ -1,0 +1,42 @@
+{
+  "_comment": "Evidence from a real `claude -p --plugin-dir` run. Regenerate with `node test/qa-harness-full-live.js --layer hooks --record` whenever hooks.json changes. This is verified evidence re-verified on change, NOT a live session run by CI.",
+  "recordedAt": "2026-08-09T08:53:48.487Z",
+  "claudeVersion": "2.1.226 (Claude Code)",
+  "hooksJsonSha256": "f4196f395791531c9f9dac471a90c725aac7c987b54b1603960c99c33d411487",
+  "observedEvents": [
+    "InstructionsLoaded",
+    "PostCompact",
+    "PostToolUse",
+    "PostToolUseFailure",
+    "PreCompact",
+    "PreToolUse",
+    "SessionEnd",
+    "SessionStart",
+    "Stop",
+    "SubagentStart",
+    "SubagentStop",
+    "TaskCompleted",
+    "TaskCreated",
+    "UserPromptSubmit"
+  ],
+  "postToolUseTools": [
+    "Bash",
+    "Edit",
+    "Write",
+    "Skill"
+  ],
+  "preToolUseTools": [
+    "Bash",
+    "Edit",
+    "Write"
+  ],
+  "unverifiedEvents": {
+    "ConfigChange": "measured: writing .claude/settings.json with the Write tool during the session does not register as a settings change, with default setting sources. The matcher watches project_settings|skills and the watcher appears not to observe in-session writes to them",
+    "CwdChanged": "measured: cd inside a Bash tool call changes that command chain only, not the SESSION working directory. The model confirmed the same in its own reply",
+    "Notification": "follows PermissionRequest: -p raises neither a permission prompt nor an idle prompt, and those are the two matchers this event carries",
+    "PermissionRequest": "measured: -p auto-approves under every permission mode tried (default, acceptEdits) and never raises a prompt, so there is no request to hook",
+    "StopFailure": "requires an API-level failure (rate limit, overload, billing) on the model request itself, which a test cannot manufacture without breaking the account",
+    "TeammateIdle": "measured: with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 a dispatched subagent runs to completion and exits. Idleness needs a teammate that is alive and waiting, which a one-shot -p session never produces",
+    "UserPromptExpansion": "a slash command named inside a -p prompt is passed through as text; expansion happens in the interactive prompt box, which -p does not have"
+  }
+}

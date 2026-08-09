@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   bkend.ai file storage — upload (presigned URL), download (CDN), visibility levels, buckets.
-  Triggers: bkend file, upload, download, presigned URL, storage, 파일 업로드, 스토리지.
+  Triggers: bkend file, bkend upload, bkend download, bkend storage, bkend presigned URL
 user-invocable: false
 agent: bkit:bkend-expert
 allowed-tools:

@@ -6,10 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   Implement frontend UI and integrate with backend APIs — state management and API clients.
-  Triggers: UI integration, frontend-backend, API client, 프론트엔드 통합, UI 구현.
-imports:
-  - ${PLUGIN_ROOT}/templates/pipeline/phase-6-ui.template.md
-agents:
+  Triggers: UI integration, frontend-backend, API client
   default: bkit:pipeline-guide
   frontend: bkit:frontend-architect
 allowed-tools:

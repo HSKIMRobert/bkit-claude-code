@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: high
 description: |
   PM Agent Team — automated product discovery, strategy, and PRD generation with 4 PM agents (for a single feature). For multi-feature initiatives with shared scope/budget/timeline, use /sprint master-plan which generates a sprint-level PRD via sprint-master-planner agent (v2.1.13).
-  Triggers: pm, PRD, product discovery, PM 분석, 제품 기획, PM analysis.
+  Triggers: pm, PRD, product discovery
 argument-hint: "[feature]"
 user-invocable: true
 agents:

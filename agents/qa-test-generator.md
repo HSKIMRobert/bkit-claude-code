@@ -4,8 +4,7 @@ description: |
   Generates test code from test plans and design specifications.
   Creates L1-L5 test files following project conventions.
 
-  Triggers: test generation, generate tests, test code, 테스트 생성,
-  テスト生成, 测试生成, generar pruebas, generer tests, Tests generieren, generare test
+  Triggers: test generation, generate tests, test code
 model: sonnet
 effort: medium
 maxTurns: 25

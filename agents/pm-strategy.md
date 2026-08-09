@@ -5,9 +5,7 @@ description: |
   Strategic Analysis (SWOT, PESTLE, Porter's 5, BMC, Pricing, Ansoff).
   Context-dependent: runs core frameworks always, strategic analysis based on product context.
 
-  Triggers: value proposition, lean canvas, JTBD, business model, strategy,
-  가치 제안, 비즈니스 모델,
-  価値提案, 价值主张, propuesta de valor, proposition de valeur, Wertversprechen, proposta di valore
+  Triggers: value proposition, lean canvas, JTBD, business model, strategy
 model: sonnet
 effort: medium
 maxTurns: 20

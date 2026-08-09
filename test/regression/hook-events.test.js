@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Regression Test: 22 Hook Events Verification (25 TC)
- * HK-001~022: Each of 22 hook events registered in hooks.json
- * HK-023~025: Each handler script file exists and has valid JS syntax
+ * Regression Test: Hook Events Verification
  *
- * @version bkit v2.0.0
+ * HK-001..N: every hook event registered in hooks.json is wired to a handler
+ * HK-*:      every handler script exists and parses
+ *
+ * Renamed from `hooks-22.test.js` in v2.1.34. The count moved (22 events → 21,
+ * when FileChanged was retired for an event its handler could actually fire on)
+ * and a filename asserting a number is a claim that goes stale silently — the
+ * same class of drift as the doc comments this release corrected across the
+ * codebase. The suite derives its cases from hooks.json and never hardcodes a
+ * total.
+ *
+ * @version bkit v2.1.34
  */
 
 const fs = require('fs');
@@ -17,7 +25,7 @@ const BASE_DIR = path.resolve(__dirname, '../..');
 const HOOKS_DIR = path.join(BASE_DIR, 'hooks');
 const SCRIPTS_DIR = path.join(BASE_DIR, 'scripts');
 
-console.log('\n=== hooks-22.test.js (25 TC) ===\n');
+console.log('\n=== hook-events.test.js ===\n');
 
 // --- Load hooks.json ---
 let hooksConfig;
@@ -160,5 +168,5 @@ assert('HK-025', allHaveTimeout,
 // ============================================================
 // Summary
 // ============================================================
-const result = summary('22 Hook Events Regression Tests');
+const result = summary('Hook Events Regression Tests');
 if (result.failed > 0) process.exit(1);

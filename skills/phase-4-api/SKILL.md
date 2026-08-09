@@ -9,11 +9,7 @@ effort: high
 user-invocable: false
 description: |
   Design and implement backend APIs with Zero Script QA validation.
-  Triggers: API design, REST API, backend, endpoint, 백엔드 API, API 설계.
-imports:
-  - ${PLUGIN_ROOT}/templates/pipeline/phase-4-api.template.md
-  - ${PLUGIN_ROOT}/templates/shared/api-patterns.md
-  - ${PLUGIN_ROOT}/templates/shared/error-handling-patterns.md
+  Triggers: API design, REST API, backend, endpoint
 agent: bkit:qa-monitor
 allowed-tools:
   - Read

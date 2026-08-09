@@ -7,9 +7,7 @@ description: |
   Use proactively when user needs security review, authentication design,
   vulnerability assessment, or security-related code review.
 
-  Triggers: security, authentication, vulnerability, OWASP, CSRF, XSS, injection,
-  보안, 인증, 취약점, 보안 검토, 인가, 보안 아키텍처,
-  セキュリティ, 安全, seguridad, sécurité, Sicherheit, sicurezza
+  Triggers: security, authentication, vulnerability, OWASP, CSRF, XSS, injection
 model: opus
 effort: high
 maxTurns: 30

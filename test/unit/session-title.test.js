@@ -32,6 +32,14 @@ function assert(id, condition, message) {
 }
 
 // --- Helpers ---
+/*
+ * v2.1.34 — fixtures moved to the real v3 schema shape.
+ *
+ * `currentPhase` at the top level is a v1 key the v3 migration removed; the
+ * phase lives at `features[<feature>].phase`. Production read the absent key
+ * too, so these tests and the code agreed on a shape no live status object has,
+ * and the session title's phase component was empty for every real user.
+ */
 function mockPdcaStatus(status) {
   const statusMod = require('../../lib/pdca/status');
   statusMod.getPdcaStatusFull = () => status;
@@ -49,14 +57,14 @@ const defaultUI = {
 // =============== TC-A1: opt-out gate ===============
 resetCache();
 mockUIConfig({ sessionTitle: { enabled: false, staleTTLHours: 24, format: '[bkit] {action} {feature}' } });
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcA1 = ST.generateSessionTitle({ sessionId: 's1' });
 assert('TC-A1', tcA1 === undefined, 'ui.sessionTitle.enabled=false 시 undefined 반환 (CC auto-title 보존)');
 
 // =============== TC-A4: phase-change cache hit ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcA4first = ST.generateSessionTitle({ sessionId: 's1' });
 const tcA4second = ST.generateSessionTitle({ sessionId: 's1' });
 // v2.1.21 (#111 Phase B): title 에 sessionId 기반 tag 부착
@@ -66,9 +74,9 @@ assert('TC-A4b', tcA4second === undefined, '2차 동일 호출 시 cache hit →
 // =============== TC-A5: phase change → emit ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 ST.generateSessionTitle({ sessionId: 's1' });
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'design', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'design', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcA5 = ST.generateSessionTitle({ sessionId: 's1' });
 assert('TC-A5', tcA5 === `[bkit] DESIGN f1 ·${ST.sessionTag('s1')}`, `phase 변경 시 새 emit (got: ${tcA5})`);
 
@@ -76,14 +84,14 @@ assert('TC-A5', tcA5 === `[bkit] DESIGN f1 ·${ST.sessionTag('s1')}`, `phase 변
 resetCache();
 mockUIConfig(defaultUI);
 const stale = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); // 25h ago
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: stale } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: stale } } } });
 const tcA6 = ST.generateSessionTitle({ sessionId: 's1' });
 assert('TC-A6', tcA6 === undefined, '24h 초과 stale feature → undefined (사용자 사례 "ui" 자동 정리)');
 
 // =============== TC-A6b: stale TTL = 0 disables check ===============
 resetCache();
 mockUIConfig({ sessionTitle: { enabled: true, staleTTLHours: 0, format: '[bkit] {action} {feature}' } });
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: stale } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: stale } } } });
 const tcA6b = ST.generateSessionTitle({ sessionId: 's1' });
 assert('TC-A6b', tcA6b === `[bkit] PLAN f1 ·${ST.sessionTag('s1')}`, 'staleTTLHours=0 시 stale 검사 비활성 → 정상 발행');
 
@@ -97,7 +105,7 @@ assert('TC-A7', tcA7 === undefined, 'PDCA 없음 → undefined (CC auto-title �
 // =============== TC-A8: explicit action override ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcA8 = ST.generateSessionTitle({ sessionId: 's1', action: 'PLAN', feature: 'overridden' });
 assert('TC-A8', tcA8 === `[bkit] PLAN overridden ·${ST.sessionTag('s1')}`, `explicit feature/action override 작동 (got: ${tcA8})`);
 
@@ -108,7 +116,7 @@ assert('TC-A9', tcA9 === '[bkit] PLAN f1', `applyFormat — action 없을 때 ph
 // =============== TC-A10: cache file written ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 ST.generateSessionTitle({ sessionId: 's1' });
 const cached = Cache.readCache();
 // v2.1.21 (#111 Phase B): cache 는 sessions[sessionId] map
@@ -122,7 +130,7 @@ assert('TC-A10', !!recA10 && recA10.feature === 'f1' && recA10.phase === 'plan',
 // =============== TC-B1: 두 병렬 세션 → DISTINCT title ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcB1a = ST.generateSessionTitle({ sessionId: 'sessionA' });
 const tcB1b = ST.generateSessionTitle({ sessionId: 'sessionB' });
 assert('TC-B1a', typeof tcB1a === 'string' && typeof tcB1b === 'string', `두 세션 모두 title 발행 (A: ${tcB1a}, B: ${tcB1b})`);
@@ -133,7 +141,7 @@ assert('TC-B1b', tcB1a !== tcB1b, `동일 feature/phase 라도 sessionId 다르�
 // 기대: A 재발행은 undefined (자기 세션 cache hit) — ENH-228 dedup 복원
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 ST.generateSessionTitle({ sessionId: 'sessionA' });   // A 1차
 ST.generateSessionTitle({ sessionId: 'sessionB' });   // B 1차 (레거시: A clobber)
 const tcB2 = ST.generateSessionTitle({ sessionId: 'sessionA' }); // A 재발행 (변화 없음)
@@ -155,7 +163,7 @@ assert('TC-B3b', !!recB3 && recB3.feature === 'oldf' && recB3.phase === 'design'
 // =============== TC-B4: sessionId 부재 시 tag 생략 (backward-compat) ===============
 resetCache();
 mockUIConfig(defaultUI);
-mockPdcaStatus({ primaryFeature: 'f1', currentPhase: 'plan', features: { f1: { timestamps: { lastUpdated: new Date().toISOString() } } } });
+mockPdcaStatus({ primaryFeature: 'f1', features: { f1: { phase: 'plan', timestamps: { lastUpdated: new Date().toISOString() } } } });
 const tcB4 = ST.generateSessionTitle({});  // sessionId 없음
 assert('TC-B4', tcB4 === '[bkit] PLAN f1', `sessionId 부재 시 tag 생략 → 기존 포맷 유지 (got: ${tcB4})`);
 

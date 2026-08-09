@@ -27,7 +27,7 @@ A development approach where AI operates as **a controllable partner leading the
 |------------|--------------|
 | Verification | gap-detector agent, quality gates (7 stages), metrics collector (M1-M10), regression guard |
 | Direction | State machine-driven PDCA, design-first workflow, PM Agent Team (5 agents), plan-plus brainstorming |
-| Quality | code-analyzer agent, bkit-rules skill, destructive-detector (8 rules), blast radius analysis |
+| Quality | code-analyzer agent, bkit-rules skill, destructive-detector (16 known-pattern rules, target-graded), blast radius analysis |
 
 ---
 
@@ -106,7 +106,7 @@ To-Be: Configure quality gates + Monitor metrics dashboard
 | **Bug Discovery** | Post-release | During PDCA Check phase (quality gates) |
 | **Design-Implementation Gap** | 30-50% | Under 5% (gap-detector + pdca-iterator) |
 | **Code Consistency** | Varies by developer | Auto-applied conventions + regression guard |
-| **Security Vulnerabilities** | Found post-hoc | Destructive detector (8 rules) + blast radius analysis |
+| **Security Vulnerabilities** | Found post-hoc | Destructive detector (16 known-pattern rules, target-graded) + blast radius analysis |
 | **Technical Debt** | Accumulates | Metrics collector (M1-M10) + continuous monitoring |
 | **AI Decision Transparency** | None | Full audit trail (JSONL) + decision tracer |
 

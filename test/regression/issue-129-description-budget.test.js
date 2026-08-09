@@ -28,7 +28,7 @@
  *     included) stays ≤20,000 — a headroom lock against re-bloat vs the
  *     measured pre-diet 30,065.
  *  4. SPRINT SKILL: skills/sprint/SKILL.md description (dieted 1,110B → ~500B
- *     in Part B) stays ≤700 bytes, keeps the word "Trigger" (SD-042) and its
+ *     in Part B) stays ≤700 bytes, keeps the word "Trigger" (SD-042), carries no
  *     Korean keywords, and stays under the 1,536-char L1-SK cap.
  */
 const fs = require('node:fs');
@@ -147,8 +147,24 @@ tc(`total agent description bytes ≤${TOTAL_BUDGET_BYTES}`,
       desc.length <= L1_SK_CAP_CHARS, `${desc.length} chars`);
     tc('sprint skill: description keeps the word "Trigger" (SD-042)',
       /Trigger/.test(desc));
-    tc('sprint skill: description keeps Korean trigger keywords',
-      /[가-힣]/.test(desc));
+    /*
+     * v2.1.34 — inverted, and this file is where the inversion matters most.
+     *
+     * Issue #129 asks that the 8-language trigger enumeration stop being
+     * always-resident in agent/skill descriptions. This assertion required the
+     * Korean keywords to be present there, so the test written to bound #129's
+     * cost was also holding #129's cause in place.
+     *
+     * The vocabulary now lives in lib/i18n/trigger-keywords.js, where bkit's
+     * intent-router matches it at no context cost. Frontmatter carries English
+     * only; the capability is asserted against code instead.
+     */
+    tc('sprint skill: description carries no Korean (it belongs in code)',
+      !/[가-힣]/.test(desc));
+    const { SKILL_TRIGGER_KEYWORDS } = require(path.join(REPO, 'lib/i18n/trigger-keywords'));
+    const sprintKeywords = SKILL_TRIGGER_KEYWORDS.sprint || {};
+    tc('sprint skill: Korean triggers still route, from lib/i18n/trigger-keywords.js',
+      Array.isArray(sprintKeywords.ko) && sprintKeywords.ko.some((k) => /[가-힣]/.test(k)));
   }
 }
 

@@ -5,6 +5,447 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.34] - 2026-08-09
+
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
+> **Status**: Reachability release. v2.1.33 made bkit's defenses act when they
+> fired. This one is about the hooks that never fired at all.
+>
+> Every finding below was reproduced against a real Claude Code runtime with
+> `claude -p --plugin-dir`, not inferred from documentation. The reproduction
+> harness ships with the release so each claim can be re-run.
+
+### Fixed
+
+- **Hook timeouts were 1000x too large on every event.** `timeout` is measured
+  in **seconds**; bkit wrote milliseconds. `"timeout": 10000` on `Stop` meant
+  2 hours 46 minutes, not 10 seconds, so a hung hook had no effective
+  cancellation — the true root cause of issue #139, where a Stop hook stalled a
+  session for ~15 minutes while "exceeding its own 10s timeout". v2.1.30 fixed
+  that hook's blocking read; the unit error stayed armed on all 22 events.
+  Verified: a 5-second hook survives `timeout: 30` and is killed at 2.26s under
+  `timeout: 2`. All 28 handlers now declare 3–10s, and every one of them was
+  measured against its own budget rather than assigned a number: five runs each,
+  worst case 5.7%–38.4% of budget. The two guards where a timeout would matter
+  most have the most room — `unified-bash-pre` uses 13.3% of its 5 s and
+  `pre-write` 18.4%.
+
+  **A shorter budget does not make hooks fire more often.** It decides how long
+  a hook that has stopped responding is waited for. Measured on a throwaway
+  probe plugin: a PreToolUse hook that is killed by its timeout **fails open**
+  under `bypassPermissions` — the tool runs — and a hook that answers in time
+  denies correctly in every permission mode. So a hung hook was never going to
+  protect anyone; before this change it also stalled the session for up to
+  166 minutes while failing to. That stall is issue #139.
+
+  The one genuine trade-off: on a pathologically slow machine a handler that
+  previously completed late now gets killed, and in auto mode that is a silent
+  fail-open. `SessionEnd` was the only budget thin enough to worry about — 768 ms
+  measured against 2 s, and this release's own performance suite had already
+  caught that handler crossing 1 s under load — so it was widened to 5 s. Losing
+  the session record silently is worse than waiting five seconds to close.
+
+- **The `FileChanged` hook never ran once, in any release since v2.1.1.** Three
+  independent causes, each confirmed: it declared `if: "Write|Edit(...)"`, but
+  `if` holds exactly one permission rule and rejects `|` alternation (the same
+  string suppresses a hook on a *valid* tool event too); `if` is evaluated only
+  on tool events, and `FileChanged` is not one; and `FileChanged`'s matcher
+  names literal files to watch, so the `docs/**/*.md` glob this handler needs
+  cannot be expressed on that event at all. The capability moved to
+  `PostToolUse(Write|Edit)` — the event that actually describes reacting to
+  Claude editing a document — as `scripts/pdca-doc-changed-handler.js`.
+
+- **`once: true` on `SessionStart` was silently ignored.** It is honoured only
+  in skill frontmatter, never in a plugin's `hooks.json`. Confirmed by resuming
+  a session and watching the hook fire a second time. The key is gone; it
+  promised a guarantee the host never made.
+
+- **`SKILL.md` edits were never linted and document edits were never
+  post-processed.** `if` accepts one rule, so `if: "Write(skills/**/SKILL.md)"`
+  under a `Write|Edit` matcher covered only `Write`; and `PostToolUse` matched
+  `Write` alone, so `unified-write-post.js` (PDCA tracking, template
+  validation, reachability ping) never ran when Claude used `Edit` — the common
+  case for an existing file. Both now declare one handler per tool.
+
+- **A recursive delete was refused no matter what it pointed at.** `G-001`
+  matched `rm -r` regardless of target, so clearing a scoped temporary directory
+  was refused exactly as hard as clearing `/` — while the refusal advised
+  "scope the command to a specific path", which the rule made impossible to act
+  on. The rule now grades by target: a broad one (`/`, `~`, `$HOME`, a glob, a
+  system directory, an unresolved variable) still denies; a specific path asks.
+  `ask` needed building, because bkit had only two outcomes and grading a
+  command down to a silent `allow` would have been a relaxation rather than a
+  fix.
+
+- **Two guards blocked ordinary work.** Writing a commit message that merely
+  *mentioned* a blocked pattern, and piping documentation through
+  `python3 - <<'PY'`, were both refused as critical — the detectors read heredoc
+  bodies as if they were command lines. Quoted heredoc bodies are now treated as
+  the data they are, while the terminator line is kept whole, since a known
+  bypass writes its exec vector there (`EOF-1 | bash`). Unquoted heredocs still
+  expand at runtime and are left fully visible.
+
+- **Four destructive-command bypasses.** Probing the shipped rules found
+  `eval "$(echo <base64> | base64 -d)"`, `find / -delete`, `dd of=/dev/disk0`
+  and `curl … | sh` all returning `allow`. Now `G-012`–`G-015`, each with a
+  regression test naming the payload it blocks.
+
+- **`lint-skill-md` still used the pattern behind issue #139.** v2.1.30 replaced
+  `fs.readFileSync(0)` centrally; this handler kept its own copy, and with it the
+  unbounded stall.
+
+### Changed
+
+- **Hook counts now describe what is proven to fire, not what is registered.**
+  22 events / 25 blocks → **21 events / 24 blocks across 28 handlers** — one dead
+  event removed while handler coverage grew, because `Write|Edit` now needs a
+  handler per tool. The reduction is an audit result, not a scope cut:
+  `FileChanged` was retired through an explicit `deprecation-registry.json` entry. Hook events may
+  now be removed only through that registry, mirroring ADR 0014 for
+  agents/skills/MCP tools: silent removal still fails the contract test, a
+  declared removal records why.
+
+- **The 8-language trigger vocabulary moved into code** (issue #129, open seven
+  months). The keywords lived in two places: `lib/intent/language.js`, where
+  bkit's intent-router reads them for free, and every agent/skill `description`,
+  which Claude Code loads for the whole session. The expensive copy was the
+  complete one and the free copy covered 12 of 34 agents and 16 of 44 skills.
+  `lib/i18n/trigger-keywords.js` now carries all 1,515 keywords, frontmatter is
+  English-only and free of CJK entirely, and every language still routes.
+  Moving them surfaced three routing defects that had been inert while the
+  keywords sat unused in frontmatter:
+
+  - The `/bkit` help skill owned a bare `기능` ("feature"), so
+    "회원가입 기능 만들어줘" reached help instead of `/dynamic`. A help surface
+    must never be the greediest matcher.
+  - **39 keywords ended in a sentence period** — `"제어."`, `"롤백."` — captured
+    from the last entry on each `Triggers:` line. They looked alive and could
+    never match. This was a defect in the GENERATED table, introduced by the
+    extraction and caught before release; the hand-curated table already carried
+    those keywords correctly, so no user was ever affected. Recorded because the
+    generator is the thing that will run again, and `TL-CLEAN` now rejects a
+    trailing period outright.
+  - The vendor-specific `bkend-*` skills had lost their vendor token on the
+    non-English side, leaving bare `인증`, `로그인`, `회원가입`, `테이블`. Once
+    the period cleanup made those matchable, a generic signup request routed to
+    a BaaS documentation skill. Every `bkend-*` keyword now names bkend.
+
+  Each is locked by a guard in `trigger-locale-contract`: no trailing
+  punctuation, no single-character CJK keyword, no vendor skill capturing a
+  generic prompt.
+
+- **The product one-liner drops "The only".** GitHub Spec Kit documents
+  `/speckit.converge` as "Assess the codebase against spec/plan/tasks", so the
+  superlative was disprovable in one search — and until this release it was also
+  untrue of bkit itself, which reported a perfect match for a feature that had
+  neither design nor implementation.
+
+- **Destructive commands that declared a confirmation now raise one.** This is
+  the most noticeable behaviour change in the release. Ten rules have carried
+  `defaultAction: 'ask'` since the rule table was written; the hook read only
+  `severity === 'critical'`, so those ten were detected, written to the audit
+  log, and then permitted without a word. From v2.1.34 they prompt:
+
+  | Command | Before | After |
+  |---|---|---|
+  | `rm -rf ./tmp/build` | refused as critical | **asks** |
+  | `rm -rf /`, `rm -rf ~`, `rm -rf $HOME` | refused | refused (unchanged) |
+  | `git reset --hard HEAD~1` | ran silently | **asks** |
+  | `git merge main`, `git push origin main` | ran silently | **asks** |
+  | access to `*.pem` / `*.key` files | ran silently | **asks** |
+  | `npm test`, `git status`, `git push origin <branch>` | ran | ran (unchanged) |
+
+  Ordinary work is deliberately untouched — a confirmation tier that interrupts
+  `npm test` gets switched off within a day, and takes the refusal tier with it.
+  A regression suite runs the shipped hook against both lists so neither can
+  drift. There is deliberately no environment variable to mute the tier: if a
+  rule asks too often, the rule is wrong and should be narrowed, not silenced.
+
+- **Hook failures are now visible.** The hook layer holds 333 catch blocks and
+  188 swallow without a trace. Most are legitimately best-effort, but a layer
+  where every failure is silent is one where working and broken look identical.
+  Crashes are recorded centrally and surfaced once at the next session start;
+  control flow is untouched, so an uncaught exception is still fatal.
+
+### Added
+
+- `test/contract/hooks-config-contract.test.js` — validates `hooks/hooks.json`
+  against the Claude Code hook specification: timeout unit and bounds, `once`
+  placement, one-rule-per-`if`, `if` only on tool events, event names, matcher
+  support, handler resolution, and count parity with the SoT. Verified against
+  the v2.1.33 configuration, where it reports the three defects above.
+
+- `test/contract/host-integration/hook-dispatch.test.js` — the new L6 layer.
+  Runs a real `claude -p --plugin-dir` session and asserts from the outside that
+  Claude Code dispatched each hook, including that `PostToolUse` fires for
+  `Edit` and not only `Write`.
+
+- `test/qa-harness-full-live.js` — exhaustive live QA across every surface: 44
+  skills as slash commands, 34 agents as dispatch targets, 21 hook events as
+  observed dispatches, 19 MCP tools over a real stdio handshake. Sampling cannot
+  find a dead surface, because a dead surface looks exactly like an unsampled
+  one. `--layer` narrows a run; `--list` prints the plan.
+
+- `test/contract/shipped-scripts-parse.test.js` — every shipped shell script
+  must pass `bash -n`, carry no expanded-heredoc corruption, and hardcode no home
+  directory. v2.1.33's live-QA harness shipped with a syntax error, referenced by
+  nothing, so it could not be caught.
+
+- `test/contract/trigger-locale-contract.test.js`,
+  `test/regression/destructive-bypass.test.js`,
+  `test/regression/hook-failure-observability.test.js` — regression locks for the
+  trigger relocation, the four proven bypasses plus the two false positives, and
+  crash observability.
+
+### Found by review of this release itself
+
+An independent review pass over this branch found three defects the release had
+introduced, and one it had committed while writing its own records. All are
+fixed here; each is listed because the pattern matters more than the individual
+bug.
+
+- **The crash recorder silenced crashes.** `installCrashRecorder` registered an
+  `unhandledRejection` listener, which SUPPRESSES Node's default — fatal since
+  Node 15. Measured: without the listener a rejecting hook exits 1 and prints its
+  stack; with it, exit 0 and silence. The mechanism built to end silent failure
+  had introduced a new one. Now uses `uncaughtExceptionMonitor`, which observes
+  without altering the default.
+
+- **Heredoc body elision became a bypass.** Treating any `<<` as a heredoc
+  opener meant `echo "example: cmd << EOF"` started a bogus elision and every
+  line up to the next `EOF` was discarded — including a real destructive
+  command, which then went undetected. The scanner is now quote-aware.
+
+- **A guard test proved nothing.** The live destructive-command check asserted
+  only that the target file survived. If the model simply declines to run the
+  command, that passes without the guard ever firing. It now requires a recorded
+  `destructive_blocked` audit entry, and reports the two outcomes separately.
+
+- **A match rate was asserted, not measured.** Registering this cycle in bkit's
+  own PDCA state wrote `matchRate: 100` — a number no gap-detector produced. That
+  is precisely the fail-open this release removed from the sprint adapter, and it
+  is now `null` with `measured: false` and a note saying why.
+
+A second review pass, after the fixes above, found nine more. Six are defects in
+shipped behaviour that predate this branch; three the branch introduced. They are
+listed together because they are one pattern — a value or a decision that exists
+in the code, looks configured, and reaches nothing.
+
+- **A gap analysis that measured nothing reported 0%.**
+  `scripts/gap-detector-stop.js` parsed the match rate as
+  `match ? parseInt(...) : 0`, so a parse failure became a measurement. The
+  fabricated 0 was written to `.bkit/state/pdca-status.json`, recorded as an M1
+  and M4 data point, published as a generated `docs/03-analysis/<feature>.
+  analysis.md` headed "Match Rate: 0%", audited as `gate_failed`, transitioned
+  the state machine to `ITERATE`, and shown to the user as "Significant
+  design-implementation gap detected". Observed on this very branch: the hook
+  wrote a 0% analysis document for a feature whose state this release had
+  deliberately set to `matchRate: null, measured: false`. A fabricated 0 is in
+  one way worse than the fabricated 100 removed earlier — it looks like
+  diligence, so the reader starts rewriting code against a measurement that was
+  never taken, and the iteration budget drains on a regex miss. There is now an
+  unmeasured branch that records nothing, transitions nothing, and asks for the
+  step that is actually missing.
+
+- **Ten destructive rules declared `defaultAction: 'ask'` and none ever asked.**
+  The hook branched on `severity === 'critical'` and did nothing otherwise, so
+  `git reset --hard`, protected-branch operations, key-file access and
+  mass-deletion patterns were detected, audited, and permitted in silence. The
+  decision now comes from the rule table's own declaration. **This is a
+  user-visible behaviour change**: those commands now raise a confirmation.
+
+- **A confirmation could downgrade a refusal.** `outputAsk()` exits the process,
+  and the ask was emitted where it was decided — before the heredoc-bypass
+  guard, the push guard and the Memory Enforcer, all of which can deny. A
+  command that both warranted confirmation and carried a `<<EOF | bash` bypass
+  would have been offered as a yes/no prompt instead of being refused. The ask
+  is now parked and emitted last, only if nothing stronger fired.
+
+- **A scoped delete was graded by text belonging to other commands.**
+  `deleteTargetIsBroad` read from the delete verb to the end of the input, so a
+  `$PWD` four lines later made `rm -rf ./tmp/x` "broad" and it was refused as
+  critical — while advising the user to scope the path they had already scoped.
+  The scan now stops at the next command separator.
+
+- **`code-analyzer` claimed the bare word "security" in eight languages.** Its
+  trigger is the compound "security scan"; the generated vocabulary also emitted
+  the head word, giving it an equal claim on `security-architect`'s identity
+  terms. Combined with the next item, security prompts routed to the wrong agent
+  in Korean, Spanish and German.
+
+- **Implicit routing returned the first-declared match, not the best one.**
+  `for (…of Object.entries(TABLE)) if (match) return` picks by table position,
+  which has nothing to do with what the user meant. Ranking is now by matched-
+  keyword strength. The contract test that covered this asserted only that
+  *some* agent resolved, so it was green throughout.
+
+- **A PostToolUse handler spoke on a channel the model does not read.** The
+  relocated `pdca-doc-changed-handler.js` emitted plain text; on PostToolUse only
+  `hookSpecificOutput.additionalContext` reaches the model. It also read
+  `pdcaStatus.currentPhase`, a key the v3.0 state schema does not have. Five
+  independent causes now closed; fixing any four would have changed nothing.
+
+- **The test aggregate under-counted itself by 481 assertions.** `qa-aggregate`
+  had no pattern for the `pass:N fail:N skip:N` format that 36 suites emit — every
+  contract and regression suite added for this release among them — so it counted
+  the single summary line as one passing assertion. Failures were still caught, so
+  the gate never went green over a real failure; what it misreported was how much
+  verification stood behind a green one. `node test/run-all.js` had the same blind
+  spot from the other side, and never opened six regression files at all. Both
+  runners now agree: 6,900 assertions across 369 files.
+
+- **`.bkit/runtime/hook-dispatch.ndjson` compaction destroyed failure records,**
+  keying on `(event, tool)` so every failure against one event collapsed to a
+  single line — on exactly the busy sessions where failures are likeliest. The
+  startup warning also had no recency window, so one failure warned forever until
+  someone deleted the file; it now clears itself after 24 hours while the record
+  survives.
+
+- **A raw NUL byte shipped inside `lib/core/hook-dispatch.js`.** It parsed, it
+  ran, and every test passed, because nothing in the suite looked at the bytes of
+  a source file — the same blind spot that let an unparseable shell script ship
+  one release earlier, one layer down. A source-integrity check now rejects raw
+  control bytes across every shipped text file, and is proven against the real
+  defect.
+
+### Found by running bkit's own orchestrators
+
+Requirement to use `/pdca` and `/sprint` had been deferred on the grounds that
+the quality gate they depend on was itself under repair. Running them once the
+repair was done paid for itself immediately.
+
+- **`/pdca qa` had been permanently BLOCKED, and that hid a real defect.**
+  `scripts/qa/pre-release-check.sh` exits 1 on any CRITICAL, and the dead-code
+  scanner reported six. Five were the scanner reading COMMENTS as code: a JSDoc
+  block documenting a module's calling site
+  (`const { detect } = require('../lib/defense/heredoc-detector')`) was resolved
+  as a real require against the wrong file, and `scripts/check-deadcode.js`
+  failed against itself twice because the comment explaining its own regex
+  carries `require('./foo')` as an example. **A gate that is permanently red is
+  as uninformative as one that is permanently green** — and this one was
+  concealing the sixth finding, which was genuine:
+  `scripts/lib/sprint-handlers-core.js` required `./sprint-memory-writer` while
+  the module sits at `scripts/sprint-memory-writer.js`, one directory up. Every
+  sprint archive threw MODULE_NOT_FOUND into a best-effort catch, so the
+  MEMORY.md auto-update never ran once. Both halves fixed; the scan now passes.
+
+- **Thirteen production sites read PDCA state keys the v3 schema does not have.**
+  Reading a renamed key is not a crash — it is `undefined`, which flows on as a
+  falsy fallback and the feature it guards simply stops happening. The worst is
+  in the busiest hook bkit has: `scripts/unified-stop.js` extracted `feature`,
+  `currentPhase`, `nextPhase`, `matchRate` and `projectLevel` from keys that are
+  all absent, so `feature` and `currentPhase` were permanently null — and they
+  gate **four** module integrations: checkpoint creation before a phase
+  transition, quality-gate recording, the state-machine transition, and the
+  workflow-engine advance. All four have been unreachable since the v3
+  migration, and nothing logged it, because a skipped `if (feature && phase)` is
+  indistinguishable from having no active cycle. Also fixed: the manual-compaction
+  guard that protects a live do/check/act cycle (never engaged), the
+  `file_change_count` metric (never collected), the next-action engine's PDCA
+  hints (never produced), the session-title phase component, and the
+  code-review-stop suggestions.
+
+  `scripts/pre-write.js` had carried a comment since v2.1.15 stating outright
+  that `currentFeature` does not exist on v2/v3. Someone knew, fixed one site,
+  and left twelve. `test/contract/state-schema-keys.test.js` now bans reads of
+  retired keys across all 274 production files, scoped to status-object
+  receivers so the state machine's own legitimate `currentState` is untouched.
+
+- **`ctx.sprintStatus` in the next-action engine has no producer** anywhere in
+  the repository, and its field names disagree with the sprint entity besides.
+  Left in place and documented rather than deleted or cosmetically renamed —
+  wiring a caller is a feature decision, and renaming fields would make dead
+  code look alive without making it run.
+
+- **The live-QA harness read its evidence before producing it.** The hooks layer
+  provoked twelve events with deliberate triggers and then evaluated a ledger
+  snapshot taken *above* the trigger block. Isolated probes fired TaskCreated,
+  TaskCompleted, PreCompact and PostCompact; the harness reported all four
+  "never dispatched" minutes later in the same repository. With the read moved
+  after the triggers — and with the triggers corrected (TaskCreate rather than
+  the Task tool; twelve chunked reads rather than one large file) — observed
+  events went from **9 of 21 to 14 of 21**. The seven that remain each carry a
+  measured reason rather than a guess, e.g. *"cd inside a Bash tool call changes
+  that command chain only, not the SESSION working directory"*.
+
+- **The Component Inventory in `CUSTOMIZATION-GUIDE.md` was four releases stale**
+  (scripts 61 vs 62, lib/ 195 vs 198, test files "118+" vs 366, BKIT_VERSION
+  2.1.13). `docs-code-sync.js` defaults to a single target, `plugin.json`, and
+  the exclusion written for README/CHANGELOG release snapshots had silently
+  generalised to two files stating current fact.
+  `test/contract/component-inventory.test.js` now measures them.
+
+### Found by the full-surface live QA re-run
+
+All four layers were re-run as real `claude -p --plugin-dir` sessions after the
+changes above, because the earlier pass predated them: **139 of 140** cases
+(skills 44/45, agents 34/34, hook events 23/23, MCP tools 38/38). The one
+non-pass is `qa-phase`, measured at 136 s and exit 0 in isolation — slow under
+121 sequential sessions, not broken — now registered as long-running with that
+measurement recorded beside it.
+
+- **A heredoc pattern scanned past its own terminator.** The pipe-shell rule
+  spans from `<<TAG` to `| <interpreter>` with a lazy
+  any-character run between them, and that crosses newlines, terminator lines
+  and any number of later commands. A heredoc that opened and closed cleanly,
+  followed further down by an unrelated pipe, was therefore graded CRITICAL and
+  refused. Reproduced against the session writing this release: a quoted python
+  heredoc followed four lines later by an unrelated pipe into `python3 -c` was
+  blocked as "pipe to a shell/interpreter". Same class as `deleteTargetIsBroad`
+  reading to end-of-input, this time in a guard that refuses the user's own
+  correct commands. Patterns now match per heredoc region; all three known
+  bypasses — opener line, terminator line, quoted tag — still deny.
+
+- **A routing claim in this release's own notes was unearned, and is withdrawn.**
+  An earlier draft said `제어 레벨 바꿔줘` and `롤백 해줘` routed correctly "for the
+  first time" after the trailing-period cleanup. Measured against origin/main:
+  **they already worked.** The 39 broken keywords were in the GENERATED table
+  this release introduces — a defect in new code, caught before shipping — not
+  in the hand-curated table users have been running. Corrected here, in the PR,
+  and in both QA reports. A release about unverifiable claims does not get to
+  make one.
+
+### Fixed — GitHub issues
+
+- **#145** (reported by [@BrightGold70](https://github.com/BrightGold70), Hawk
+  Kim): the ENH-310 heredoc guard denied quoted-tag heredoc bodies as critical.
+  A quoted tag disables expansion — a bash language guarantee, not a heuristic —
+  so `$(cmd <<TAG … TAG)` appearing in such a body is prose and cannot become
+  shell syntax. It bit hardest when writing documentation *about the guard*,
+  which is also how this release hit it independently. The reporter's exact
+  reproduction is now a regression test. Verified: `critical`/`sub` before,
+  `warning`/`lone-heredoc` (audit-only, not a refusal) after.
+
+### Notes for maintainers
+
+- New CI steps: hooks config contract, shipped-script parse, trigger locale
+  contract, deprecation-registry schema, and L6 live-run freshness.
+
+- **L6 is enforced without a CLI in CI, and does not pretend otherwise.** The
+  live layer needs a real Claude Code session; the runner has neither the binary
+  nor credentials, and installing them was considered and declined. An earlier
+  revision simply set `BKIT_HOST_INTEGRATION=1` and ran the live test on CI,
+  which meant the step always skipped while a wiring test called it green — the
+  `validate-plugin --strict` / `continue-on-error: true` shape this release cites
+  as its cautionary tale, recreated by the test written to prevent it.
+
+  Instead, a live run records the events it observed plus the SHA-256 of the
+  `hooks.json` it observed them against, into
+  `test/contract/host-integration/last-live-run.json`. CI asserts that evidence
+  still matches what ships. The enforced property is the one that matters:
+  **`hooks.json` cannot change without someone re-running the harness and
+  committing fresh evidence.** That is verified evidence re-verified on change —
+  not a live session run by CI, and the wiring contract fails if the workflow
+  ever claims otherwise.
+
+  Regenerate with `node test/qa-harness-full-live.js --layer hooks --record`.
+
+- `.bkit/runtime/hook-dispatch.ndjson` is a new per-project diagnostic file
+  (append-only, self-compacting, ~0.69 ms per hook). Set
+  `BKIT_HOOK_DISPATCH_RECORD=0` to switch it off; the host-integration tests and
+  the session-start failure warning both read it.
+
 ## [2.1.33] - 2026-08-08
 
 > **Status**: Enforcement release. bkit had several defenses that detected

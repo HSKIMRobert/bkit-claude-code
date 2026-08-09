@@ -82,7 +82,7 @@ const MINIMAL_INPUTS = {
   'scripts/notification-handler.js': '{"matcher":"idle_prompt"}\n',
   'scripts/cwd-changed-handler.js': '{"new_cwd":"/tmp"}\n',
   'scripts/task-created-handler.js': '{"task_id":"t1","subject":"smoke"}\n',
-  'scripts/file-changed-handler.js': '{"file_path":"/tmp/x.md","change":"write"}\n',
+  'scripts/pdca-doc-changed-handler.js': '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"docs/02-design/x.design.md"}}\n',
 };
 
 for (const rel of handlers) {
@@ -112,8 +112,14 @@ for (const rel of handlers) {
 // ============================================================
 // hooks.json structure sanity
 // ============================================================
-test('hooks.json has 22 event keys', () => {
-  assert.strictEqual(Object.keys(hooksJson.hooks).length, 22);
+// v2.1.34: read the expected counts from the docs=code SoT instead of repeating
+// literals here. Two hardcoded numbers in this file are exactly the kind of
+// second copy the SoT module exists to eliminate — they turned red on a
+// legitimate, declared hook retirement rather than on a real regression.
+const { EXPECTED_COUNTS } = require('../../lib/domain/rules/docs-code-invariants');
+
+test(`hooks.json has ${EXPECTED_COUNTS.hookEvents} event keys`, () => {
+  assert.strictEqual(Object.keys(hooksJson.hooks).length, EXPECTED_COUNTS.hookEvents);
 });
 test('hooks.json PreToolUse has 2 matcher blocks', () => {
   assert.strictEqual(hooksJson.hooks.PreToolUse.length, 2);
@@ -121,10 +127,10 @@ test('hooks.json PreToolUse has 2 matcher blocks', () => {
 test('hooks.json PostToolUse has 3 matcher blocks', () => {
   assert.strictEqual(hooksJson.hooks.PostToolUse.length, 3);
 });
-test('hooks.json total matcher-blocks = 25', () => {
+test(`hooks.json total matcher-blocks = ${EXPECTED_COUNTS.hookBlocks}`, () => {
   let total = 0;
   for (const [, entries] of Object.entries(hooksJson.hooks)) total += entries.length;
-  assert.strictEqual(total, 25);
+  assert.strictEqual(total, EXPECTED_COUNTS.hookBlocks);
 });
 
 // Every block has type:'command' handler

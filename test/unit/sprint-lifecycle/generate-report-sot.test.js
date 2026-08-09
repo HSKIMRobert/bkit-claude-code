@@ -72,15 +72,35 @@ test('TC-F3-3-R7: divergenceLogger called when divergences exist', async () => {
   assert.equal(logged[0].precedenceApplied, 'qualityGates');
 });
 
-test('TC-F3-3-R8: renderQualityGatesSection returns null when no gates measured', () => {
+test('TC-F3-3-R8: an unmeasured gate is RENDERED as "not measured", not omitted', () => {
+  /*
+   * v2.1.34 — inverted. This asserted that a gate with nothing measured is
+   * dropped from the report entirely.
+   *
+   * That is the same fail-open the release closes one layer down, where an
+   * unmeasured gate reported 100. A dropped row and a passing row read
+   * identically to anyone holding the report: the heading said "N gates, N
+   * passed" and the gate that was never measured simply was not there. The
+   * report asserted completeness it had not earned.
+   *
+   * An unmeasured gate is not a passing gate. It appears, it says so, and it
+   * does not count toward the passed tally.
+   */
   const sec = gr.renderQualityGatesSection({ qualityGates: { M1_matchRate: { current: null } } });
-  assert.equal(sec, null);
+  assert.ok(Array.isArray(sec), 'the section was omitted — an absent gate reads as a passing one');
+  const text = sec.join('\n');
+  assert.match(text, /M1/, 'the unmeasured gate is missing from the table');
+  assert.match(text, /not measured/, 'the row does not say the gate was never measured');
+  assert.match(text, /0 passed/, 'an unmeasured gate must not count as passed');
+  assert.match(text, /1 not measured/, 'the heading does not disclose the unmeasured count');
 });
 
-test('TC-F3-3-R9: generateReport on minimal sprint (no qualityGates) — Quality Gates section omitted', async () => {
+test('TC-F3-3-R9: a sprint with NO registered gates omits the section', async () => {
+  // Still correct, and now the only case that omits it: there is genuinely
+  // nothing to report, as distinct from a gate that exists and was not measured.
   const minimal = { id: 'min', name: 'Min', phase: 'archived', status: 'archived', context: {}, features: [], featureMap: {}, qualityGates: {}, kpi: {}, phaseHistory: [], iterateHistory: [] };
   const r = await gr.generateReport(minimal);
-  assert.ok(!r.reportContent.includes('## Quality Gates'), 'should omit section when no measured gates');
+  assert.ok(!r.reportContent.includes('## Quality Gates'), 'should omit section when no gates are registered at all');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

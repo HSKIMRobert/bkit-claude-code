@@ -70,7 +70,15 @@ try {
     reason,
     endedAt: new Date().toISOString(),
     feature: pdcaStatus ? (pdcaStatus.feature || pdcaStatus.featureName || null) : null,
-    phase: pdcaStatus ? (pdcaStatus.phase || pdcaStatus.currentPhase || null) : null,
+    // v2.1.34: `currentPhase` is a v1 schema key and always undefined; the phase
+    // lives on the feature entry.
+    phase: pdcaStatus
+      ? (pdcaStatus.phase
+        || (pdcaStatus.primaryFeature && pdcaStatus.features
+          && pdcaStatus.features[pdcaStatus.primaryFeature]
+          && pdcaStatus.features[pdcaStatus.primaryFeature].phase)
+        || null)
+      : null,
     progress: pdcaStatus ? (pdcaStatus.progress || null) : null,
   };
 

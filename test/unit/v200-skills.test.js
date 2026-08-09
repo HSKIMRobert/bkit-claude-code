@@ -115,11 +115,22 @@ for (let i = 0; i < NEW_SKILLS.length; i++) {
 
   // Check for English triggers (lowercase ascii words) and Korean triggers (hangul characters)
   const hasEnglishTrigger = /Triggers:.*[a-z]+/i.test(fm) || /Keywords:.*[a-z]+/i.test(fm);
-  // Korean characters in the Hangul Syllables range
-  const hasKoreanTrigger = /[\uAC00-\uD7AF]/.test(fm);
+  /*
+   * v2.1.34 (issue #129): Korean triggers are no longer expected in frontmatter.
+   *
+   * Frontmatter is loaded into context for the entire session, so the
+   * 8-language vocabulary moved to lib/i18n/trigger-keywords.js, where bkit's
+   * intent-router matches it at no context cost. Requiring Hangul here would
+   * re-impose exactly the cost #129 exists to remove \u2014 so the assertion keeps
+   * its intent (this skill is reachable in Korean) and checks the new home.
+   */
+  const { SKILL_TRIGGER_KEYWORDS } = require('../../lib/i18n/trigger-keywords');
+  const keywords = SKILL_TRIGGER_KEYWORDS[skill] || {};
+  const hasKoreanTrigger = Array.isArray(keywords.ko)
+    && keywords.ko.some((k) => /[\uAC00-\uD7AF]/.test(k));
 
   assert(id, hasEnglishTrigger && hasKoreanTrigger,
-    `${skill}/SKILL.md has triggers in EN and KO`);
+    `${skill}: English trigger in SKILL.md, Korean in lib/i18n/trigger-keywords.js`);
 }
 
 // ============================================================

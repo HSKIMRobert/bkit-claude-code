@@ -303,12 +303,25 @@ if (feature) {
 // v2.0.5: Collect M9 (Iteration Efficiency) metric
 try {
   const mc = require('../lib/quality/metrics-collector');
-  const prevMatchRate = featureStatus?.matchRate || 0;
-  // Efficiency = matchRate improvement per iteration (%p/iteration)
-  const improvement = matchRate - prevMatchRate;
-  const efficiency = currentIteration > 0 ? Math.round((improvement / currentIteration) * 100) / 100 : 0;
-  mc.collectMetric('M9', feature || 'unknown', efficiency, 'pdca-iterator');
-  debugLog('Agent:pdca-iterator:Stop', 'M9 metric collected', { efficiency, prevMatchRate, matchRate });
+  // v2.1.34: with `|| 0`, an unmeasured previous rate made the first iteration
+  // look like it improved the match rate by its entire current value. M9
+  // (iteration efficiency) was then computed from a baseline that never existed.
+  const mr = require('../lib/quality/match-rate');
+  const prevMatchRate = mr.isMeasured(featureStatus?.matchRate) ? featureStatus.matchRate : null;
+  if (!mr.isMeasured(prevMatchRate) || !mr.isMeasured(matchRate)) {
+    // Not an error — there is simply nothing to compute an efficiency from.
+    // Recording a number here would put a fabricated data point in the metric
+    // series, which is worse than a gap in it.
+    debugLog('Agent:pdca-iterator:Stop', 'M9 skipped — no measured baseline', {
+      prevMatchRate, matchRate,
+    });
+  } else {
+    // Efficiency = matchRate improvement per iteration (%p/iteration)
+    const improvement = matchRate - prevMatchRate;
+    const efficiency = currentIteration > 0 ? Math.round((improvement / currentIteration) * 100) / 100 : 0;
+    mc.collectMetric('M9', feature || 'unknown', efficiency, 'pdca-iterator');
+    debugLog('Agent:pdca-iterator:Stop', 'M9 metric collected', { efficiency, prevMatchRate, matchRate });
+  }
 } catch (e) {
   debugLog('Agent:pdca-iterator:Stop', 'M9 collection failed', { error: e.message });
 }

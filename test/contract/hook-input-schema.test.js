@@ -4,7 +4,9 @@
 /**
  * Contract Test: Hook Input Schema
  *
- * Validates that all 22 hook entries in hooks.json reference existing scripts
+ * Validates that every hook entry in hooks.json references an existing script
+ * (the count is read from the file, not asserted here — it was written as 22 and
+ * was wrong from the moment FileChanged was retired)
  * and that those scripts can handle the expected JSON stdin schema from Claude Code.
  */
 
@@ -130,13 +132,19 @@ test('HIS-07', 'Every hook entry defines a timeout', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T08: SessionStart has once:true
+// T08: SessionStart must NOT declare once:true
+//
+// v2.1.34 inverts this assertion. `once` is honoured only for hooks declared in
+// skill frontmatter and is ignored in settings files, so the flag never did
+// anything here — confirmed by resuming a session and watching SessionStart
+// fire a second time. Asserting its presence made a no-op look like a
+// guarantee, which is worse than not testing it at all.
 // ---------------------------------------------------------------------------
 
-test('HIS-08', 'SessionStart hook has once:true flag', () => {
+test('HIS-08', 'SessionStart hook does not declare once (ignored outside skill frontmatter)', () => {
   const entries = hooksJson.hooks.SessionStart;
   const hasOnce = entries.some(e => e.once === true);
-  assert.ok(hasOnce, 'SessionStart should have once:true');
+  assert.ok(!hasOnce, 'SessionStart must not declare once:true — Claude Code ignores it here');
 });
 
 // ---------------------------------------------------------------------------

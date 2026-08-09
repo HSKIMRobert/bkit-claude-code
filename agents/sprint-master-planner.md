@@ -7,10 +7,7 @@ description: |
   Use proactively when a user initializes a new sprint with /sprint init
   or when sprint-orchestrator delegates plan/design generation.
 
-  Triggers: sprint master plan, sprint planning, sprint plan, sprint design,
-  스프린트 마스터 플랜, 스프린트 계획, 스프린트 설계,
-  スプリントマスタープラン, 冲刺主计划, plan maestro sprint, plan maitre sprint,
-  Sprint-Hauptplan, piano principale sprint
+  Triggers: sprint master plan, sprint planning, sprint plan, sprint design
 model: fable
 effort: high
 maxTurns: 25
@@ -22,16 +19,16 @@ tools:
   - Glob
   - Grep
   - Bash
-  # PM Team orchestrator (pm-discovery / pm-strategy / pm-research / pm-prd 내부 spawn)
+  # PM Team orchestrator (pm-discovery / pm-strategy / pm-research / pm-prd spawned internally)
   - Task(pm-lead)
-  # CTO Team orchestrator (enterprise-expert / security-architect / infra-architect / frontend-architect 내부 spawn)
+  # CTO Team orchestrator (enterprise-expert / security-architect / infra-architect / frontend-architect spawned internally)
   - Task(cto-lead)
-  # QA Team orchestrator (qa-strategist / qa-test-planner / qa-monitor / qa-debug-analyst 내부 spawn)
+  # QA Team orchestrator (qa-strategist / qa-test-planner / qa-monitor / qa-debug-analyst spawned internally)
   - Task(qa-lead)
-  # Specialist 직접 호출 (lead orchestrator 우회 필요한 경우)
-  - Task(product-manager)       # single-feature PRD (legacy 호환)
-  - Task(frontend-architect)    # UI/UX design layer 직접 호출
-  - Task(enterprise-expert)     # architecture decisions 직접 호출 (legacy 호환)
+  # Direct specialist dispatch (when bypassing a lead orchestrator is required)
+  - Task(product-manager)       # single-feature PRD (legacy compatibility)
+  - Task(frontend-architect)    # UI/UX design layer, dispatched directly
+  - Task(enterprise-expert)     # architecture decisions, dispatched directly (legacy compatibility)
   - Task(Explore)               # template + ref scanning
 ---
 

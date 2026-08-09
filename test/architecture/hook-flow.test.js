@@ -206,18 +206,31 @@ assert('HF-017',
   `Maximum timeout is ${maxTimeout}ms (<= 30000ms CC limit)`
 );
 
-// HF-018: SessionStart timeout is reasonable (5000ms or less)
+/*
+ * v2.1.34: these two assertions read hooks.json `timeout` as milliseconds. It is
+ * SECONDS — verified against a real runtime, where a 5-second hook survives
+ * `timeout: 30` and is killed at 2.26s under `timeout: 2`.
+ *
+ * HF-019 did not merely tolerate the 1000x error, it REQUIRED it: demanding
+ * `>= 5000` on a seconds field meant demanding the Stop hook be allowed to run
+ * for at least 83 minutes. A test can enforce a bug as firmly as it prevents
+ * one, and this is what kept issue #139's real cause in place while its symptom
+ * was patched in v2.1.30.
+ *
+ * Bounds are now expressed in seconds: SessionStart is the heaviest handler at
+ * ~1.4s measured, and Stop needs enough room to finish cleanup without ever
+ * becoming an unbounded stall.
+ */
 const sessionStartTimeout = allTimeouts.find(t => t.event === 'SessionStart');
 assert('HF-018',
-  sessionStartTimeout && sessionStartTimeout.timeout <= 5000,
-  `SessionStart timeout: ${sessionStartTimeout?.timeout || 'N/A'}ms (<= 5000ms)`
+  sessionStartTimeout && sessionStartTimeout.timeout <= 15,
+  `SessionStart timeout: ${sessionStartTimeout?.timeout || 'N/A'}s (<= 15s)`
 );
 
-// HF-019: Stop timeout allows for cleanup (>= 5000ms)
 const stopTimeout = allTimeouts.find(t => t.event === 'Stop');
 assert('HF-019',
-  stopTimeout && stopTimeout.timeout >= 5000,
-  `Stop timeout: ${stopTimeout?.timeout || 'N/A'}ms (>= 5000ms for cleanup)`
+  stopTimeout && stopTimeout.timeout >= 5 && stopTimeout.timeout <= 30,
+  `Stop timeout: ${stopTimeout?.timeout || 'N/A'}s (5..30s — enough for cleanup, bounded enough to cancel)`
 );
 
 // HF-020: All events have at least one hook with timeout

@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: high
 description: |
   Deploy feature to target environment (dev/staging/prod) with level-based strategy.
-  Triggers: deploy, /pdca deploy, 배포, デプロイ, 部署, desplegar, déployer, bereitstellen, distribuire.
+  Triggers: deploy, /pdca deploy
 argument-hint: "[feature] [--env dev|staging|prod]"
 user-invocable: true
 agents:

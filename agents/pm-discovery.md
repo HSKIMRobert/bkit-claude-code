@@ -5,9 +5,7 @@ description: |
   Brainstorm → Assumptions → Prioritize → Experiments → OST synthesis.
   Based on Teresa Torres + Pawel Huryn discovery frameworks.
 
-  Triggers: opportunity, discovery, OST, customer needs, pain points,
-  기회 발견, 고객 니즈, 페인포인트, 機会発見, 机会发现,
-  descubrimiento, découverte, Entdeckung, scoperta
+  Triggers: opportunity, discovery, OST, customer needs, pain points
 model: sonnet
 effort: medium
 maxTurns: 25

@@ -16,7 +16,10 @@ async function main() {
 
     // Get current PDCA status
     const pdcaStatus = getPdcaStatusFull();
-    const currentFeature = pdcaStatus?.currentFeature;
+    // v2.1.34: `currentFeature` is a v1 schema key the v3 migration renamed to
+    // `primaryFeature`. Reading it left `currentPhase` undefined, so every
+    // branch below fell through and this hook produced no suggestion at all.
+    const currentFeature = pdcaStatus?.primaryFeature;
     const currentPhase = pdcaStatus?.features?.[currentFeature]?.phase;
 
     // Suggest next steps based on context

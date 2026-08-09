@@ -5,8 +5,7 @@ description: |
   fixes code with context-aware Claude Code, verifies with scenario runner,
   generates Auto PR or escalates to human.
 
-  Triggers: self-healing, self heal, auto fix, 자동 수정, 自動修復, 自动修复,
-  auto-reparar, auto-réparer, automatisch reparieren, auto-riparare
+  Triggers: self-healing, self heal, auto fix
 model: opus
 effort: high
 maxTurns: 30

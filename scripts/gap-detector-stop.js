@@ -58,7 +58,23 @@ debugLog('Agent:gap-detector:Stop', 'Input received', {
 // Patterns: "Overall Match Rate: XX%", "매치율: XX%", "Match Rate: XX%", "일치율: XX%"
 const matchRatePattern = /(Overall|Match Rate|매치율|일치율|Design Match)[^0-9]*(\d+)/i;
 const match = inputText.match(matchRatePattern);
-let matchRate = match ? parseInt(match[2], 10) : 0;
+/*
+ * v2.1.34 — a gap analysis that stated no rate is UNMEASURED, not 0%.
+ *
+ * `match ? parseInt(...) : 0` fabricated a measurement out of a parse failure,
+ * and that 0 then travelled: into `.bkit/state/pdca-status.json`, into the M1
+ * and M4 metric series, and into a generated `docs/03-analysis/<feature>.
+ * analysis.md` headed "Match Rate: 0%". Observed during v2.1.34 work — this
+ * hook wrote a 0% report for a feature whose state had been deliberately set to
+ * `matchRate: null, measured: false`, contradicting the release's own record.
+ *
+ * A fabricated 0 is worse than a fabricated 100 in one respect: it looks like
+ * diligence. Someone reading "0%" concludes the comparison ran and found
+ * nothing matching, and starts fixing code against a measurement that was never
+ * taken.
+ */
+const matchRate = match ? parseInt(match[2], 10) : null;
+const measured = matchRate !== null;
 
 // Extract feature name from multiple sources
 const featurePattern = /feature[:\s]+['"]?(\w[\w-]*)['"]?/i;
@@ -101,6 +117,7 @@ if (feature && fs.existsSync(planDocPath)) {
 if (feature) {
   updatePdcaStatus(feature, 'check', {
     matchRate,
+    measured,
     analysisDoc: `docs/03-analysis/${feature}.analysis.md`,
     fulfillment: fulfillmentResult ? {
       score: fulfillmentResult.score,
@@ -114,19 +131,23 @@ if (feature) {
 try {
   const mc = require('../lib/quality/metrics-collector');
   const f = feature || 'unknown';
-  // M1: Match Rate (primary metric from gap analysis)
-  mc.collectMetric('M1', f, matchRate, 'gap-detector');
+  // M1: Match Rate (primary metric from gap analysis). A metric series with a
+  // gap in it is honest; one padded with fabricated zeroes is not, and the
+  // padding is indistinguishable from real data once it is written.
+  if (measured) {
+    mc.collectMetric('M1', f, matchRate, 'gap-detector');
+  }
 
   // M4: API Compliance Rate — extract from output if present
   const apiPattern = /(API|api)\s*(Compliance|compliance|일치율|준수율)[^0-9]*(\d+)/i;
   const apiMatch = inputText.match(apiPattern);
   if (apiMatch) {
     mc.collectMetric('M4', f, parseInt(apiMatch[3], 10), 'gap-detector');
-  } else {
+  } else if (measured) {
     // Estimate: use matchRate as proxy when no explicit API compliance data
     mc.collectMetric('M4', f, matchRate, 'gap-detector');
   }
-  debugLog('Agent:gap-detector:Stop', 'Quality metrics collected', { M1: matchRate });
+  debugLog('Agent:gap-detector:Stop', 'Quality metrics collected', { M1: matchRate, measured });
 } catch (e) {
   debugLog('Agent:gap-detector:Stop', 'Metrics collection failed', { error: e.message });
 }
@@ -144,7 +165,34 @@ let guidance = '';
 let nextStep = '';
 let userPrompt = null;
 
-if (matchRate >= threshold) {
+if (!measured) {
+  /*
+   * v2.1.34 — the unmeasured branch, which did not exist.
+   *
+   * With `matchRate` fabricated as 0, an analysis that reported no rate at all
+   * fell through every threshold and landed in the "below 70%" branch. The user
+   * was told a significant design-implementation gap had been detected and
+   * pushed toward auto-improvement — from a comparison that never produced a
+   * number. Iterations would then be spent closing a gap nobody had measured,
+   * and the iteration counter would climb toward its limit on the strength of
+   * a parse failure.
+   *
+   * The missing step is the measurement, so that is what this asks for.
+   */
+  nextStep = 'pdca-check';
+  guidance = `⚪ Gap Analysis produced no match rate.
+
+The analysis ran but reported no percentage, so nothing was measured. That is
+not a low score — it is the absence of a score, and the cycle cannot advance on
+it. No metric was recorded and the phase was left where it is.
+
+Recommended actions:
+1. Re-run the gap analysis and make sure it reports a rate, e.g. "Match Rate: 87%"
+2. Check that the design documents the analysis compares against actually exist
+3. Run with BKIT_DEBUG=1 to see what the agent's output contained
+
+📊 Iterations: ${iterCount}/${maxIterations} (unchanged — an unmeasured run does not consume one)`;
+} else if (matchRate >= threshold) {
   // >= threshold: Suggest completion
   nextStep = 'pdca-report';
   guidance = `✅ Gap Analysis complete: ${matchRate}% match
@@ -397,7 +445,8 @@ Recommended actions:
 }
 
 // v1.4.0: Get auto phase advance suggestion
-const phaseAdvance = autoAdvancePdcaPhase(feature, 'check', { matchRate });
+// An unmeasured run must not drive a phase transition in either direction.
+const phaseAdvance = measured ? autoAdvancePdcaPhase(feature, 'check', { matchRate }) : null;
 
 // v1.4.4 FR-06/FR-07: Auto-create PDCA Tasks and Update Task Status
 let autoCreatedTasks = [];
@@ -408,7 +457,9 @@ try {
   if (feature) {
     updatePdcaTaskStatus('check', feature, {
       matchRate,
-      status: matchRate >= threshold ? 'completed' : 'in_progress',
+      // Unmeasured stays in_progress: the check task has not finished, because
+      // the thing it exists to produce was never produced.
+      status: measured && matchRate >= threshold ? 'completed' : 'in_progress',
       fulfillment: fulfillmentResult
     });
     debugLog('Agent:gap-detector:Stop', 'Check Task status updated', {
@@ -517,7 +568,9 @@ try {
     const analysisContent = [
       `# Gap Analysis: ${feature}`,
       '',
-      `> **Match Rate**: ${matchRate}%`,
+      // `${null}%` renders as "null%", which is a worse claim than no claim at
+      // all — it reads as a corrupt measurement rather than an absent one.
+      `> **Match Rate**: ${require('../lib/quality/match-rate').format(matchRate)}`,
       `> **Threshold**: ${threshold}%`,
       `> **Iteration**: ${iterCount}`,
       `> **Date**: ${timestamp}`,
@@ -527,9 +580,12 @@ try {
       '',
       '## Result',
       '',
-      matchRate >= threshold
-        ? `Pass - match rate ${matchRate}% meets threshold ${threshold}%`
-        : `Fail - match rate ${matchRate}% below threshold ${threshold}%`,
+      !measured
+        ? `Not measured - the analysis reported no match rate, so this is neither a `
+          + `pass nor a fail against the ${threshold}% threshold`
+        : (matchRate >= threshold
+          ? `Pass - match rate ${matchRate}% meets threshold ${threshold}%`
+          : `Fail - match rate ${matchRate}% below threshold ${threshold}%`),
       '',
       '## Guidance',
       '',
@@ -560,7 +616,9 @@ const sessionTitle = generateSessionTitle({ action: 'CHECK', feature, sessionId:
 // hookSpecificOutput/sessionTitle/userPrompt/analysisResult/autoTrigger. Diagnostics → debugLog.
 void sessionTitle; void userPrompt;
 const reason = [
-  `Gap Analysis complete. Match rate: ${matchRate}%`,
+  measured
+    ? `Gap Analysis complete. Match rate: ${matchRate}%`
+    : 'Gap Analysis complete. No match rate was measured.',
   '',
   guidance,
   '',
@@ -572,7 +630,12 @@ debugLog('Agent:gap-detector:Stop', 'surface', { matchRate, feature: feature || 
 try {
   const sm = require('../lib/pdca/state-machine');
   const smCtx = sm.loadContext(feature) || sm.createContext(feature || 'unknown');
-  if (matchRate >= threshold) {
+  if (!measured) {
+    // Neither MATCH_PASS nor ITERATE. Iterating on an unmeasured result spends
+    // the iteration budget closing a gap nobody measured, and the counter
+    // reaches its limit on the strength of a parse failure.
+    debugLog('Agent:pdca-iterator:Stop', 'no state transition — nothing measured', { feature });
+  } else if (matchRate >= threshold) {
     sm.transition('check', 'MATCH_PASS', { ...smCtx, matchRate });
   } else {
     sm.transition('check', 'ITERATE', { ...smCtx, matchRate });
@@ -582,7 +645,7 @@ try {
 // v2.0.0: Metrics collection
 try {
   const mc = require('../lib/quality/metrics-collector');
-  mc.collectMetric('M1', feature || 'unknown', matchRate, 'gap-detector');
+  if (measured) mc.collectMetric('M1', feature || 'unknown', matchRate, 'gap-detector');
 } catch (_) {}
 
 // v2.0.0: Audit logging
@@ -590,11 +653,15 @@ try {
   const audit = require('../lib/audit/audit-logger');
   audit.writeAuditLog({
     actor: 'agent', actorId: 'gap-detector',
-    action: matchRate >= threshold ? 'gate_passed' : 'gate_failed',
+    // `gate_failed` would say the gate was evaluated and lost. It was not
+    // evaluated at all, and an audit trail that cannot tell those apart is the
+    // same false assurance as the hardcoded `result: 'blocked'` in
+    // unified-bash-pre (ENH-393).
+    action: !measured ? 'gate_unmeasured' : (matchRate >= threshold ? 'gate_passed' : 'gate_failed'),
     category: 'quality',
     target: feature || 'unknown', targetType: 'feature',
-    details: { matchRate, threshold },
-    result: matchRate >= threshold ? 'success' : 'failure'
+    details: { matchRate, threshold, measured },
+    result: !measured ? 'blocked' : (matchRate >= threshold ? 'success' : 'failure')
   });
 } catch (_) {}
 

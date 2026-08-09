@@ -5,9 +5,7 @@ description: |
   Coordinates qa-test-planner, qa-test-generator, qa-debug-analyst, and qa-monitor
   to produce comprehensive QA verification before PDCA Report phase.
 
-  Triggers: qa team, QA lead, test execution, QA phase, QA execution,
-  QA 실행, QA팀,
-  QAリード, QA执行, QA ejecucion, exécution QA, QA-Ausfuhrung, esecuzione QA
+  Triggers: qa team, QA lead, test execution, QA phase, QA execution
 model: fable
 effort: high
 maxTurns: 30
@@ -24,7 +22,7 @@ tools:
   - Task(qa-debug-analyst)
   - Task(qa-monitor)
   # v2.1.13 Sprint Management: for sprint-level QA (7-Layer dataFlowIntegrity)
-  # delegate to sprint-qa-flow (관점 1-1 A3)
+  # delegate to sprint-qa-flow (perspective 1-1 A3)
   - Task(sprint-qa-flow)
   - Task(Explore)
   - mcp__claude-in-chrome__tabs_create_mcp

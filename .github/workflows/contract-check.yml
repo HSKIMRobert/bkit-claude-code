@@ -40,6 +40,31 @@ jobs:
       - name: Guard Registry validation
         run: node scripts/check-guards.js
 
+      # v2.1.34: hooks.json must conform to the Claude Code hook specification.
+      # Every defect this catches shipped in a release and survived a green
+      # 6,398-assertion suite, because nothing validated the CONFIGURATION —
+      # only that handlers existed, parsed, and behaved when invoked directly.
+      # Covers: timeout unit and bounds (they were 1000x too large — `10000` on
+      # Stop meant 2h46m, the real cause of issue #139), `once` placement,
+      # one-rule-per-`if`, `if` only on tool events, event-name validity,
+      # matcher support, handler resolution, and count parity with the SoT.
+      - name: Hooks config contract (Claude Code hook spec conformance)
+        run: node test/contract/hooks-config-contract.test.js
+
+      # v2.1.34: every shipped shell script must parse. v2.1.33's flagship
+      # live-QA harness was committed with a bash syntax error (an unquoted
+      # heredoc expanded `$(` and `$0` at generation time) and was referenced by
+      # nothing, so it could not be detected. `node --check` already covers .js.
+      - name: Shipped shell scripts parse (bash -n + portability)
+        run: node test/contract/shipped-scripts-parse.test.js
+
+      # v2.1.34 (issue #129): the 8-language trigger vocabulary lives in code,
+      # where it costs nothing, and frontmatter stays English-only. Guards both
+      # directions — non-English creeping back onto the always-resident prompt
+      # surface, and an agent/skill losing its multilingual routing entirely.
+      - name: Trigger locale contract (English frontmatter + code-side coverage)
+        run: node test/contract/trigger-locale-contract.test.js
+
       # v2.1.17 (CO-7): detect untracked production test files. Defends
       # against silent .gitignore regression that previously masked CI-
       # referenced test files (Cannot find module errors).
@@ -69,6 +94,44 @@ jobs:
 
       - name: L3 MCP Runtime (stdio JSON-RPC lifecycle)
         run: node test/contract/l3-mcp-runtime.test.js
+
+      # v2.1.34 — L6 host integration. Drives a REAL `claude -p --plugin-dir`
+      # session and asserts from the outside that Claude Code actually dispatched
+      # bkit's hooks, using the `.bkit/runtime/hook-dispatch.ndjson` ledger.
+      #
+      # L1-L5 all call bkit's own code; l2-smoke.test.js states outright that it
+      # "does NOT require the real CC runtime". That is precisely why eight
+      # shipped features could be dead in production while every test passed.
+      #
+      # Skips cleanly when the CLI is absent (the usual case on a stock runner),
+      # so it costs seconds and never blocks a PR; it becomes a real gate wherever
+      # the CLI and credentials exist. BKIT_REQUIRE_HOST_INTEGRATION=1 turns a
+      # skip into a failure.
+      # v2.1.34 — L6 host integration, enforced WITHOUT a Claude Code CLI.
+      #
+      # The live layer drives a real `claude -p --plugin-dir` session. This
+      # runner has no CLI and no credentials, and installing one plus injecting
+      # an API key was considered and declined. An earlier revision of this file
+      # simply set BKIT_HOST_INTEGRATION=1 and ran the live test here, which
+      # meant the step always took its skip path while a wiring test reported it
+      # green — the same `validate-plugin --strict` / `continue-on-error: true`
+      # shape this release cites as its cautionary tale, one level up.
+      #
+      # What is enforced instead: a live run records which events it observed
+      # and the hash of the hooks.json it observed them against. This step
+      # asserts that evidence still describes what is being shipped, so
+      # hooks.json cannot change without someone re-running the harness and
+      # committing fresh evidence. Verified evidence, re-verified on change —
+      # not a live session run by CI.
+      - name: L6 Live-run freshness (hook evidence matches shipped hooks.json)
+        run: node test/contract/host-integration/live-run-freshness.test.js
+
+      # The registry is the only path by which a hook event may leave
+      # hooks.json, and the only way an agent/skill/MCP tool may disappear
+      # without failing L4. Nothing validated the registry itself, so a lazy
+      # tombstone ("reason": "unused") passed — a rubber stamp with extra steps.
+      - name: Deprecation registry schema (tombstones must justify themselves)
+        run: node test/contract/deprecation-registry-schema.test.js
 
       # ENH-411 (v2.1.33) — layer 3 of 3: make the pipe preserve the exit code.
       # Without an explicit `shell:`, GitHub Actions runs steps under `bash -e`

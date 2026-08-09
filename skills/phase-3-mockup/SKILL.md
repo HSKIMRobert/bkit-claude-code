@@ -8,8 +8,7 @@ deprecation-risk: high
 effort: medium
 description: |
   Create UI/UX mockups and HTML/CSS/JS prototypes without a designer.
-  Triggers: mockup, prototype, wireframe, UI design, 목업, 프로토타입.
-agents:
+  Triggers: mockup, prototype, wireframe, UI design
   default: bkit:pipeline-guide
   frontend: bkit:frontend-architect
 allowed-tools:

@@ -8,10 +8,7 @@ description: |
   or "what should I do first", or starts a new project without clear direction.
 
   Triggers: development pipeline, phase, development order, where to start, what to do first,
-  how to begin, new project, project setup,
-  개발 파이프라인, 뭐부터, 어디서부터, 순서, 시작,
-  開発パイプライン, 开发流程, pipeline de desarrollo, pipeline de développement,
-  Entwicklungs-Pipeline, pipeline di sviluppo
+  how to begin, new project, project setup
 model: sonnet
 effort: medium
 maxTurns: 20

@@ -6,7 +6,7 @@ deprecation-risk: low
 effort: low
 description: |
   Mobile app development guide — React Native, Flutter, Expo for cross-platform.
-  Triggers: mobile app, React Native, Flutter, Expo, iOS, Android, 모바일 앱.
+  Triggers: mobile app, React Native, Flutter, Expo, iOS, Android
 agent: bkit:pipeline-guide
 allowed-tools:
   - Read

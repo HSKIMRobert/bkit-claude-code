@@ -1012,10 +1012,14 @@ group('A10-hooks/config/workflow/i18n', () => {
     assert(hooks.description.includes('v' + BKIT_VERSION));
   });
 
-  tc('A10-3 hooks.json SessionStart has once:true', () => {
+  // v2.1.34: inverted. `once` is honoured only for hooks declared in skill
+  // frontmatter and is ignored in settings files, so the flag never did anything
+  // here — confirmed by resuming a session and watching SessionStart fire again.
+  // Requiring its presence made a no-op look like a guarantee.
+  tc('A10-3 hooks.json SessionStart does not declare once', () => {
     const ss = hooks.hooks.SessionStart;
     assert(Array.isArray(ss) && ss.length > 0);
-    assert.equal(ss[0].once, true);
+    assert.equal(ss[0].once, undefined);
   });
 
   tc('A10-4 hooks.json PreToolUse has Write|Edit matcher', () => {
@@ -1025,12 +1029,15 @@ group('A10-hooks/config/workflow/i18n', () => {
     assert(wr, 'missing Write|Edit matcher');
   });
 
-  tc('A10-5 hooks.json every command has timeout', () => {
+  // v2.1.34: the bound was 1000..30000 because this read `timeout` as
+  // milliseconds. The field is SECONDS, so the old range demanded that every
+  // hook be allowed to run for between 16 minutes and 8 hours.
+  tc('A10-5 hooks.json every command has a sane timeout in seconds', () => {
     for (const groups of Object.values(hooks.hooks)) {
       for (const g of groups) {
         for (const h of (g.hooks || [])) {
           if (h.type === 'command') {
-            assert(h.timeout >= 1000 && h.timeout <= 30000, `timeout ${h.timeout}`);
+            assert(h.timeout >= 1 && h.timeout <= 60, `timeout ${h.timeout}s outside 1..60s`);
           }
         }
       }

@@ -167,37 +167,51 @@ assert('LS-005',
 const fs = require('fs');
 const path = require('path');
 const SKILLS_DIR = path.join(__dirname, '../../skills');
+// v2.1.34 (issue #129): the Korean/8-language trigger vocabulary moved out of
+// SKILL.md frontmatter — where Claude Code loads it into context for the whole
+// session — and into lib/i18n/trigger-keywords.js, where bkit's intent-router
+// matches it at no context cost. Asserting it in frontmatter would re-impose the
+// very cost #129 exists to remove, so the check now targets its real home.
+const { SKILL_TRIGGER_KEYWORDS } = require('../../lib/i18n/trigger-keywords');
 
 // --- LS-006: /control SKILL.md has EN+KO trigger keywords (v2.0.8: JA/ZH moved to agents) ---
 const controlSkill = fs.readFileSync(path.join(SKILLS_DIR, 'control', 'SKILL.md'), 'utf-8');
-const controlHasLang = controlSkill.includes('control') && controlSkill.includes('제어');
+const controlHasLangKw = SKILL_TRIGGER_KEYWORDS['control'] || {};
+const controlHasLang = controlSkill.includes('control')
+  && Array.isArray(controlHasLangKw.ko) && controlHasLangKw.ko.length > 0;
 assert('LS-006',
   controlHasLang,
-  '/control SKILL.md has EN+KO trigger keywords (v2.0.8: 8-lang via agents)'
+  '/control: English trigger in SKILL.md, Korean in lib/i18n/trigger-keywords.js'
 );
 
 // --- LS-007: /audit SKILL.md has EN+KO trigger keywords (v2.0.8) ---
 const auditSkill = fs.readFileSync(path.join(SKILLS_DIR, 'audit', 'SKILL.md'), 'utf-8');
-const auditHasLang = auditSkill.includes('audit') && auditSkill.includes('감사');
+const auditHasLangKw = SKILL_TRIGGER_KEYWORDS['audit'] || {};
+const auditHasLang = auditSkill.includes('audit')
+  && Array.isArray(auditHasLangKw.ko) && auditHasLangKw.ko.length > 0;
 assert('LS-007',
   auditHasLang,
-  '/audit SKILL.md has EN+KO trigger keywords (v2.0.8: 8-lang via agents)'
+  '/audit: English trigger in SKILL.md, Korean in lib/i18n/trigger-keywords.js'
 );
 
 // --- LS-008: /rollback SKILL.md has EN+KO trigger keywords (v2.0.8) ---
 const rollbackSkill = fs.readFileSync(path.join(SKILLS_DIR, 'rollback', 'SKILL.md'), 'utf-8');
-const rollbackHasLang = rollbackSkill.includes('rollback') && rollbackSkill.includes('롤백');
+const rollbackHasLangKw = SKILL_TRIGGER_KEYWORDS['rollback'] || {};
+const rollbackHasLang = rollbackSkill.includes('rollback')
+  && Array.isArray(rollbackHasLangKw.ko) && rollbackHasLangKw.ko.length > 0;
 assert('LS-008',
   rollbackHasLang,
-  '/rollback SKILL.md has EN+KO trigger keywords (v2.0.8: 8-lang via agents)'
+  '/rollback: English trigger in SKILL.md, Korean in lib/i18n/trigger-keywords.js'
 );
 
 // --- LS-009: /pdca-batch SKILL.md has EN+KO trigger keywords (v2.0.8) ---
 const batchSkill = fs.readFileSync(path.join(SKILLS_DIR, 'pdca-batch', 'SKILL.md'), 'utf-8');
-const batchHasLang = batchSkill.includes('batch') && batchSkill.includes('배치');
+const batchHasLangKw = SKILL_TRIGGER_KEYWORDS['pdca-batch'] || {};
+const batchHasLang = batchSkill.includes('batch')
+  && Array.isArray(batchHasLangKw.ko) && batchHasLangKw.ko.length > 0;
 assert('LS-009',
   batchHasLang,
-  '/pdca-batch SKILL.md has EN+KO trigger keywords (v2.0.8: 8-lang via agents)'
+  '/pdca-batch: English trigger in SKILL.md, Korean in lib/i18n/trigger-keywords.js'
 );
 
 // --- LS-010: bkend-expert has trigger patterns for 8 languages ---

@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   bkit plugin help - list available functions including /pdca (9-phase feature cycle), /sprint (8-phase feature container, v2.1.13), /control (Trust L0-L4 + SPRINT_AUTORUN_SCOPE), /bkit-explore, and 40+ specialized skills. Use "/bkit" or "bkit help".
-  Triggers: bkit, help, functions, 도움말, 기능, ヘルプ, 帮助, ayuda, aide, Hilfe, aiuto.
+  Triggers: bkit help, bkit functions, show bkit commands, bkit command list
 argument-hint: "[help]"
 user-invocable: true
 allowed-tools:

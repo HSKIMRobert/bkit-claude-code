@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: high
 description: |
   QA Phase execution — L1-L5 test planning, generation, execution, and reporting for a single feature. For sprint-level QA (7-Layer dataFlowIntegrity / S1 gate across multiple features) use /sprint qa <sprintId> which delegates to sprint-qa-flow agent (v2.1.13).
-  Triggers: qa phase, QA test, qa run, QA 실행, QAフェーズ, QA阶段, fase QA, phase QA, QA-Phase, fase QA.
+  Triggers: qa phase, QA test, qa run
 argument-hint: "[feature]"
 user-invocable: true
 agents:

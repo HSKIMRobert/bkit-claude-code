@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: high
 description: |
   CC CLI version upgrade impact analysis — research changes, analyze bkit impact, generate report.
-  Triggers: cc-version-analysis, CC upgrade, version analysis, CC 버전 분석, 버전 영향.
+  Triggers: cc-version-analysis, CC upgrade, version analysis
 argument-hint: "[from_version] [to_version]"
 user-invocable: true
 

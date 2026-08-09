@@ -180,33 +180,52 @@ function runL1MCP() {
 function runL1Hooks() {
   const current = collectHooks({ persist: false, projectRoot: PROJECT_ROOT });
   const baseline = loadBaselineManifest().hooks;
+  // v2.1.34: a hook event may leave hooks.json only through an explicit
+  // deprecation-registry entry, mirroring ADR 0014 for agents/skills/mcpTools.
+  // Silent removal still fails; a declared removal is auditable and states why.
+  const registry = loadDeprecationRegistry();
+  const retiredEvents = registry.hookEvents || {};
+  const retiredCount = Object.keys(retiredEvents).length;
   // Additions-tolerant counts (ENH-371): every other L1 surface (skills/agents/MCP)
   // guards by per-identity existence and silently accepts additions — a NEW hook event
   // must not break a frozen baseline compare any more than a new skill does. The
   // per-event existence loop below is the real removal guard; the count checks only
-  // fail on a NET DECREASE. This also honors the LTS-frozen governance in
-  // docs/06-guide/contract-baseline-rollforward.guide.md §3.1 (LTS v2.1.9 is edited
-  // only at a major LTS transition, never for a routine hook addition).
+  // fail on a NET DECREASE beyond what the registry declares. This also honors the
+  // LTS-frozen governance in docs/06-guide/contract-baseline-rollforward.guide.md §3.1
+  // (LTS v2.1.9 is edited only at a major LTS transition, never for a routine change).
   assert(
-    current.events >= baseline.events,
-    `L1-HK FAIL hook events count decreased (${current.events} < ${baseline.events}) — additions OK, removals fail`
+    current.events >= baseline.events - retiredCount,
+    `L1-HK FAIL hook events count decreased (${current.events} < ${baseline.events - retiredCount}) — additions OK; removals require a deprecation-registry hookEvents entry`
   );
-  assert(
-    current.blocks >= baseline.blocks,
-    `L1-HK FAIL hook blocks count decreased (${current.blocks} < ${baseline.blocks}) — block additions OK, removals fail`
-  );
-  // Verify each baseline event still exists
+  // Blocks are not proportional to events (one event can hold several blocks), so
+  // the block floor is only relaxed by blocks the retired events actually held.
   const baselineEventsFile = path.join(BASE_DIR, 'hook-events.json');
+  let retiredBlocks = 0;
+  let bEvents = null;
   if (fs.existsSync(baselineEventsFile)) {
-    const bEvents = JSON.parse(fs.readFileSync(baselineEventsFile, 'utf8'));
+    bEvents = JSON.parse(fs.readFileSync(baselineEventsFile, 'utf8'));
+    for (const evt of Object.keys(retiredEvents)) {
+      if (bEvents[evt] && typeof bEvents[evt].blockCount === 'number') {
+        retiredBlocks += bEvents[evt].blockCount;
+      }
+    }
+  }
+  assert(
+    current.blocks >= baseline.blocks - retiredBlocks,
+    `L1-HK FAIL hook blocks count decreased (${current.blocks} < ${baseline.blocks - retiredBlocks}) — block additions OK; removals require a deprecation-registry hookEvents entry`
+  );
+  // Verify each baseline event still exists, unless its retirement is declared.
+  if (bEvents) {
     const currentHooksJson = JSON.parse(
       fs.readFileSync(path.join(PROJECT_ROOT, 'hooks', 'hooks.json'), 'utf8')
     );
     const currentEvents = Object.keys(currentHooksJson.hooks || {});
     for (const evt of Object.keys(bEvents)) {
+      if (currentEvents.includes(evt)) continue;
+      const declared = retiredEvents[evt];
       assert(
-        currentEvents.includes(evt),
-        `L1-HK FAIL hook event '${evt}' removed from hooks.json`
+        declared && declared.deprecatedIn && declared.reason,
+        `L1-HK FAIL hook event '${evt}' removed from hooks.json without a deprecation-registry hookEvents entry carrying deprecatedIn + reason`
       );
     }
   }

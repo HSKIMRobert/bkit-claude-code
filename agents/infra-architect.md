@@ -7,9 +7,7 @@ description: |
   Use proactively when user discusses AWS, Kubernetes, Terraform, cloud infrastructure,
   CI/CD pipelines, or requires Enterprise-level deployment architecture.
 
-  Triggers: AWS, Kubernetes, Terraform, infrastructure, CI/CD, EKS, RDS, cloud,
-  인프라, 쿠버네티스, 클라우드,
-  インフラ, 基础设施, infraestructura, déploiement, Infrastruktur, infrastruttura
+  Triggers: AWS, Kubernetes, Terraform, infrastructure, CI/CD, EKS, RDS, cloud
 model: opus
 effort: high
 maxTurns: 30

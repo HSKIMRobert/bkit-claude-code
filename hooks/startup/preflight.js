@@ -74,13 +74,55 @@ function run() {
     debugLog('SessionStart', 'preflight CC version check failed', { error: e.message });
   }
 
+  try {
+    const warning = renderHookFailureWarning();
+    if (warning) lines.push(`⚠️ ${warning}`);
+  } catch (e) {
+    debugLog('SessionStart', 'preflight hook-failure check failed', { error: e.message });
+  }
+
   if (lines.length === 0) return '';
   return ['', '## Preflight', ...lines, ''].join('\n');
+}
+
+/**
+ * Surface hooks that failed, so a broken hook stops looking like a working one.
+ *
+ * v2.1.34 (R9). bkit's hook layer holds 333 catch blocks, 188 of which swallow
+ * without a trace, and the crash recorder in lib/core/io.js now writes what they
+ * hide into the dispatch ledger. Recording it is only half the fix: a record
+ * nobody reads is the same silence in a different file. This is where it becomes
+ * something the user actually sees.
+ *
+ * Deliberately quiet — one line, only when there is something to say, naming the
+ * events rather than dumping stack traces.
+ *
+ * @param {string} [root] - project root; defaults to the ledger's own resolution
+ * @returns {string} warning text, or '' when every hook is healthy
+ */
+function renderHookFailureWarning(root) {
+  const { readFailures } = require('../../lib/core/hook-dispatch');
+  const failures = readFailures(root);
+  if (!failures.length) return '';
+
+  const byEvent = new Map();
+  for (const f of failures) {
+    byEvent.set(f.event, (byEvent.get(f.event) || 0) + 1);
+  }
+  const summary = [...byEvent.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([event, n]) => `${event}×${n}`)
+    .join(', ');
+
+  return `bkit hooks reported ${failures.length} failure(s) — ${summary}. `
+    + `See .bkit/runtime/hook-dispatch.ndjson; run with BKIT_DEBUG=1 for detail.`;
 }
 
 module.exports = {
   run,
   checkAgentTeamsEnv,
   renderCCVersionWarning,
+  renderHookFailureWarning,
   AGENT_TEAMS_ENV,
 };

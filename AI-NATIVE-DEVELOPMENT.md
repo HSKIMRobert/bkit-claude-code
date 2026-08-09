@@ -107,7 +107,7 @@ Based on research from industry leaders (Addy Osmani, Sapphire Ventures, DevOps.
 - **Quality Gates (7 stages)**: Configurable thresholds per phase transition
 - **Audit trail**: JSONL logging + decision tracer for full transparency
 - **Emergency stop**: Immediate pause with checkpoint/rollback support
-- **Destructive detection**: 8 rules (rm -rf, git push --force, etc.) with blast radius analysis
+- **Destructive detection**: 16 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops) graded by target — a broad target denies, a specific one asks. A denylist holds only for the shapes someone wrote down, so it is a known-pattern guard, not a complete defense.
 
 ---
 
@@ -135,7 +135,7 @@ According to Addy Osmani's research on AI-Native engineers, effective practition
 Context Engineering is the **systematic design of information flow to LLMs**—going beyond simple prompt crafting to build entire systems that consistently guide AI behavior.
 
 **Key Practices**:
-- Design multi-layered context injection systems (22 hook events, 6 layers)
+- Design multi-layered context injection systems (21 hook events, 6 layers)
 - Build state management with declarative state machines (25 transitions, 9 guards)
 - Create adaptive triggers based on user intent (8-language, auto-detection)
 - Implement quality feedback loops with quality gates and metrics (M1-M10)
@@ -145,7 +145,7 @@ Context Engineering is the **systematic design of information flow to LLMs**—g
 Domain Knowledge (44 Skills) ────────┐
 Behavioral Rules (34 Agents) ────────┤
 State Management (195 modules / 22 subdirs, Clean Arch 4-Layer + Application pilot) ─┤
-3-Layer Orchestration ────┼─→ 22-Event Hook System (25 blocks, 62 scripts)
+3-Layer Orchestration ────┼─→ 21-Event Hook System (24 blocks, 62 scripts)
   ├─ intent-router (feature>skill>agent)                         │    ─→ Dynamic Context Injection
   ├─ next-action-engine (Stop-family)                           │
   ├─ team-protocol (PM/CTO/QA Lead)                             │
@@ -153,7 +153,7 @@ State Management (195 modules / 22 subdirs, Clean Arch 4-Layer + Application pil
 Workflow Engine (3 presets) ─────────┤
 Controllable AI (L0-L4 + fast-track Daniel-mode) ────────────────┤
 Defense-in-Depth 4-Layer (CC→bkit→audit-logger→Token Ledger) ──┤
-Invocation Contract L1~L5 (226 CI-gated + L2 + L3 MCP + L5 E2E)┤
+Invocation Contract L1~L6 (202 CI-gated + L2 + L3 MCP + L5 E2E + L6 host)┤
 7 Port↔Adapter pairs (cc-payload, state-store, regression-registry, audit-sink, token-meter, docs-code-index, mcp-tool) ──┤
 Quality Gates M1-M10 (catalog + check-quality-gates-m1-m10.js) ─┤
 i18n (KO/EN full + 6-lang fallback, error-friendly localization) ┤
@@ -194,8 +194,8 @@ bkit implements **Context Engineering**—the systematic curation of context tok
 | **Convention Skill (Phase 2)** | Defines naming, structure, patterns |
 | **CLAUDE.md Files** | Project-specific AI instructions |
 | **Skill System (44 skills)** | Domain-specific knowledge (v2.1.11 added bkit-evals, bkit-explore, pdca-watch, pdca-fast-track) |
-| **22-Event Hook System** | Centralized context injection via hooks.json (22 events / 25 blocks, 62 scripts); 3 attribution sites (Stop/SessionEnd/SubagentStop) |
-| **lib/ (195 modules)** | 22 subdirectories Clean Architecture 4-Layer with 7 Port↔Adapter pairs: application (v2.1.11 γ2 pilot), audit, cc-regression, control, core, **dashboard** (v2.1.11 β4), **defense**, **discovery** (v2.1.11 β1), **domain**, **evals** (v2.1.11 β2), **i18n** (v2.1.11 β3/β6), **infra**, intent, **orchestrator**, pdca, qa, quality, **sprint** (v2.1.13), task, team, ui, **util** |
+| **21-Event Hook System** | Centralized context injection via hooks.json (21 events / 24 blocks, 62 scripts); 3 attribution sites (Stop/SessionEnd/SubagentStop) |
+| **lib/ (198 modules)** | 22 subdirectories Clean Architecture 4-Layer with 7 Port↔Adapter pairs: application (v2.1.11 γ2 pilot), audit, cc-regression, control, core, **dashboard** (v2.1.11 β4), **defense**, **discovery** (v2.1.11 β1), **domain**, **evals** (v2.1.11 β2), **i18n** (v2.1.11 β3/β6), **infra**, intent, **orchestrator**, pdca, qa, quality, **sprint** (v2.1.13), task, team, ui, **util** |
 
 **Context Engineering Architecture (v2.1.13)**:
 ```

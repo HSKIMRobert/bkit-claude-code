@@ -7,10 +7,7 @@ effort: medium
 user-invocable: false
 description: |
   Enhance SEO (meta tags, semantic HTML) and security (vulnerability checks, hardening).
-  Triggers: SEO, security, meta tags, vulnerability, 검색 최적화, 보안.
-imports:
-  - ${PLUGIN_ROOT}/templates/pipeline/phase-7-seo-security.template.md
-agents:
+  Triggers: SEO, security, meta tags, vulnerability
   default: bkit:code-analyzer
   security: bkit:security-architect
 allowed-tools:

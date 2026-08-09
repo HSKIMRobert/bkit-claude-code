@@ -1,6 +1,7 @@
 # Skills Overview
 
 > 44 Skills defined in bkit (v2.1.13)
+> **v2.1.34**: Reachability release — hook events 22 -> 21, blocks 25 -> 24. Hook `timeout` is measured in SECONDS and bkit had been writing milliseconds, so a declared 10000 on `Stop` meant 2h46m rather than 10s and a hung hook had no effective cancellation — the real cause behind issue #139, whose symptom alone was patched in v2.1.30. The `FileChanged` handler had never run once since v2.1.1 (an `if` rule cannot take | alternation, `if` is evaluated only on tool events, and FileChanged's matcher names literal files rather than globs), so PDCA document-change detection moved to PostToolUse Write/Edit where it demonstrably fires. `once: true` on SessionStart was ignored outside skill frontmatter and is gone. `SKILL.md` edits were never linted and `unified-write-post` never ran on `Edit`, because one `if` rule and a Write-only matcher covered half the cases. Every finding was reproduced against a real Claude Code runtime, and a new host-integration layer asserts from the outside that registered hooks actually dispatch. CC recommended: v2.1.220.
 >
 > **Counting note**: CC's `/plugin` Skills count = `skills/` + `commands/` entries (same-name dedup); bkit's 44 skills + `commands/output-style-setup.md` display as **45** — expected, not a drift.
 >

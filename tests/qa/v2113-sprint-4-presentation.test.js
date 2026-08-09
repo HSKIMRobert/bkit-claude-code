@@ -81,18 +81,45 @@ const LANG_REGEX = {
   // TRIG — 5 frontmatters × 8 languages = 40 micro-assertions in 5 TCs
   // ─────────────────────────────────────────────────────────────────────────
 
+  /*
+   * v2.1.34 (issue #129): the 8-language vocabulary is asserted against code.
+   *
+   * These five frontmatters used to carry keywords in all eight languages, and
+   * frontmatter is loaded into context for the entire session — the cost #129
+   * was filed about. The vocabulary now lives in lib/i18n/trigger-keywords.js,
+   * where bkit's intent-router matches it for free, so frontmatter keeps the
+   * English trigger and this check follows the keywords to their real home.
+   *
+   * The intent is unchanged: each of these five surfaces must still be
+   * reachable in all eight languages.
+   */
+  const { AGENT_TRIGGER_KEYWORDS, SKILL_TRIGGER_KEYWORDS } =
+    require(path.join(PLUGIN_ROOT, 'lib/i18n/trigger-keywords'));
+
   for (const fm of FRONTMATTERS) {
-    test(`TRIG-${fm.label}: 8-language triggers present`, () => {
+    test(`TRIG-${fm.label}: English trigger in frontmatter, other languages in code`, () => {
       const src = readFile(fm.file);
-      // Extract YAML frontmatter (between leading --- markers)
       const m = src.match(/^---\n([\s\S]*?)\n---/);
       assert.ok(m, `frontmatter delimiters in ${fm.file}`);
       const fmBody = m[1];
-      // English keyword presence (catch-all): word boundary 'sprint'
       assert.ok(/sprint/i.test(fmBody), `EN keyword in ${fm.file}`);
-      // Other 7 languages
+
+      const name = path.basename(fm.file, '.md') === 'SKILL'
+        ? path.basename(path.dirname(fm.file))
+        : path.basename(fm.file, '.md');
+      const table = fm.label === 'skill' ? SKILL_TRIGGER_KEYWORDS : AGENT_TRIGGER_KEYWORDS;
+      const entry = table[name];
+      assert.ok(entry, `no lib/i18n/trigger-keywords.js entry for ${name}`);
+
+      const allKeywords = Object.entries(entry)
+        .filter(([lang]) => lang !== 'en')
+        .flatMap(([, words]) => words)
+        .join(' ');
       for (const [lang, re] of Object.entries(LANG_REGEX)) {
-        assert.ok(re.test(fmBody), `${lang.toUpperCase()} keyword missing in ${fm.file}`);
+        assert.ok(
+          re.test(allKeywords),
+          `${lang.toUpperCase()} keyword missing for ${name} in lib/i18n/trigger-keywords.js`
+        );
       }
     });
   }
@@ -582,21 +609,27 @@ const LANG_REGEX = {
     assert.equal(out, '');
   });
 
-  test('INV-05: hooks/hooks.json 22 events 25 blocks invariant', () => {
+  test('INV-05: hooks/hooks.json event/block counts match the counts SoT', () => {
     // v2.1.14 Sub-Sprint 6 Observation: the original Sprint 4 invariant
     // froze hooks.json against structural change. Version-string bumps
     // inside the `description` field are SSoT-driven (BKIT_VERSION sync)
     // and explicitly allowed — assert event/block counts directly rather
     // than relying on a clean `git diff --stat`.
-    // v2.1.27 (ENH-371): +UserPromptExpansion event/block for slash-command
-    // orchestrator reachability (issue #132) → 21→22 events, 24→25 blocks.
+    // v2.1.34: read the numbers from the counts SoT instead of repeating them.
+    // Hardcoding here meant a declared, auditable hook retirement (FileChanged,
+    // recorded in test/contract/deprecation-registry.json) failed identically to
+    // an accidental regression, which is the opposite of what this guard is for.
+    const { EXPECTED_COUNTS } = require(
+      require('path').join(PLUGIN_ROOT, 'lib/domain/rules/docs-code-invariants'));
     const data = JSON.parse(require('fs').readFileSync(
       require('path').join(PLUGIN_ROOT, 'hooks/hooks.json'), 'utf8'));
     const events = Object.keys(data.hooks || {});
     let totalBlocks = 0;
     for (const ev of events) totalBlocks += (data.hooks[ev] || []).length;
-    assert.equal(events.length, 22, 'hooks.json must declare 22 events');
-    assert.equal(totalBlocks, 25, 'hooks.json must declare 25 total blocks');
+    assert.equal(events.length, EXPECTED_COUNTS.hookEvents,
+      `hooks.json must declare ${EXPECTED_COUNTS.hookEvents} events`);
+    assert.equal(totalBlocks, EXPECTED_COUNTS.hookBlocks,
+      `hooks.json must declare ${EXPECTED_COUNTS.hookBlocks} total blocks`);
   });
 
   // ─────────────────────────────────────────────────────────────────────────

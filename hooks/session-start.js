@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * bkit Vibecoding Kit - SessionStart Hook (v2.1.33, uses BKIT_VERSION from lib/core/version)
+ * bkit Vibecoding Kit - SessionStart Hook (v2.1.34, uses BKIT_VERSION from lib/core/version)
  *
  * Thin orchestrator that delegates to startup modules:
  *   1. migration   - Legacy path migration (docs/ -> .bkit/)
@@ -16,11 +16,35 @@
 
 const { BKIT_PLATFORM } = require('../lib/core/platform');
 const { debugLog } = require('../lib/core/debug');
+const { readStdinSync } = require('../lib/core/io');
+
+/*
+ * v2.1.34: read the hook payload.
+ *
+ * This handler previously ignored stdin entirely, which cost it two things.
+ *
+ * First, `source` — Claude Code reports whether the session began via
+ * `startup`, `resume`, `clear`, `compact` or `fork`. bkit had no way to tell
+ * them apart, and the `once: true` flag it carried in hooks.json to approximate
+ * "only on a fresh session" was never honoured there in the first place (it is
+ * read only from skill frontmatter). Confirmed by resuming a session and
+ * watching this hook fire a second time.
+ *
+ * Second, dispatch observability: reading through the shared reader stamps
+ * `.bkit/runtime/hook-dispatch.ndjson`, which is how the host-integration test
+ * proves from the outside that Claude Code really invokes this hook. A hook
+ * nobody can observe is how eight bkit features stayed dead across releases.
+ *
+ * The reader is bounded (issue #139), so this cannot stall the session.
+ */
+const hookPayload = readStdinSync() || {};
+const sessionSource = typeof hookPayload.source === 'string' ? hookPayload.source : null;
 
 // Log session start
 debugLog('SessionStart', 'Hook executed', {
   cwd: process.cwd(),
-  platform: BKIT_PLATFORM
+  platform: BKIT_PLATFORM,
+  source: sessionSource,
 });
 
 // --- ENH-148: Defensive cleanup for env vars that should reset on /clear ---
@@ -296,7 +320,16 @@ try {
 // ENH-227 (Issue #77 Phase A): single-source generator with opt-out + phase-change-only + stale TTL
 const { generateSessionTitle } = require('../lib/pdca/session-title');
 const primaryFeature = onboardingContext.onboardingData.primaryFeature || pdcaStatus?.primaryFeature || null;
-const currentPhase = onboardingContext.onboardingData.phase || pdcaStatus?.currentPhase || null;
+/*
+ * v2.1.34: `pdcaStatus?.currentPhase` — a key the v3 schema does not have. The
+ * line directly above already reads `primaryFeature` correctly, so one fallback
+ * worked and the next silently did not: the phase component of the session
+ * title was null unless onboarding happened to supply it. The phase lives on
+ * the feature entry, which is where it is now read from.
+ */
+const currentPhase = onboardingContext.onboardingData.phase
+  || (primaryFeature ? pdcaStatus?.features?.[primaryFeature]?.phase : null)
+  || null;
 // GitHub #119: Claude Code exposes CLAUDE_CODE_SESSION_ID (not CLAUDE_SESSION_ID).
 // Reading the legacy name made sessionId null on SessionStart → the per-session
 // `·a1b2` title tag from #111 never applied → concurrent same-repo sessions

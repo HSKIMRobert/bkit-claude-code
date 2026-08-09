@@ -1,6 +1,6 @@
 # bkit — Full Reference
 
-> The only Claude Code plugin that verifies AI-generated code against its own design specs.
+> A Claude Code plugin that verifies AI-generated code against its own design specs.
 
 > **The 5-minute version is in [README.md](README.md). This file is the deep one.** It exists for people who want to know exactly what `/sprint`, `/pdca`, and `/control` do, which agent runs in which phase, how the 11 quality gates measure things, and how the architecture stops AI from drifting. **Release history is in [CHANGELOG.md](CHANGELOG.md) and is not duplicated here.**
 
@@ -67,7 +67,7 @@ The terms used in this file, explained for someone who is new to AI-coding.
 | **bkit** | The plugin you're reading about. It adds 3 commands (`/sprint`, `/pdca`, `/control`), 44 skills, 34 specialist agents, 11 quality checks. |
 | **Skill** | A bundle of instructions Claude Code reads to remember "how do I run a PDCA cycle?" or "how do I plan a sprint?" When you type `/pdca`, a skill activates. |
 | **Agent** | A specialist version of Claude Code that knows one job very well — e.g. `frontend-architect`, `qa-lead`, `gap-detector`. The agent's job is in its name. |
-| **Hook** | A piece of code that runs *around* AI actions. bkit's hooks intercept dangerous actions (deleting files, leaking secrets), log every step, and inject context. There are 22 hook events Claude Code fires. |
+| **Hook** | A piece of code that runs *around* AI actions. bkit's hooks intercept dangerous actions (deleting files, leaking secrets), log every step, and inject context. There are 21 hook events Claude Code fires. |
 | **Context** | Everything the AI knows at the moment it decides what to write — your prompt, the file it just read, the rules it was given, its memory. AI quality is mostly about getting the right context to the AI at the right moment. |
 | **Context Engineering** | A discipline that says: *don't try to write the perfect prompt — build a system that gives the AI the right context every time.* bkit is a Context Engineering system. |
 | **PDCA** | Plan → Do → Check → Act. A 70-year-old continuous improvement loop. bkit's 9-phase version is `pm → plan → design → do → check → act → qa → report → archive`. |
@@ -96,7 +96,7 @@ The software industry refined how *humans* write code over decades — version c
 |---|---|---|
 | **Process** | Output | One feature through proper planning + design + implementation + verification beats ten hacked-together features. The PDCA cycle *is* the product. |
 | **Verification** | Trust | AI generates plausible code. Plausible is not correct. Every implementation goes through gap analysis. Below 90 % match, the system iterates. We do not ship hope. |
-| **Context** | Prompts | A clever prompt helps once. A systematic context system helps every time. 44 skills + 34 agents + 195 lib modules exist so the AI receives the right context at the right moment. |
+| **Context** | Prompts | A clever prompt helps once. A systematic context system helps every time. 44 skills + 34 agents + 198 lib modules exist so the AI receives the right context at the right moment. |
 | **Constraints** | Features | Three project levels, not infinite configuration. Fixed 9-phase PDCA and 8-phase Sprint, not a customizable workflow builder. Opinionated defaults eliminate decision fatigue. |
 
 > *"We do not offer a hundred features. We engineer each one through proper design and verification. That is the difference between a tool and a discipline."*
@@ -142,7 +142,7 @@ These come from [`AI-NATIVE-DEVELOPMENT.md`](AI-NATIVE-DEVELOPMENT.md). They are
 
 ## 2. The Three Commands
 
-Everything else in bkit — 44 skills, 34 agents, 22 hooks, 11 quality gates, 226+ contract assertions — exists to make these three commands work reliably.
+Everything else in bkit — 44 skills, 34 agents, 21 hooks, 11 quality gates, 202 contract assertions — exists to make these three commands work reliably.
 
 | Command | One-line purpose | When you use it |
 |---|---|---|
@@ -231,7 +231,7 @@ Critically, **every transition is gated** (see §5). The workflow can't accident
 
 `/control level N` is **the** autonomy knob. The same setting governs both Sprint and PDCA — there's no second knob to forget. The dial maps to a `stopAfter` phase (see §6). Trust Score (0–100) can recommend a level from your track record, but you stay in charge: `autoEscalation` / `autoDowngrade` flags in `bkit.config.json` decide whether bkit may move the dial on its own.
 
-> **Hook-driven invisible execution**: while you read the master plan, Claude Code's 22 hook events are quietly firing — `PreToolUse` blocks unsafe operations, `PostToolUse` logs every action, `SessionStart` restores memory, `Stop` writes the closing audit entry. You never invoke a hook directly; bkit attaches them automatically through `hooks/hooks.json` (25 blocks across 22 events). See §4.3 for the lifecycle map.
+> **Hook-driven invisible execution**: while you read the master plan, Claude Code's 21 hook events are quietly firing — `PreToolUse` blocks unsafe operations, `PostToolUse` logs every action, `SessionStart` restores memory, `Stop` writes the closing audit entry. You never invoke a hook directly; bkit attaches them automatically through `hooks/hooks.json` (24 blocks across 21 events). See §4.3 for the lifecycle map.
 
 > **8-language auto-trigger**: skills and agents declare keywords in 8 languages (EN, KO, JA, ZH, ES, FR, DE, IT). If you type *"로그인 기능 만들어줘"*, *"作成一个登录功能"*, or *"build a login feature"* — bkit's intent-router maps to the same skill. You never need to know the English command name.
 
@@ -337,7 +337,7 @@ A realistic 60-minute run with one user input:
 
 ### 4.3 Claude Code hooks lifecycle — what runs around every AI action
 
-You don't invoke hooks. They run automatically because bkit attaches them via `hooks/hooks.json` (25 hook blocks across 22 hook events). Hooks are what make bkit's safety net invisible: you never have to remember to verify, log, or block — Claude Code fires the events, bkit responds.
+You don't invoke hooks. They run automatically because bkit attaches them via `hooks/hooks.json` (24 hook blocks across 21 hook events). Hooks are what make bkit's safety net invisible: you never have to remember to verify, log, or block — Claude Code fires the events, bkit responds.
 
 ```mermaid
 flowchart TD
@@ -652,7 +652,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Presentation
-        hooks["hooks/ (22 events / 25 blocks)"]
+        hooks["hooks/ (21 events / 24 blocks)"]
         scripts["scripts/ (51 Node.js)"]
         skills["skills/ (44)"]
         agents["agents/ (34)"]
@@ -713,17 +713,33 @@ flowchart TB
     WSM --> Phases["PDCA + Sprint phases"]
 ```
 
-### 9.5 Invocation Contract L1–L5
+### 9.5 Invocation Contract L1–L6
 
-| Level | What | Count | Where |
-|---|---|---|---|
-| L1 | Contract baseline JSON | 94 | `tests/contract/baseline.json` |
-| L2 | Hook attribution smoke | 98 TC | `tests/integration/hooks/` |
-| L3 | MCP stdio runtime | 42 TC | `tests/contract/l3-mcp-stdio.test.js` |
-| L3 (v2.1.13) | Sprint cross-sprint contracts | 10 TC (SC-01~10) | `tests/contract/v2113-sprint-contracts.test.js` |
-| L5 | E2E shell scenarios | 5 | `tests/e2e/run-all.sh` |
+| Level | What | Where |
+|---|---|---|
+| L1 | Contract baseline snapshots (44 skills · 40 agents · 21 hook events) | `test/contract/baseline/` |
+| L2 | Hook attribution smoke | `test/contract/l2-smoke.test.js`, `l2-hook-attribution.test.js` |
+| L3 | MCP stdio runtime | `test/contract/l3-mcp-compat.test.js`, `l3-mcp-runtime.test.js` |
+| L4 | Cross-version drift vs two baselines (v2.1.9, v2.1.16) | `test/contract/scripts/contract-test-run.js` |
+| L5 | E2E shell scenarios | `test/e2e/` |
+| L6 | **Host integration (v2.1.34)** — a real `claude -p --plugin-dir` run, recorded | `test/contract/host-integration/` |
 
-CI gate `contract-check.yml` enforces 226+ assertions.
+CI gate `contract-check.yml` enforces 202 L1+L4 assertions, plus L6.
+
+**L6 is what v2.1.34 adds, and it exists because L1–L5 could not have caught the
+defects this release fixes.** Every level above it asks whether bkit's own files
+say the right thing. None of them asks whether Claude Code ever *invokes* what
+those files declare — which is how eight registered features shipped dead across
+releases while the contract stayed green. L6 records what a real session
+observed, together with the hash of the `hooks.json` it observed it against, so
+`hooks.json` cannot change without fresh evidence. CI needs no CLI and no
+credentials to enforce that; it needs the artefact to still describe what is
+being shipped.
+
+The L1+L4 count fell from 226 in v2.1.33 because FileChanged was retired. That is
+a *declared* removal, recorded in `test/contract/deprecation-registry.json`: the
+runner accepts a drop only when the registry explains it, so a contract that
+silently loses coverage still fails.
 
 ---
 

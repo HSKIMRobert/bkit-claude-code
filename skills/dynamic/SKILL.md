@@ -6,7 +6,7 @@ deprecation-risk: medium
 effort: medium
 description: |
   Fullstack development with bkend.ai BaaS — authentication, database, API integration.
-  Triggers: fullstack, BaaS, login, signup, database, web app, 풀스택, 인증, init dynamic.
+  Triggers: fullstack, BaaS, login, signup, database, web app
 argument-hint: "[init|guide|help]"
 agent: bkit:bkend-expert
 allowed-tools:

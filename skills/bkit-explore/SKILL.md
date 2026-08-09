@@ -6,7 +6,7 @@ deprecation-risk: none
 effort: low
 description: |
   Browse installed bkit skills, agents, and evals via lib/discovery/explorer.js (filesystem scan, no subprocess).
-  Triggers: bkit explore, list skills, skill discovery, browse skills, 스킬 탐색, スキル探索, 技能探索, explorar, explorer.
+  Triggers: bkit explore, list skills, skill discovery, browse skills
 argument-hint: "[category] | evals | --level <Starter|Dynamic|Enterprise>"
 user-invocable: true
 allowed-tools:

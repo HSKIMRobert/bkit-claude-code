@@ -6,7 +6,7 @@ deprecation-risk: low
 effort: high
 description: |
   Enterprise-grade systems with microservices, Kubernetes, Terraform, and AI Native methodology. For multi-feature initiatives spanning a release timeline, combine with /sprint master-plan (v2.1.13) to group features into a single 8-phase sprint container with shared scope/budget and 4 auto-pause triggers (QUALITY_GATE_FAIL / ITERATION_EXHAUSTED / BUDGET_EXCEEDED / PHASE_TIMEOUT).
-  Triggers: microservices, k8s, terraform, monorepo, AI native, 마이크로서비스, init enterprise.
+  Triggers: microservices, k8s, terraform, monorepo, AI native
 argument-hint: "[init|guide|help]"
 agents:
   default: bkit:enterprise-expert
