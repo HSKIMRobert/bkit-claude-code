@@ -34,7 +34,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
@@ -91,7 +91,7 @@ function walk(dir, out = []) {
 
 function getTrackedSet() {
   try {
-    const out = execSync('git ls-files', {
+    const out = execFileSync('git', ['ls-files'], {
       cwd: PROJECT_ROOT,
       encoding: 'utf8',
       maxBuffer: 100 * 1024 * 1024,

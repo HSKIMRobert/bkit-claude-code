@@ -28,7 +28,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const ROOT = process.cwd();
 
@@ -182,8 +182,17 @@ async function collectDogfooderIssuesData(asOf, dogfooders) {
   const issues = [];
   for (const handle of dogfooders) {
     try {
-      const json = execSync(
-        `gh issue list --state all --search "author:${handle} created:>=${sinceDateOnly}" --limit 100 --json number,createdAt,closedAt,author,title`,
+      // ENH-427 (v2.1.35): argv, no shell. The search expression is one
+      // argument, so a handle can never terminate the quoted string around it.
+      const json = execFileSync(
+        'gh',
+        [
+          'issue', 'list',
+          '--state', 'all',
+          '--search', `author:${handle} created:>=${sinceDateOnly}`,
+          '--limit', '100',
+          '--json', 'number,createdAt,closedAt,author,title',
+        ],
         { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000 }
       );
       const parsed = JSON.parse(json);
@@ -286,7 +295,7 @@ function collectConventionTestsData() {
   const asOf = new Date().toISOString();
   let gitCommit = 'unknown';
   try {
-    gitCommit = execSync('git rev-parse HEAD', { encoding: 'utf8', cwd: ROOT }).trim();
+    gitCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', cwd: ROOT }).trim();
   } catch (_) { /* git unavailable, keep 'unknown' */ }
   let bkitVersion = 'unknown';
   try {

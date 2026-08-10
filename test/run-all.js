@@ -88,10 +88,6 @@ const CATEGORIES = {
       'unit/session-guide.test.js',
       // v2.1.0 comprehensive test strategy additions
       'unit/paths.test.js',
-      'unit/context-loader.test.js',
-      'unit/impact-analyzer.test.js',
-      'unit/invariant-checker.test.js',
-      'unit/scenario-runner.test.js',
       'unit/import-resolver.test.js',
       'unit/skill-orchestrator.test.js',
       'unit/skill-name.test.js',
@@ -201,7 +197,7 @@ const CATEGORIES = {
       'performance/module-load-perf.test.js',
       'performance/plugin-data-perf.test.js',
       'performance/hook-cold-start.test.js',
-      // 'performance/direct-import.test.js' — ENH-167 Phase B: 파일 미존재로 제거 (run-all 정합성)
+      // 'performance/direct-import.test.js' — ENH-167 Phase B: removed, file does not exist (run-all consistency)
       'performance/state-store-perf.test.js',
       'performance/audit-write-perf.test.js',
       'performance/ui-render-perf.test.js',
@@ -390,7 +386,11 @@ function parseTestOutput(output, filePath) {
 function runTestFile(filePath) {
   const fullPath = path.join(TEST_DIR, filePath);
   if (!fs.existsSync(fullPath)) {
-    return { passed: 0, failed: 0, total: 0, skipped: 1, failures: [{ id: filePath, message: 'File not found' }] };
+    // v2.1.35 (ENH-431): a manifest entry with no file is a failure, not a skip.
+    // Returning failed:0 alongside a failure entry is how four orphans left by
+    // the v2.1.16 cleanup stayed out of the totals for 19 releases — the report
+    // listed them under "Failures" while the verdict counted them as skips.
+    return { passed: 0, failed: 1, total: 1, skipped: 0, failures: [{ id: filePath, message: 'File not found' }] };
   }
 
   try {

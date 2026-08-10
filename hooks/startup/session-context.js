@@ -1,5 +1,5 @@
 /**
- * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.34)
+ * bkit Vibecoding Kit - SessionStart: Session Context Builder Module (v2.1.35)
  *
  * Builds the additionalContext string for the SessionStart hook response.
  * Includes PDCA status injection, Feature Usage rules, Executive Summary rules,
@@ -7,9 +7,9 @@
  *
  * v2.1.20 (F10 + ENH-323): adds detectCCVersion() + buildCCVersionAdvisoryContext()
  * to surface a Claude Code v2.1.143+ minimum-version advisory at SessionStart
- * (1회/session cap, .bkit/runtime/cc-version.json cache 1h TTL, opt-out via
+ * (once-per-session cap, .bkit/runtime/cc-version.json cache 1h TTL, opt-out via
  * BKIT_DISABLE_CC_VERSION_DETECTION=1, OTEL emit via gen_ai.cc_version_detection_ms).
- * Trigger: 외부 dogfooder 정병진 (@bj) 2026-05-26 install incident. See ADR 0011.
+ * Trigger: external dogfooder @bj 2026-05-26 install incident. See ADR 0011.
  *
  * ENH-368 (v2.1.25): adds a model-floor advisory — when 2.1.143 ≤ CC < 2.1.170,
  * the 6 Fable-pinned agents hard-fail at spawn (`fable` alias introduced in
@@ -18,7 +18,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process'); // v2.1.20 F10: CC version detection
+// v2.1.35 (ENH-428): CC version detection no longer spawns its own shell here —
+// it delegates to lib/infra/cc-version-checker's shared, argv-based helper.
 const { detectLevel } = require('../../lib/pdca/level');
 const { debugLog } = require('../../lib/core/debug');
 const { getPdcaStatusFull } = require('../../lib/pdca/status');
@@ -34,18 +35,18 @@ const { FABLE_MODEL_FLOOR } = require('../../lib/infra/cc-version-checker');
 // ─────────────────────────────────────────────────────────────────────────────
 // v2.1.20 (F10 + ENH-323): Claude Code version detection at SessionStart
 // ─────────────────────────────────────────────────────────────────────────────
-// Trigger: 외부 dogfooder 정병진 (@bj) 2026-05-26 install incident — the
+// Trigger: external dogfooder @bj 2026-05-26 install incident — the
 // strict plugin-manifest path in CC ≤ v2.1.142 rejects bkit's displayName
 // field. SessionStart-time detection forward-proofs users who upgrade bkit
 // before upgrading CC.
 //
 // Performance budget:
 //   - Strategy 0 (ENH-375): `~/.local/bin/claude` symlink read — no subprocess
-//   - child_process.execSync timeout 1000ms hard cap (fallback only)
+//   - shared argv-based subprocess helper, 1000ms hard cap (fallback only)
 //   - .bkit/runtime/cc-version.json cache 1h TTL on success
 //   - failed detections cached for 60s only, so a transient failure retries
 //     instead of pinning "unknown" for an hour (ENH-375)
-//   - 1회/session cap (identical session reuses cache mtime)
+//   - once-per-session cap (identical session reuses cache mtime)
 //   - opt-out via BKIT_DISABLE_CC_VERSION_DETECTION=1
 //   - OTEL emit: gen_ai.cc_version_detection_ms (3-month telemetry → v2.1.21+
 //     decision to keep/demote)
@@ -93,7 +94,7 @@ function ccVersionLt(a, b) {
 /**
  * Detect installed Claude Code version + emit advisory if < v2.1.143.
  *
- * 1회/session cap + cache 1h TTL on success (.bkit/runtime/cc-version.json);
+ * Once-per-session cap + cache 1h TTL on success (.bkit/runtime/cc-version.json);
  * failed detections expire after 60s so they retry (ENH-375).
  * Opt-out: BKIT_DISABLE_CC_VERSION_DETECTION=1.
  * Performance: installer-symlink read first (no subprocess); the
@@ -166,14 +167,16 @@ function detectCCVersion() {
   }
 
   // Strategy 1: subprocess fallback (npm installs, Windows, non-standard layouts)
+  // ENH-427/428 (v2.1.35): shared, shell-free implementation. This budget stays
+  // local — a SessionStart hook cannot afford the checker's default.
   if (version === null) {
     try {
-      const result = execSync('claude --version', {
-        timeout: CC_VERSION_DETECT_TIMEOUT_MS,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      }).toString().trim();
-      const match = result.match(/(\d+)\.(\d+)\.(\d+)/);
-      if (match) version = match[0];
+      const { detectViaSubprocess } = require('../../lib/infra/cc-version-checker');
+      version = detectViaSubprocess(CC_VERSION_DETECT_TIMEOUT_MS);
+      if (version === null) {
+        detectError = 'claude --version produced no parsable version';
+        debugLog('SessionStart', 'CC version detection failed', { error: detectError });
+      }
     } catch (e) {
       detectError = e.message || String(e);
       debugLog('SessionStart', 'CC version detection failed', { error: detectError });
@@ -528,7 +531,7 @@ function buildVersionEnhancementsContext(detectedLevel) {
   ctx += `\n## bkit v${BKIT_VERSION} (Current)\n`;
   ctx += `- CC recommended: v2.1.220 (fork background-default handled; Claude 5 alias resolution) | verified against v2.1.226 | model floor: v2.1.170+ for Fable-pinned agents | install floor: v2.1.143 (displayName schema)\n`;
   ctx += `- Architecture: 44 Skills, 34 Agents, 21 Hook Events (24 blocks / 28 handlers), 198 Lib Modules (22 subdirs, 8 Port↔Adapter pairs), 2 MCP Servers (19 tools), Sprint Management (v2.1.13 GA)\n`;
-  ctx += `- v2.1.34: hook timeouts are SECONDS (were 1000x too large); an unmeasured quality gate fails closed; L6 host integration proves hooks actually dispatch; destructive rules grade by target (broad denies, specific asks)\n`;
+  ctx += `- v2.1.35: bkit's hooks DO work in a git worktree (measured) — the old advisory said otherwise; a subdirectory of a plain checkout is no longer misread as a worktree; every child_process call passes argv, never a shell string\n`;
   // ENH-265: ENABLE_PROMPT_CACHING_1H hint (CC v2.1.108+, 30-40% token savings on long sessions)
   const _caching1h = process.env.ENABLE_PROMPT_CACHING_1H === '1' || process.env.ENABLE_PROMPT_CACHING_1H === 'true';
   if (_caching1h) {
