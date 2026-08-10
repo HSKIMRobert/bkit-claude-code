@@ -5,6 +5,181 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.35] - 2026-08-10
+
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
+> **Status**: Correction release. An outside contributor sent a one-file
+> `execSync` → `execFileSync` hardening patch. Reproducing its claim found that
+> the vulnerability it reported was not reachable — and that two real defects had
+> been shipping in that same file since v2.1.12, one of which had bkit telling
+> users, in writing, something about Claude Code that is not true.
+>
+> As in v2.1.34, every claim below is a recorded run against a real Claude Code
+> runtime or real `git`, not an inference from source.
+
+### Fixed
+
+- **bkit told you its hooks might not work in a git worktree. They work.**
+  The advisory read *"git worktree detected — Claude Code hooks may not fire
+  (issue #46808). Run bkit from the primary repository if hook-driven automation
+  is required."* Measured on Claude Code 2.1.226: a live
+  `claude -p --plugin-dir` session inside a linked worktree dispatched
+  `SessionStart`, `InstructionsLoaded`, `UserPromptSubmit`, `Stop` and
+  `SessionEnd` — the identical set to a matched control session in the primary
+  checkout of the same repository.
+
+  The claim was never measured, and the issue behind it does not say what bkit
+  said it says. [anthropics/claude-code#46808](https://github.com/anthropics/claude-code/issues/46808)
+  is **closed as not planned**, and its subject is project-level
+  `.claude/settings.json`, which Claude Code resolves relative to the working
+  directory. bkit ships its hooks in plugin `hooks/hooks.json` — a different
+  configuration source, loaded when the plugin is enabled.
+
+  Detection is kept, because a linked worktree genuinely can be missing
+  project-scope `.claude/` configuration when that directory is untracked or
+  gitignored. What is gone is the claim about bkit's own hooks, the citation of
+  a declined issue as a live defect, and the advice to leave the worktree. The
+  flag file now records `bkitHooksAffected: false` and a `verifiedOn` runtime
+  version, so the next reader can re-measure instead of inheriting the claim.
+
+- **A subdirectory of an ordinary checkout was reported as a linked worktree.**
+  `git rev-parse --git-dir` answers with an absolute path while
+  `--git-common-dir` answers relative to **the current working directory**; the
+  code resolved both against `toplevel`. From `repo/sub/deep`, git returns
+  `../../.git`, which is correct against `sub/deep` and meaningless against
+  `repo/` — so the two never compared equal and every subdirectory looked like a
+  worktree. Symlinked checkouts (`/tmp` → `/private/tmp` on macOS) failed the
+  same way.
+
+  Detection now asks git for absolute paths directly
+  (`--path-format=absolute`, git ≥ 2.31) with a fallback that resolves against
+  the base git actually used, and compares through `realpath`. Verified across
+  8 topologies — main toplevel, main subdirectory, worktree toplevel, worktree
+  subdirectory, submodule, bare repo, non-git directory, symlinked path — with
+  zero mismatches. Both superseded implementations are re-implemented inside the
+  test suite as a negative control, so the suite provably fails if either
+  returns.
+
+- **The advisory flag file bypassed bkit's own path resolver.** It was built
+  from bare `process.cwd()` while every other bkit state file goes through
+  `STATE_PATHS` and honours `CLAUDE_PROJECT_DIR`. Combined with the defect
+  above, a session started in a subdirectory wrote a stray
+  `.bkit/runtime/worktree-warning.flag` that nothing reads. `detectAndWarn(cwd)`
+  also silently ignored its own `cwd` argument; it no longer does.
+
+- **A quality gate could fail because bkit was running.** `SB-011` compared two
+  reads of the developer's live `.bkit/state/`, taken ~80 lines apart — and a
+  bkit session running in the repository rewrites `trust-profile.json` between
+  them. Observed on this branch as `control: 38, engine: 50`, passing on the
+  next run. v2.1.33 had already removed a hardcoded constant from this assertion
+  with the note *"a test that passes or fails based on accumulated local state
+  is not a test"*; it removed the constant and left the state dependence. Both
+  readings now come from one child process pinned to an empty
+  `CLAUDE_PROJECT_DIR` — deterministic at 38/38 across consecutive runs, and
+  identical on a fresh clone and in CI.
+
+- **The test runner listed four files it could not find, and counted them as
+  skips.** v2.1.16's "31 stale test cleanup" deleted the files and left their
+  entries in `test/run-all.js`. For 19 releases the generated report printed
+  *"unit/context-loader.test.js: File not found"* under **Failures** while
+  `runTestFile()` returned `failed: 0, skipped: 1` — so the report listed
+  failures its own verdict did not count. The orphans are removed, a missing
+  file now counts as a failure, and `test/contract/test-manifest-integrity.test.js`
+  fails if the manifest and the filesystem disagree again.
+
+### Changed
+
+- **Every `child_process` call in shipped code now passes an argv array.**
+  PR #146 converted one call site; seven remained, two of which interpolated
+  variables into a shell string: `lib/defense/push-event-guard.js` (a remote
+  name parsed out of the user's own `git push`) and `scripts/_v2119-s0-measure.js`
+  (a GitHub handle inside a quoted `--search` expression). Neither was
+  exploitable — the first is constrained by `REMOTE_REGEX` plus `shellEscape()`,
+  the second reads a hardcoded list — but both are now argv, and the remote name
+  is passed after a `--` separator so a leading-dash name cannot be read as a
+  flag.
+
+  This was already the project's policy. `lib/qa/test-runner.js` has carried
+  *"C1 fix (audit): use execFileSync (no shell)"* since an earlier audit — as a
+  comment in one file, which is why seven other call sites never received it.
+  `test/contract/child-process-policy.test.js` now enforces it mechanically.
+
+- **Claude Code version detection has one implementation instead of three.**
+  `lib/infra/cc-bridge.js` and `hooks/startup/session-context.js` each spawned
+  their own `claude --version` through a shell, alongside the correct
+  argv-based one already in `lib/infra/cc-version-checker.js`. Both now delegate
+  to a shared `detectViaSubprocess(timeoutMs)` helper and keep their own
+  timeouts, because a SessionStart hook cannot spend what a CLI script can. The
+  `2>/dev/null` that `cc-bridge` shelled out for is what
+  `stdio: ['ignore','pipe','ignore']` already does.
+
+### Added
+
+- `test/unit/worktree-detector.test.js` (14 assertions) — the 8-topology
+  detection matrix built against real `git`, the absolute-path contract, the
+  advisory's three content guarantees, and `WT-14`, a negative control that
+  re-implements both superseded versions and asserts each one gets the
+  subdirectory case wrong. This restores coverage that CHANGELOG v2.1.12
+  recorded as `test-scripts/unit/worktree-detector.test.js` — a path that has
+  never existed in this repository, which is why the defect survived 22
+  releases.
+- `test/contract/child-process-policy.test.js` (5 assertions) — a scan floor so
+  the check cannot silently match nothing, a ban on shell command strings and on
+  interpolated command names, named assertions pinning the two historically
+  risky call sites to argv, and the single-implementation rule for version
+  detection. Negative control verified: reintroducing an interpolated `execSync`
+  fails exactly two assertions.
+
+### ENH
+
+ENH-424, 425, 426, 427, 428, 429, 430, 431.
+
+### Deferred
+
+`WorktreeCreate` / `WorktreeRemove` registration (ENH-396/418) stays deferred on
+the reasoning recorded in v2.1.33 — *"confirmed supported by Claude Code,
+deferred for the hook-count cascade."* Nothing found in this cycle changes it:
+this release removes an incorrect claim about worktrees; it does not add
+worktree lifecycle management, and two more always-loaded hook events carry a
+context cost this release has no evidence to justify.
+
+### Notes for maintainers
+
+- **ENH-383/403 status correction.** Analysis documents from the v2.1.33 cycle
+  describe ENH-383 as unshipped. It was half-shipped: the `skipped[]` surfacing
+  landed in `hooks/startup/restore.js` and `lib/core/paths.js`, and ENH-403's
+  two-cause message distinction is in `paths.js` and listed in the v2.1.33
+  CHANGELOG. The remaining half — *"the `worktree-detector.js` message is now
+  misleading"* — is what this release closes.
+- **Carried, not fixed.** Two observations from this cycle that did not reproduce
+  well enough to act on, recorded so the next cycle does not rediscover them:
+  - `HS-012/013/014` (hook cold-start < 100 ms) fail on the release machine at
+    ~2.0 s. Identical on `main` at ~2.1 s, so this release did not cause it —
+    and bare `node -e "0"` measures 0.51–0.62 s there, so the 100 ms budget is
+    unreachable by any Node program on that host regardless of what bkit does.
+    Treated as environmental. The budget itself may deserve to be expressed
+    relative to measured interpreter start rather than as an absolute.
+  - `CP-010` (checkpoint restore) failed once while 100+ live QA sessions ran
+    concurrently, and passes 3/3 in isolation. Its temp directory is unique per
+    process (`bkit-cp-test-${pid}-${Date.now()}`), so shared-directory
+    interference is ruled out; the residual hypothesis is `PROJECT_DIR`
+    resolution order under load. Not reproduced, so not claimed fixed.
+  - The generated report counts a performance failure it does not list under
+    **Failures** — the same listed-vs-counted mismatch fixed for missing files
+    above, in a different code path.
+- The semgrep finding that started this (`javascript.lang.security.detect-child-process`,
+  HIGH) is a true description of the pattern and a false description of the risk
+  at that call site: all three `safeGit(...)` callers pass module-internal string
+  literals. The migration was kept and extended anyway, because removing the
+  shell means a future caller cannot reintroduce the primitive.
+
+### Credits
+
+- **[@anupamme](https://github.com/anupamme)** — PR #146. A one-file security
+  hardening patch that, on reproduction, turned into this release. The
+  `execFileSync` migration is theirs and now covers the whole repository.
+
 ## [2.1.34] - 2026-08-09
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.

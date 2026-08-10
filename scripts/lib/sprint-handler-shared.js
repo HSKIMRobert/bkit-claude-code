@@ -190,7 +190,7 @@ function resolveBkitVersion() {
  */
 function resolveBkitCommit() {
   try {
-    return require('child_process').execSync('git rev-parse HEAD', {
+    return require('child_process').execFileSync('git', ['rev-parse', 'HEAD'], {
       encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
   } catch (_) { return 'unknown'; }

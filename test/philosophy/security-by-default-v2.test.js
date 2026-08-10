@@ -149,13 +149,46 @@ assert('SB-010',
 // reports the same score the trust engine does (the wiring), and a session
 // starts in the lower half of the range rather than trusted-by-default (the
 // security property this section is named for).
-// `trustEngine` is already required at the top of this file.
-const engineScore = trustEngine.loadTrustProfile().trustScore;
+//
+// v2.1.35: v2.1.33 removed the hardcoded constant but left the reading against
+// the developer's live `.bkit/state/`. `initState` is captured ~80 lines above
+// and the engine was read here, so any writer landing in between — a bkit
+// session running in this very repository, which is the dogfooding setup —
+// made the two disagree. Observed once as `control: 38, engine: 50` during a
+// full aggregate, passing on the next run: a flaky gate.
+//
+// Both readings now come from one child process pinned to an empty project
+// directory. That makes the pair atomic with respect to this machine's state
+// and the expected value identical on a fresh clone and in CI.
+const trustProbe = (() => {
+  const os = require('os');
+  const { execFileSync } = require('child_process');
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-sb011-'));
+  try {
+    const script = `
+      const ac = require(${JSON.stringify(path.resolve(__dirname, '../../lib/control/automation-controller'))});
+      const te = require(${JSON.stringify(path.resolve(__dirname, '../../lib/control/trust-engine'))});
+      const engine = te.loadTrustProfile().trustScore;
+      const control = ac.getRuntimeState().trustScore;
+      process.stdout.write(JSON.stringify({ control, engine }));
+    `;
+    const out = execFileSync(process.execPath, ['-e', script], {
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: tmpRoot },
+      cwd: tmpRoot,
+      timeout: 20000,
+    });
+    return JSON.parse(out);
+  } finally {
+    try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* best effort */ }
+  }
+})();
+
 assert('SB-011',
-  initState.trustScore === engineScore
-    && Number.isFinite(initState.trustScore)
-    && initState.trustScore >= 0 && initState.trustScore <= 50,
-  `control runtime state must mirror the trust engine and start un-trusted (control: ${initState.trustScore}, engine: ${engineScore}; expected equal and within 0..50)`
+  trustProbe.control === trustProbe.engine
+    && Number.isFinite(trustProbe.control)
+    && trustProbe.control >= 0 && trustProbe.control <= 50,
+  `control runtime state must mirror the trust engine and start un-trusted (control: ${trustProbe.control}, engine: ${trustProbe.engine}; expected equal and within 0..50)`
 );
 
 // --- SB-012: Trust score 40 is below L3 upgrade threshold (65) ---
