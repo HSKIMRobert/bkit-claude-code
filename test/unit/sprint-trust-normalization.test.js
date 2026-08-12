@@ -6,12 +6,26 @@
  * docs §10.2) is honored alongside `args.trustLevel` and
  * `args.trustLevelAtStart`, with the documented precedence:
  *
- *     trustLevel > trust > trustLevelAtStart > DEFAULT_TRUST_LEVEL ('L3')
+ *     trustLevel > trust > trustLevelAtStart > configured default
  *
- * Plan SC: F3 — scripts/sprint-handler.js:721 + 750 normalize unification
+ * v2.1.36 — this test no longer reads the function's SOURCE.
+ *
+ * It used to spawn a child process, regex the body of `normalizeTrustLevel` out
+ * of the shipped file, supply its own `DEFAULT_TRUST_LEVEL = 'L3'` and
+ * `VALID_TRUST_LEVELS`, and eval the fragment. Two things followed from that:
+ *
+ *   1. It broke the moment the function called a helper — the extraction takes
+ *      one function body, so `configuredDefaultTrustLevel is not defined` came
+ *      out of a fragment that runs nowhere in production.
+ *   2. More importantly, the stub said `'L3'` while the real constant has been
+ *      `'L2'` since v2.1.19 (Safe Defaults, master plan §3.2). The test asserted
+ *      a default the code stopped producing seventeen releases ago, and passed,
+ *      because it was checking its own stub rather than the module.
+ *
+ * `normalizeTrustLevel` is exported. Requiring it tests what ships.
+ *
+ * Plan SC: F3 — normalize unification
  * Design Ref: docs/02-design/features/v2118-sprint-trust-ux-fix.design.md §4.3
- *
- * Cases A-G (CTO §F 권고 추가 case G: 기존 사용자 protection)
  *
  * @module test/unit/sprint-trust-normalization.test
  */
@@ -22,50 +36,12 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+const shared = require(path.join(PROJECT_ROOT, 'scripts/lib/sprint-handler-shared.js'));
 
-// Inject normalizeTrustLevel via require — exported from sprint-handler indirectly via patching
-// Direct test: monkey-patch require cache and dynamically import internal function.
-// Cleaner approach: spawnSync into a node -e eval that resolves normalizeTrustLevel.
-const { spawnSync } = require('node:child_process');
+const { normalizeTrustLevel, DEFAULT_TRUST_LEVEL } = shared;
 
-/**
- * Run normalizeTrustLevel(args) in a fresh node process and parse JSON result.
- * (Avoids polluting the parent process require cache + mirrors how the handler
- * is invoked in production CLI mode.)
- * @param {Object|null} args
- * @returns {string} normalized trust level
- */
-function normalize(args) {
-  // The sprint-handler module does not re-export normalizeTrustLevel; we tap
-  // into the closure by monkey-patching via require and reading the function
-  // body directly. Simpler: use spawnSync with a small eval script.
-  const argsJson = JSON.stringify(args);
-  const code = `
-    const h = require('${path.join(PROJECT_ROOT, 'scripts/sprint-handler.js').replace(/\\/g, '\\\\')}');
-    // sprint-handler does not export normalizeTrustLevel directly. We test via
-    // its observable side-effect: handleSprintAction('trust', ...) reads through
-    // the same chain. Use 'init' to verify normalizeTrustLevel propagation.
-    // For unit-level assertion, parse the source file directly:
-    const fs = require('fs');
-    // v2.1.22 S3a: normalizeTrustLevel was extracted from sprint-handler.js to
-    // scripts/lib/sprint-handler-shared.js (god-file split). Read from the new home.
-    const src = fs.readFileSync('${path.join(PROJECT_ROOT, 'scripts/lib/sprint-handler-shared.js').replace(/\\/g, '\\\\')}', 'utf8');
-    // Extract & eval normalizeTrustLevel (closure-safe within this child process)
-    const fnMatch = src.match(/function normalizeTrustLevel\\(args\\)[\\s\\S]*?\\n\\}/);
-    if (!fnMatch) { console.log('ERROR_FN_NOT_FOUND'); process.exit(2); }
-    const VALID = ['L0','L1','L2','L3','L4'];
-    const DEFAULT_TRUST_LEVEL = 'L3';
-    const VALID_TRUST_LEVELS = VALID;
-    eval(fnMatch[0]);
-    const args = ${argsJson};
-    console.log(normalizeTrustLevel(args));
-  `;
-  const r = spawnSync('node', ['-e', code], { encoding: 'utf8' });
-  if (r.status !== 0) {
-    throw new Error(`normalize spawn failed: ${r.stderr || r.stdout}`);
-  }
-  return r.stdout.trim();
-}
+/** @param {Object|null} args @returns {string} */
+const normalize = (args) => normalizeTrustLevel(args);
 
 let pass = 0;
 let fail = 0;
@@ -98,15 +74,30 @@ test('Case C: args.trustLevelAtStart only', () => {
 test('Case D: precedence trustLevel > trust', () => {
   assert.strictEqual(normalize({ trust: 'L2', trustLevel: 'L3' }), 'L3');
 });
-test('Case E: invalid value falls back to L3 default', () => {
-  assert.strictEqual(normalize({ trust: 'invalid' }), 'L3');
+test('Case E: an invalid value falls back to the shipped default', () => {
+  // Asserted against the real constant, not a literal. The old test hardcoded
+  // 'L3' and kept passing after v2.1.19 lowered it to 'L2', because it never
+  // read the constant it claimed to be checking.
+  assert.strictEqual(DEFAULT_TRUST_LEVEL, 'L2', 'Safe Defaults: the built-in default is L2 since v2.1.19');
+  assert.strictEqual(normalize({ trust: 'invalid' }), DEFAULT_TRUST_LEVEL);
+  assert.strictEqual(normalize(null), DEFAULT_TRUST_LEVEL);
+  assert.strictEqual(normalize({}), DEFAULT_TRUST_LEVEL);
 });
 test('Case F: case-insensitive', () => {
   assert.strictEqual(normalize({ trust: 'l2' }), 'L2');
+  assert.strictEqual(normalize({ trust: 'l4' }), 'L4');
 });
 test('Case G (★ CTO §F protection): existing --trustLevel user precedence preserved', () => {
   // Triple-source: trustLevel wins, trust + trustLevelAtStart ignored (regression-protect)
   assert.strictEqual(normalize({ trustLevel: 'L4', trust: 'L1', trustLevelAtStart: 'L0' }), 'L4');
+});
+test('Case H (v2.1.36): the configured default is what the file ships', () => {
+  // ENH-454 wired `sprint.defaultTrustLevel`, which had shipped in
+  // bkit.config.json with nothing reading it. Assert the resolver reads the
+  // file rather than the constant, without pinning a literal here.
+  const configured = shared.configuredDefaultTrustLevel();
+  assert.ok(['L0', 'L1', 'L2', 'L3', 'L4'].includes(configured), `got ${configured}`);
+  assert.strictEqual(normalize({}), configured);
 });
 
 console.log(`\nResults: ${pass} pass / ${fail} fail`);

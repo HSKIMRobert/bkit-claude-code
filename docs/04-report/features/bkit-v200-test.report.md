@@ -1,7 +1,7 @@
 # bkit v2.0.5 Comprehensive Test Report
 
-> Generated: 2026-08-12T12:50:28.557Z
-> Total: 3874 TC, 3870 PASS, 0 FAIL, 4 SKIP
+> Generated: 2026-08-12T13:07:31.786Z
+> Total: 4364 TC, 4360 PASS, 0 FAIL, 4 SKIP
 > Pass Rate: 99.9%
 
 ---
@@ -21,15 +21,15 @@
 | Architecture Tests | 100 | 100 | 0 | 0 | 100.0% PASS |
 | Controllable AI Tests | 80 | 80 | 0 | 0 | 100.0% PASS |
 | behavioral | 45 | 45 | 0 | 0 | 100.0% PASS |
-| contract | 40 | 40 | 0 | 0 | 100.0% PASS |
-| **Total** | **3874** | **3870** | **0** | **4** | **99.9%** |
+| contract | 530 | 530 | 0 | 0 | 100.0% PASS |
+| **Total** | **4364** | **4360** | **0** | **4** | **99.9%** |
 
 ## Version Comparison: v1.6.2 → v2.0.0
 
 | Metric | v1.6.2 | v2.0.0 | Delta |
 |--------|:------:|:------:|:-----:|
 | Categories | 8 | 12 | +4 |
-| Total TC | 1151 | 3874 | +2723 |
+| Total TC | 1151 | 4364 | +3213 |
 | Unit Tests | 450 | 1540 | +1090 |
 | Integration Tests | 130 | 556 | +426 |
 | Security Tests | 80 | 249 | +169 |
@@ -41,7 +41,7 @@
 | Architecture Tests | N/A | 100 | NEW |
 | Controllable AI Tests | N/A | 80 | NEW |
 | behavioral | N/A | 45 | NEW |
-| contract | N/A | 40 | NEW |
+| contract | N/A | 530 | NEW |
 
 ## Verdict
 
