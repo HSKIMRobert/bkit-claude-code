@@ -180,6 +180,10 @@ const CATEGORIES = {
       // files it never opened held the locks for this release's defects.
       // Two runners disagreeing about what "all tests" means is how a gap hides.
       'regression/destructive-bypass.test.js',
+      // v2.1.36 — guardrail precision. Locks BOTH directions of the operand
+      // boundary defect: the false positives issue #148 reported, and the
+      // false negatives the audit found underneath them.
+      'regression/enh-440-447-guardrail-precision.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
       'regression/bash-pre-decision.test.js',
@@ -253,6 +257,9 @@ const CATEGORIES = {
       // v2.1.0 E2E additions
       'e2e/pdca-lifecycle.test.js',
       'e2e/pdca-status-persistence.test.js',
+      // v2.1.36 — @Sinclair-Seo issue #148 harness, absorbed verbatim
+      // (external dogfooder Lifecycle Stage 4).
+      'e2e/external-dogfood/sinclair-seo-148-guardrail-precision.test.js',
     ],
     expected: 90,
   },
