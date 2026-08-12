@@ -77,6 +77,8 @@
     "matchRateThreshold": 90,
     "autoIterate": true,
     "maxIterations": 5,
+    "_comment_staleDays": "v2.1.36 (ENH-453): lib/pdca/lifecycle.js read `pdca.automation.staleDays`, a section this file has never had, so the shipped value could never take effect. The reader now matches this key.",
+    "staleDays": 7,
     "requireDesignDoc": true,
     "automationLevel": "semi-auto",
     "autoStartThreshold": 100,
@@ -180,7 +182,9 @@
     "autoDowngrade": true,
     "maxConcurrentFeatures": 3,
     "gateTimeoutMs": 300000,
-    "emergencyStopEnabled": true
+    "_comment_emergency": "v2.1.36 (ENH-453): emergencyStopEnabled shipped here and nothing read it, while automation-controller.js read emergencyFallbackLevel, which was never shipped. Both halves of one feature were disconnected from the file that claims to configure them. Both are now wired.",
+    "emergencyStopEnabled": true,
+    "emergencyFallbackLevel": 1
   },
   "guardrails": {
     "destructiveDetection": true,
