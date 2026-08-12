@@ -197,7 +197,7 @@ bkit is not just a collection of prompts—it's a **production-grade plugin arch
 | **MCP Servers** | 2 | `bkit-pdca-server` (13 tools — v2.1.13 added `bkit_sprint_list` · `bkit_sprint_status` · `bkit_master_plan_read`), `bkit-analysis-server` (6 tools). **19 tools total**, registered via `lib/infra/mcp-port-registry.js` per FR-δ1. |
 | **ACTION_TYPES** | 20 | v2.1.13 added `sprint_paused` + `sprint_resumed` + `master_plan_created` + `task_created`. Categories also expanded 10→11 (`sprint` added). |
 | **Test Files** | 371 (qa-aggregate scope) | 6,900 assertions, 0 failures (v2.1.35 measured; +2 files this release — worktree-detector unit + child-process-policy contract) |
-| **BKIT_VERSION** | 2.1.35 | `bkit.config.json` single source of truth; 5-location invariant enforced by `scripts/docs-code-sync.js` (PASS 9-streak: v2.1.120/121/123/129/132/133/137/139, F9-120 closure carryover monitoring complete) |
+| **BKIT_VERSION** | 2.1.36 | `bkit.config.json` single source of truth; 5-location invariant enforced by `scripts/docs-code-sync.js` (PASS 9-streak: v2.1.120/121/123/129/132/133/137/139, F9-120 closure carryover monitoring complete) |
 
 **Total: 730+ components** working in harmony across **Clean Architecture 4-Layer + Defense-in-Depth 4-Layer + Invocation Contract L1~L6 + 3-Layer Orchestration + Application Layer pilot (v2.1.11 γ2 introduction; v2.1.12 hardens the evals path; v2.1.13 GA introduces Sprint Management as the first non-PDCA workflow primitive: +1 skill + 4 agents + 7 templates + 3 MCP tools + 2 core infrastructure adapters + 9 application-layer modules + 8 contract test cases = 27+ new components, plus −2,333 LOC tech debt cleanup)**.
 

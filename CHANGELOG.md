@@ -5,6 +5,141 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.36] - 2026-08-12
+
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
+> **Status**: Guardrail precision release, triggered by external dogfooder
+> [@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)
+> (issue #148, 2026-08-12, bkit 2.1.35 / CC 2.1.228 / Node 22.22.0 / WSL2), who
+> shipped a 12-case reproduction harness with negative controls. Reproduced
+> exactly: 4 false positives, 0 missed controls. Auditing all 16 rules measured
+> the defect class at roughly 3x the report — and found the same root cause
+> producing **false negatives**, which is why this is a correctness release and
+> not a comfort one.
+
+### Headline
+
+Every guardrail rule is written as one command's shape, but each was matched
+against the whole input. `.*` and `[\s\S]*` ran past `&&`, `;` and newlines, so
+tokens belonging to other commands in a chain were read as operands of the
+dangerous one.
+
+Measured on v2.1.35:
+
+| direction | example | before |
+|---|---|---|
+| false positive | `git push origin feature-x && rm -f /tmp/scratch/note.txt` | G-002 **deny** |
+| false positive | `cp a.txt b.txt && ls /` | G-008 **deny** |
+| false positive | `dd if=/dev/zero of=./scratch.img … && echo "of=/dev/null"` | G-014 **deny** |
+| **false negative** | `chmod 777 / ; ls` | **detected by nothing** |
+| **false negative** | `DELETE FROM audit_log; SELECT 1 FROM t WHERE x=1` | G-010b defeated |
+| **false negative** | `DELETE FROM audit_log -- WHERE` | G-010b defeated |
+
+`chmod 777 /` is the command G-008's own comment cites as its reason to exist.
+Appending `; ls` defeated it completely.
+
+**Why it mattered beyond annoyance**: a PreToolUse block asks a question, and an
+unattended run has nobody to answer it, so the agent stalls silently instead of
+failing. The reporter lost ~15 minutes twice in one sprint, noticed only because
+an idle-stall monitor was attached.
+
+### Fixed
+
+- **ENH-440** — rules are matched per command segment instead of against the
+  whole input (`splitCommandSegments`, quote-aware). `|` is deliberately not a
+  split point: a pipe is how G-012, G-013 and G-015 express their threat, so
+  splitting there would blind exactly the rules that exist to catch it. SQL rules
+  segment on `;` only, because a newline ends a shell command but not a SQL
+  statement.
+- **ENH-442** — G-004: `\b` is satisfied by a hyphen, so `merge` matched the
+  read-only `merge-base`. `merge-tree` and `merge-file` were measured to have the
+  same defect. `(?!-)` excludes git's plumbing spellings.
+- **ENH-443** — G-013 grades by target (`findTargetIsBroad`), so a scoped
+  find-delete asks instead of denying — parity with G-001's scoped `rm -rf`.
+- **ENH-445** — G-006 no longer fires on `ls -la ./certs/server.pem`. Listing a
+  key is not reading one; every reader and copier still fires.
+- **ENH-446** — G-010b's negative lookahead is evaluated against one statement,
+  and SQL comments are stripped first. `--` must be followed by whitespace to
+  count as a comment: without that condition the stripper read the shell flag
+  `--command` as a comment and silently removed a real `DROP TABLE` from the
+  matched text. The negative controls caught that regression before it left the
+  working tree.
+- **ENH-447** — G-007 stands down on SQL statements. `DELETE FROM audit_log
+  WHERE id = 1` was being reported as a filesystem mass deletion.
+- **ENH-448** — `getBlockMessage()` names only recourse that exists. It used to
+  say "adjust guardrail settings in bkit.config.json or use manual override";
+  this module never reads that file, and `disableRule()` sets a flag `detect()`
+  does not consult.
+- **ENH-453** — three `getConfig()` paths the config file never provided, each
+  silently falling back: `automation.loopBreaker.maxPdcaIterations` (the setting
+  lives under `guardrails.loopBreaker`), `pdca.automation.staleDays` (that
+  section does not exist), and `automation.emergencyFallbackLevel` (never
+  shipped, while `automation.emergencyStopEnabled` shipped and nothing read it).
+
+### Added
+
+- **ENH-449 / ADR 0016** — guardrail rules are immutable at runtime, and that is
+  now written down. `test/security/integrity-verification.test.js` IV-09 already
+  asserted it; the decision, its rationale and its costs are recorded rather than
+  left implicit in a test name.
+- **ENH-450** — `test/e2e/external-dogfood/sinclair-seo-148-guardrail-precision.test.js`
+  absorbs @Sinclair-Seo's harness verbatim (Early Adopter Program Lifecycle
+  Stage 4).
+- **ENH-451** — `test/regression/enh-440-447-guardrail-precision.test.js`, 29 TC
+  covering every defect class, both false-negative directions, nine negative
+  controls, and the two new helpers directly.
+- **ENH-454 / 455 / 456 / 457** — config keys reaching the code that names them:
+  the seven `sprint.default*` values and `sprint.autoPause.armedTriggers`, the
+  three `guardrails.loopBreaker.*` ceilings, `guardrails.checkpointOnPhaseTransition`,
+  and `performance.promptCaching1h.envVar`.
+
+### Changed
+
+- **ENH-458** — thirteen config keys that no code reads now say so in the file,
+  with the reason. `permissions.*` is the safe-default policy bkit *recommends*
+  in Claude Code's syntax — bkit does not enforce it and Claude Code does not
+  read this file. `blastRadiusLimit`, `checkpointOnDestructive`,
+  `quality.{gateEnabled,metricsCollection,historyMaxDataPoints}`,
+  `automation.gateTimeoutMs` and `contextSizing.minSprints` have no consumer and
+  no specified behaviour; wiring them would mean inventing policy nobody asked
+  for. `automation.maxConcurrentFeatures` duplicates the live
+  `multiFeature.maxActiveFeatures`.
+- `AI-NATIVE-DEVELOPMENT.md` claimed all 16 rules are "graded by target". That is
+  true of two (G-001, and now G-013).
+- `test/security/destructive-rules.test.js` said it validated 8 rules. There are
+  16, and the header had said 8 since v2.1.10.
+
+### Known behaviour change
+
+A scoped `find … -delete` now **asks** where it used to **deny**. The reporter
+expected no finding at all; grading it to ask matches what G-001 does with a
+scoped `rm -rf`, and matches the direction they themselves suggested. Asking is
+not what stalled unattended runs — denying was.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| 16-rule audit false positives | 12 | **1** (the intended grading change above) |
+| Reporter's 12-case harness | 4 FP / 0 missed | **0 FP / 0 missed** |
+| False negatives | 3 | **0** |
+| Config keys read by nobody | 27 of 115 | **13, each documented** |
+| `getConfig()` paths that never resolve | 5 sites | **1** (verified benign) |
+| Test suite | 3794/3798 PASS, 0 FAIL | **3835/3839 PASS, 0 FAIL** (+41 TC) |
+
+New tests were verified against the pre-fix tree: 19 of 29 regression assertions
+and 4 of 12 harness cases failed there. A test written after the fix passes on
+arrival and proves nothing.
+
+### Credits
+
+**[@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)**
+— reproduction script with negative controls, precise file:line root-cause
+analysis for all three reported rules, and the observation that made the
+severity clear: an unattended run has nobody to answer a prompt. Thank you.
+
+
 ## [2.1.35] - 2026-08-10
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.

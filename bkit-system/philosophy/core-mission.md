@@ -186,7 +186,7 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 - **Audit Trail**: JSONL logging with decision traces for full AI transparency
 - **Quality Gates**: 7-stage gates with configurable thresholds per project level
 - **Checkpoint/Rollback**: Automatic checkpoint on phase transitions, manual rollback support
-- **Destructive Detection**: 16 known-pattern rules graded by target — a broad target denies, a specific one asks. A denylist holds only for the shapes someone wrote down.
+- **Destructive Detection**: 16 known-pattern rules, each matched against a single command segment so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete and find-based delete — a broad target denies and a specific one asks. A denylist holds only for the spellings someone wrote down, and the rules cannot be switched off at runtime (ADR 0016).
 - **MCP Servers**: bkit-pdca (10 tools) + bkit-analysis (6 tools) for external integration
 - **Multi-Language Support**: 8 languages (EN, KO, JA, ZH, ES, FR, DE, IT)
 

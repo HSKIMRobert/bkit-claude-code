@@ -1,8 +1,8 @@
 # bkit v2.0.5 Comprehensive Test Report
 
-> Generated: 2026-08-12T06:41:32.215Z
-> Total: 3839 TC, 3835 PASS, 0 FAIL, 4 SKIP
-> Pass Rate: 99.9%
+> Generated: 2026-08-12T07:05:56.525Z
+> Total: 3839 TC, 3828 PASS, 7 FAIL, 4 SKIP
+> Pass Rate: 99.7%
 
 ---
 
@@ -13,7 +13,7 @@
 | Unit Tests | 1540 | 1540 | 0 | 0 | 100.0% PASS |
 | Integration Tests | 556 | 556 | 0 | 0 | 100.0% PASS |
 | Security Tests | 249 | 249 | 0 | 0 | 100.0% PASS |
-| Regression Tests | 641 | 641 | 0 | 0 | 100.0% PASS |
+| Regression Tests | 641 | 634 | 7 | 0 | 98.9% FAIL |
 | Performance Tests | 161 | 157 | 0 | 4 | 97.5% PASS |
 | Philosophy Tests | 140 | 140 | 0 | 0 | 100.0% PASS |
 | UX Tests | 185 | 185 | 0 | 0 | 100.0% PASS |
@@ -22,7 +22,7 @@
 | Controllable AI Tests | 80 | 80 | 0 | 0 | 100.0% PASS |
 | behavioral | 45 | 45 | 0 | 0 | 100.0% PASS |
 | contract | 40 | 40 | 0 | 0 | 100.0% PASS |
-| **Total** | **3839** | **3835** | **0** | **4** | **99.9%** |
+| **Total** | **3839** | **3828** | **7** | **4** | **99.7%** |
 
 ## Version Comparison: v1.6.2 → v2.0.0
 
@@ -43,6 +43,8 @@
 | behavioral | N/A | 45 | NEW |
 | contract | N/A | 40 | NEW |
 
+## Failures
+
 ## Verdict
 
-**ALL TESTS PASSED** - bkit v2.1.35 is ready for release.
+**7 TESTS FAILED** - Issues must be resolved before release.
