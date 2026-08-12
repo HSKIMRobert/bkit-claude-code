@@ -59,7 +59,7 @@
 | **WHY** | ENH-388이 감사 전용 가드레일을 실제 차단으로 바꾸면서 규칙 정밀도 검토를 거치지 않았다. 이슈 #148이 3개 규칙의 안전 명령 차단을 입증했고, 16규칙 감사가 결함을 신고의 약 3배로 측정했다: 경계 넘김 8규칙(대부분 critical/deny), G-004 하이픈 단어경계 결함, G-010b **치명적 위음성**(다른 문장의 WHERE가 무범위 DELETE를 은폐), G-007의 안전한 SQL 오탐, G-006의 읽기전용 조회 과잉매칭, 16개 중 1개만 등급 부여, 그리고 모듈이 읽지도 않는 `bkit.config.json`을 가리키는 차단 메시지. 병행한 양방향 설정 감사에서 115개 키 중 27개가 미판독, `getConfig()` 경로 3개가 해석 불가로 확인되었다. |
 | **WHO** | (a) 무인·고자율 운영자 — PreToolUse deny가 에이전트를 조용히 멈춘다(실측 회당 약 15분); (b) 이슈 #148 리포터 @Sinclair-Seo, PR 제출 의사 표명; (c) 체인 셸 명령(`&&` `;` `\|` 줄바꿈)을 쓰는 모든 사용자; (d) G-010b가 무범위 SQL DELETE를 잡아줄 것이라 믿는 사용자; (e) `bkit.config.json`을 편집하고 효과를 기대한 모든 사용자. |
 | **RISK** | (1) 오탐을 고치다 진짜 가드를 약화 — 32 TC 우회 차단 스위트(`test/regression/destructive-bypass.test.js`)를 절대 약화 금지; (2) 46개 테스트 파일이 이 규칙들을 건드림; (3) `guardrails.destructiveDetection` 배선이 IV-09 런타임 불변 계약과 충돌 가능; (4) 엄격해야 할 규칙까지 등급 부여하는 범위 확대. |
-| **SUCCESS** | 측정된 오탐 전부 통과 · `DELETE FROM audit_log; SELECT * FROM users WHERE id = 1`이 G-010b 발화 · 통제군 누락 0 · 전체 스위트 ≥ 3794/3798 PASS 0 FAIL · 리포터 12케이스 하네스가 `test/e2e/external-dogfood/` 영구 E2E로 통과 · `getBlockMessage()`가 실행 가능한 조언만 제시 · 모든 출하 설정 키가 판독자를 갖거나 선언용임이 명시됨. |
+| **SUCCESS** | 측정된 오탐 전부 통과 · `DELETE FROM audit_log; SELECT * FROM users WHERE id = 1`이 G-010b 발화 · 통제군 누락 0 · 전체 스위트 ≥ 3794/3798 PASS 0 FAIL · 리포터 12케이스 하네스가 `test/e2e/external-dogfood/` 영구 E2E로 통과 · 거부 메시지가 **모델이 실제로 읽는 경로에서** 규칙별로 실행 가능한 조언만 제시 · 모든 출하 설정 키가 판독자를 갖거나 선언용임이 명시됨. |
 | **OUT-OF-SCOPE** | 신규 가드레일 규칙; heredoc-detector 재설계; AST 수준 셸 파서 도입(구분자-창 휴리스틱이 선택한 정밀도 수준); 문자열 조각 재조립 우회 차단(관측·기록했으나 탐지 깊이 문제이지 정밀도 문제가 아님 — 이월). |
 
 ---

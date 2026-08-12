@@ -45,7 +45,7 @@ Concretely:
   documented as annotations, not switches. They have no production callers.
 - `guardrails.destructiveDetection` in `bkit.config.json` is documented as
   declarative. It is **not** wired to an off-switch.
-- `getBlockMessage()` lists only recourse that actually works: narrow the
+- The refusal message lists only recourse that actually works, per rule: narrow the
   target, split the chained command, or state the intent explicitly and have the
   user confirm.
 

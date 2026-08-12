@@ -184,6 +184,10 @@ const CATEGORIES = {
       // boundary defect: the false positives issue #148 reported, and the
       // false negatives the audit found underneath them.
       'regression/enh-440-447-guardrail-precision.test.js',
+      // v2.1.36 — the guards as the model sees them. Spawns the hook as a
+      // process and reads its JSON, because five defects in this release lived
+      // between correct modules and no detect()-level test could express them.
+      'regression/enh-459-463-hook-path-guards.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
       'regression/bash-pre-decision.test.js',

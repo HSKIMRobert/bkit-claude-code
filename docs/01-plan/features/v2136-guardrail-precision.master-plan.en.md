@@ -52,7 +52,7 @@ G-001 already solves both defect classes A and F in the same file; the work is l
 | **WHAT (domain)** | Rule precision in `lib/control/destructive-detector.js`: operand-window boundary helper propagated to 8 rules, G-004 regex fix, G-010b statement-boundary fix, G-007 SQL suppression, `severityFor` extension (G-013 at minimum), recovery-path truthfulness, permanent E2E absorption of the reporter's harness, docs-code sync. |
 | **WHAT NOT** | No new detection rules; no enforcement rollback; no runtime rule-disable mechanism unless the recovery-path design decision explicitly chooses it; no allow-list support in `memory-directives.json`; no version bumps (maintainer's call). |
 | **RISK** | (1) Weakening a real guard while fixing false positives — the 32-TC bypass-closure suite (`test/regression/destructive-bypass.test.js`) must not be weakened; (2) 46 test files touch these rules; (3) `test/security/integrity-verification.test.js:206` asserts "critical rules default to deny" and may break when `severityFor` is added to a critical rule — must be resolved deliberately, not edited away; (4) `integrity-verification.test.js:168` asserts `disableRule` inertness *by design* — the recovery-path fix must not silently overturn an intended security property; (5) scope creep from grading rules that should stay strict (G-008/G-012/G-014/G-015 are inherently broad by construction). |
-| **SUCCESS** | All measured false positives (issue #148 harness + 16-rule audit probes in §2.1) pass unblocked; `DELETE FROM audit_log; SELECT * FROM users WHERE id = 1` fires G-010b; every negative control still caught (0 missed); full suite **≥ 3794/3798 PASS, 0 FAIL**; reporter's 12-case harness green as a permanent E2E under `test/e2e/external-dogfood/`; `getBlockMessage()` gives only followable advice; docs = code across all rule-count/behavior claims. |
+| **SUCCESS** | All measured false positives (issue #148 harness + 16-rule audit probes in §2.1) pass unblocked; `DELETE FROM audit_log; SELECT * FROM users WHERE id = 1` fires G-010b; every negative control still caught (0 missed); full suite **≥ 3794/3798 PASS, 0 FAIL**; reporter's 12-case harness green as a permanent E2E under `test/e2e/external-dogfood/`; the refusal message gives only followable advice, per rule, on the path the model actually reads; docs = code across all rule-count/behavior claims. |
 | **SCOPE (quantitative)** | 6 features / 3 sprints / 13 ENH (440–452) / 1 primary production module + 2 consumer scripts + 46 dependent test files + ≥ 4 doc surfaces (README.md, CUSTOMIZATION-GUIDE.md, AI-NATIVE-DEVELOPMENT.md, CHANGELOG.md). |
 | **OUT-OF-SCOPE** | New guardrail rules; heredoc-detector (`lib/defense/heredoc-detector.js`) redesign beyond keeping its imports working; general shell-parser adoption (AST-level parsing) — the separator-window heuristic is the chosen precision level; string-fragment-reassembly evasion closure (observed and documented, but a detection-depth problem, not a precision problem — carry item for a future cycle). |
 
@@ -327,6 +327,35 @@ UNVERIFIED facts (needed but not measured — do not treat as established):
 - **U3** — State JSON `masterPlanPath` reads `…master-plan.md` (no `.en`/`.ko` suffix), while this file is the `.en.md` sibling per the bilingual docs policy. The main session should reconcile the path field when writing back the Context Anchor.
 
 ---
+
+## 11b. Post-hoc: what auditing ONE module missed (added 2026-08-12)
+
+Everything above scoped the work to `lib/control/destructive-detector.js`. The
+fixes landed, 30 assertions against `detect()` passed, and the false-positive
+class was reported closed.
+
+It was not. Running ordinary commands through the **real hook process** — the
+only surface a user meets — found five more defects that no `detect()`-level
+test could express, plus one on the Write path:
+
+| ENH | Defect | Why the unit tests could not see it |
+|---|---|---|
+| 459 | Refusal advice was fixed for every rule, led by "Scope the command to a specific path" — meaningless after `curl … \| sh`, `DROP TABLE`, `dd of=/dev/disk0` | The advice is assembled in the hook, not in the module under test |
+| 448 (corrected) | `getBlockMessage()` has **no production callers**; rewriting it changed nothing for anyone | Nothing asserted that the fixed function is reached |
+| 460 | `push-event-guard` scanned the whole line for force flags, so `git push origin feature-x && rm -f note.txt` stayed refused | Different module; the detector was clean |
+| 461 | `bash <<'EOF' … rm -rf / … EOF` was **allowed** — the detector elides heredoc bodies by design, and the heredoc guard graded the plain form `warning` | Each module correct alone; the payload passed between them |
+| 462 | `detectPushCommand` reported `branch: 'origin'` whenever a flag preceded the remote | Nothing read `branch` until the force verdict began grading by target |
+| 463 | The hook emitted the push guard's `ask` through the deny call, so every confirmation was presented as a refusal | The guard returned the right verdict; the caller discarded it |
+| 464 | `.env.example` was refused as a secret by the `.env*` deny glob | Write path, never exercised end to end |
+
+**Method that found them**: 28 ordinary developer commands and 8 ordinary file
+writes, fed to the real hook, with no assumption about which guard would fire.
+Locked as `test/regression/enh-459-463-hook-path-guards.test.js` (34 TC), of
+which 13 fail against the pre-fix tree — including two false negatives.
+
+**Rule for future cycles**: a fix to a guard module is not verified until the
+hook that hosts it has been run as a process and its JSON read. Module-level
+green is necessary and not sufficient.
 
 ## 12. External Contribution (issue #148 reporter)
 

@@ -67,10 +67,39 @@ an idle-stall monitor was attached.
   working tree.
 - **ENH-447** — G-007 stands down on SQL statements. `DELETE FROM audit_log
   WHERE id = 1` was being reported as a filesystem mass deletion.
-- **ENH-448** — `getBlockMessage()` names only recourse that exists. It used to
-  say "adjust guardrail settings in bkit.config.json or use manual override";
-  this module never reads that file, and `disableRule()` sets a flag `detect()`
-  does not consult.
+- **ENH-448 / ENH-459** — the refusal message names only recourse that exists,
+  and the recourse now fits the rule that fired. The first attempt at this
+  rewrote `getBlockMessage()` alone and reported the user-facing message as
+  corrected — but that function has **no production callers**, so nothing changed
+  for anyone. The text users actually see is built in `scripts/unified-bash-pre.js`,
+  and it offered the same three lines for every rule, led by "Scope the command to
+  a specific path" — meaningless after `curl … | sh`, `DROP TABLE users`, or
+  `dd of=/dev/disk0`. Both sites now share one `alternativesFor()` helper.
+- **ENH-460** — `push-event-guard` scanned the whole command line for force
+  flags, so `git push origin feature-x && rm -f note.txt` was refused as a force
+  push. The same root cause as ENH-440 in a different module; `REMOTE_REGEX` in
+  that same file already bounded at `[^|;&]`, and only the flag scan was left
+  unbounded.
+- **ENH-461** — `heredoc-detector` had no critical pattern for the plainest
+  execution vector. Measured: `bash <<'EOF' … rm -rf / … EOF` was **allowed**.
+  `destructive-detector` elides heredoc bodies by design, and this file graded the
+  plain interpreter form `warning`, which the hook audits and permits — each
+  module correct alone, the payload passing between them.
+- **ENH-462** — `detectPushCommand` reported `branch: 'origin'` whenever a flag
+  preceded the remote, because the remote regex's character class included `-`.
+  Harmless while nothing read `branch`; not harmless once the force verdict
+  grades by target. Force pushes now grade: a protected branch denies, a topic
+  branch asks.
+- **ENH-464** — `.env.example` was refused as a secret. The `.env*` deny glob
+  matched the file whose entire purpose is to be committed, so writing the
+  template that tells the next developer which variables to set was blocked.
+  The exemption is a closed list of conventional template suffixes
+  (`.example`, `.sample`, `.template`, `.dist`); `.env.local`, `.env.production`
+  and every other real environment file keep their deny.
+- **ENH-463** — the hook collapsed the push guard's three verdicts into two.
+  `ask` was emitted through the same call as `deny`, so every confirmation the
+  guard computed was presented as a refusal — `git push origin main` was refused
+  rather than confirmed. Same class as ENH-410: decided, then dropped.
 - **ENH-453** — three `getConfig()` paths the config file never provided, each
   silently falling back: `automation.loopBreaker.maxPdcaIterations` (the setting
   lives under `guardrails.loopBreaker`), `pdca.automation.staleDays` (that
@@ -131,6 +160,22 @@ not what stalled unattended runs — denying was.
 New tests were verified against the pre-fix tree: 19 of 29 regression assertions
 and 4 of 12 harness cases failed there. A test written after the fix passes on
 arrival and proves nothing.
+
+### How the last seven defects were found
+
+Everything above was verified against `detect()`, and 30 assertions passed. Then
+28 ordinary developer commands and 8 ordinary file writes were fed to the **real
+hook processes** — the only surface a user meets — with no assumption about which
+guard would fire. That found ENH-448's false claim, ENH-459, and ENH-460 through
+ENH-464, including two false negatives that a green unit suite had been sitting
+on top of: `chmod 777 / ; ls` and `bash <<'EOF' … rm -rf / … EOF`.
+
+Locked as `test/regression/enh-459-463-hook-path-guards.test.js` (34 TC), which
+spawns the hook and reads its JSON. 13 of those fail against the pre-fix tree.
+
+**Rule for future work**: a guard-module fix is not verified until the hook
+hosting it has been run as a process and its output read. Module-level green is
+necessary and not sufficient.
 
 ### Credits
 
