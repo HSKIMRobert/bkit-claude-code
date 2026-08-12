@@ -177,6 +177,23 @@ spawns the hook and reads its JSON. 13 of those fail against the pre-fix tree.
 hosting it has been run as a process and its output read. Module-level green is
 necessary and not sufficient.
 
+### ENH-465 — the local runner and CI now agree on what "all tests" means
+
+This release reported "3870/3874 PASS, 0 FAIL" from `node test/run-all.js` and
+pushed. CI then failed on L6 live-run freshness: `hooks/hooks.json` had changed
+and the recorded hook-dispatch evidence no longer described what was being
+shipped. The gate was right, and it was not reachable from the command every
+contributor runs — **thirteen contract tests ran in CI and nowhere else**.
+
+v2.1.34 had already written down what this costs, while moving six regression
+files in the other direction: *"Two runners disagreeing about what 'all tests'
+means is how a gap hides."* The contract layer had drifted the same way since.
+
+All thirteen are now listed in `test/run-all.js` as well as in the workflow.
+The duplication is deliberate: CI must not be the only place a contract is
+checked, and a contributor must be able to reproduce a CI failure locally.
+Suite totals move 3870/3874 → **4360/4364**, which is the size of the gap.
+
 ### Credits
 
 **[@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)**
