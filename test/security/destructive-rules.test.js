@@ -3,7 +3,10 @@
  * @module test/security/destructive-rules
  * @version 2.0.0
  *
- * Validates all 8 guardrail rules (G-001 to G-008) in destructive-detector.
+ * Validates the guardrail rules in destructive-detector. There are 16 of them
+ * (G-001..G-015 plus G-010b); this header said 8 from v2.1.10 until v2.1.36,
+ * which is how a reader could believe the SQL, obfuscation, raw-device and
+ * remote-script rules were covered here when they are not.
  * Covers blocking, safe pass-through, edge cases, and confidence scores.
  * 25 TC total.
  */

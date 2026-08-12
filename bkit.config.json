@@ -111,6 +111,7 @@
       "safetyMargin": 0.25,
       "tokensPerLOC": 6.67,
       "baselineLOC": 5000,
+      "_comment_minSprints": "v2.1.36 (ENH-458): RESERVED, NOT CONSUMED. context-sizer.js merges this key (:171) but nothing reads cfg.minSprints; only maxSprints is enforced (:321). A floor on the sprint count has no specified behaviour, so it is declared rather than given an invented one.",
       "minSprints": 1,
       "maxSprints": 12,
       "dependencyAware": true
@@ -161,10 +162,11 @@
     "promptCaching1h": {
       "recommended": true,
       "envVar": "ENABLE_PROMPT_CACHING_1H",
-      "ccMinVersion": "v2.1.108",
+      "_comment_ccMinVersion": "v2.1.36 (ENH-456): `ccMinVersion` was removed. It restated the floor already held by FEATURE_VERSION_MAP.promptCaching1h in lib/infra/cc-version-checker.js, in a different format ('v2.1.108' vs '2.1.108'), and nothing read it. Two places to state one version is a drift waiting to happen; the checker is the single source.",
       "note": "Set ENABLE_PROMPT_CACHING_1H=1 in shell before launching CC for 30-40% token savings on long PDCA sessions. ENH-265 (bkit v2.1.9)."
     }
   },
+  "_comment_permissions": "v2.1.36 (ENH-458): DECLARATIVE. This block is the safe-default policy bkit RECOMMENDS, in Claude Code's permission-rule syntax so it can be copied into .claude/settings.json. bkit does not enforce it and Claude Code does not read this file, so editing it changes nothing on its own. Enforcement of destructive shapes lives in lib/control/destructive-detector.js (16 rules), not here. test/controllable-ai/safe-defaults.test.js asserts these values — note that this checks the recommendation's content, not that anything enforces it.",
   "permissions": {
     "Write": "allow",
     "Edit": "allow",
@@ -180,13 +182,16 @@
     "trustScoreEnabled": true,
     "autoEscalation": false,
     "autoDowngrade": true,
+    "_comment_maxConcurrentFeatures": "v2.1.36 (ENH-458): DUPLICATE, NOT CONSUMED. The live setting is `multiFeature.maxActiveFeatures` (read at lib/core/config.js:136). Two keys for one concept is how a value gets edited in the wrong place; use multiFeature.maxActiveFeatures.",
     "maxConcurrentFeatures": 3,
+    "_comment_gateTimeoutMs": "v2.1.36 (ENH-458): RESERVED, NOT CONSUMED. No gate evaluation path is time-bounded today.",
     "gateTimeoutMs": 300000,
     "_comment_emergency": "v2.1.36 (ENH-453): emergencyStopEnabled shipped here and nothing read it, while automation-controller.js read emergencyFallbackLevel, which was never shipped. Both halves of one feature were disconnected from the file that claims to configure them. Both are now wired.",
     "emergencyStopEnabled": true,
     "emergencyFallbackLevel": 1
   },
   "guardrails": {
+    "_comment_destructiveDetection": "v2.1.36 (ENH-458): DECLARATIVE, NOT A SWITCH. The Destructive Detector cannot be turned off at runtime, and that is deliberate: test/security/integrity-verification.test.js IV-09 asserts detect() ignores the _disabled flag precisely so a guard cannot be neutralised from inside a session. Setting this to false does NOT disable detection. It is kept as a declaration of intent and as the anchor for that contract; wiring it to a real off-switch would overturn IV-09 and is a maintainer decision, not a config edit. False-positive relief comes from rule precision (see the 12->1 measurement in this release), not from an off-switch.",
     "destructiveDetection": true,
     "loopBreaker": {
       "maxPdcaIterations": 5,
@@ -194,11 +199,14 @@
       "maxAgentRecursion": 3,
       "cooldownMs": 60000
     },
+    "_comment_blastRadiusLimit": "v2.1.36 (ENH-458): RESERVED, NOT CONSUMED. lib/control/blast-radius.js grades a change set and reports a level; it has no configurable ceiling, so there is no place for this value to act. Wiring it would mean inventing a policy nobody has specified. Recorded here rather than silently ignored.",
     "blastRadiusLimit": "high",
     "checkpointOnPhaseTransition": true,
+    "_comment_checkpointOnDestructive": "v2.1.36 (ENH-458): RESERVED, NOT CONSUMED. A destructive command is denied or asked at PreToolUse, not checkpointed — and bkit never observes the user's answer to an ask, so there is no point at which 'before the destructive operation proceeds' can be detected. Left declared, not wired.",
     "checkpointOnDestructive": true
   },
   "quality": {
+    "_comment_unwired": "v2.1.36 (ENH-458): gateEnabled, metricsCollection and historyMaxDataPoints are RESERVED, NOT CONSUMED. Quality gates are evaluated unconditionally by lib/application/sprint-lifecycle/quality-gates.js evaluateGate(); metrics collection and history retention have no configurable path today. `thresholds` and `regressionGuard` ARE read. These three are recorded as declarative so the file no longer implies control it does not have.",
     "gateEnabled": true,
     "metricsCollection": true,
     "regressionGuard": true,

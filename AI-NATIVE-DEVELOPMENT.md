@@ -107,7 +107,7 @@ Based on research from industry leaders (Addy Osmani, Sapphire Ventures, DevOps.
 - **Quality Gates (7 stages)**: Configurable thresholds per phase transition
 - **Audit trail**: JSONL logging + decision tracer for full transparency
 - **Emergency stop**: Immediate pause with checkpoint/rollback support
-- **Destructive detection**: 16 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops) graded by target — a broad target denies, a specific one asks. A denylist holds only for the shapes someone wrote down, so it is a known-pattern guard, not a complete defense.
+- **Destructive detection**: 16 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops). Rules are matched against a single command segment, not the whole input, so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete (G-001) and find-based delete (G-013) — a broad target denies and a specific one asks; the other rules describe shapes that are dangerous regardless of target and do not grade. A denylist holds only for the spellings someone wrote down, so this is a known-pattern guard, not a complete defense, and the rules cannot be switched off at runtime (ADR 0016).
 
 ---
 

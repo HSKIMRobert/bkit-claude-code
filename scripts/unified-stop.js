@@ -313,8 +313,22 @@ const matchRate = require('../lib/quality/match-rate').isMeasured(featureEntry?.
 const level = pdcaStatus?.pipeline?.level || null;
 const agentName = activeAgent || activeSkill || null;
 
-// v2.0.0: Checkpoint creation before phase transitions
-if (feature && currentPhase && nextPhase) {
+/*
+ * v2.0.0: Checkpoint creation before phase transitions.
+ *
+ * ENH-457 (v2.1.36): `guardrails.checkpointOnPhaseTransition` shipped in
+ * bkit.config.json and nothing read it — checkpoints were created
+ * unconditionally, so turning the setting off changed nothing and nothing said
+ * so. Defaults to true, which is the behaviour every existing install already
+ * has.
+ */
+let _checkpointOnPhaseTransition = true;
+try {
+  _checkpointOnPhaseTransition =
+    require('../lib/core/config').getConfig('guardrails.checkpointOnPhaseTransition', true) !== false;
+} catch (_) { /* config unavailable — keep checkpointing */ }
+
+if (feature && currentPhase && nextPhase && _checkpointOnPhaseTransition) {
   try {
     const cp = getCheckpointManager();
     if (cp) {
