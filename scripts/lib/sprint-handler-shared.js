@@ -45,12 +45,99 @@ const DEFAULT_TRUST_LEVEL = 'L2';
  * @param {Object} args
  * @returns {('L0'|'L1'|'L2'|'L3'|'L4')}
  */
+/**
+ * The configured default trust level, or the built-in one.
+ *
+ * ENH-454 (v2.1.36) — `sprint.defaultTrustLevel` shipped in bkit.config.json and
+ * nothing read it: the default was the module constant below, so editing the
+ * config file changed nothing and nothing said so. Read at call time rather than
+ * module load so an injected project root is honoured.
+ *
+ * An invalid configured value falls back to the constant rather than throwing —
+ * a malformed config should not make sprints un-creatable.
+ *
+ * @returns {'L0'|'L1'|'L2'|'L3'|'L4'}
+ */
+function configuredDefaultTrustLevel() {
+  try {
+    const raw = require('../../lib/core/config').getConfig('sprint.defaultTrustLevel', DEFAULT_TRUST_LEVEL);
+    if (typeof raw !== 'string') return DEFAULT_TRUST_LEVEL;
+    const upper = raw.toUpperCase();
+    return VALID_TRUST_LEVELS.includes(upper) ? upper : DEFAULT_TRUST_LEVEL;
+  } catch (_) {
+    return DEFAULT_TRUST_LEVEL;
+  }
+}
+
+/**
+ * The sprint config block a new sprint should start from.
+ *
+ * ENH-454 (v2.1.36) — the seven `sprint.default*` keys shipped in
+ * bkit.config.json and nothing read them. The values used at runtime came from
+ * `DEFAULT_CONFIG` in lib/domain/sprint/entity.js, which happens to carry the
+ * same numbers, so the file looked authoritative while being inert.
+ *
+ * The domain entity stays config-free by design (it has no requires at all), so
+ * the read belongs here, at the handler boundary, and the resolved values are
+ * passed in as ordinary input.
+ *
+ * Only keys with a usable configured value are returned; anything missing or of
+ * the wrong type is omitted so `createSprint` falls back to its own default
+ * rather than receiving `undefined`.
+ *
+ * @returns {Object} partial sprint config
+ */
+function configuredSprintConfig() {
+  let getConfig;
+  try { ({ getConfig } = require('../../lib/core/config')); } catch (_) { return {}; }
+
+  const SPEC = [
+    ['budget', 'sprint.defaultBudget', 'number'],
+    ['phaseTimeoutHours', 'sprint.defaultPhaseTimeoutHours', 'number'],
+    ['maxIterations', 'sprint.defaultMaxIterations', 'number'],
+    ['matchRateTarget', 'sprint.defaultMatchRateTarget', 'number'],
+    ['matchRateMinAcceptable', 'sprint.defaultMatchRateMinAcceptable', 'number'],
+    ['dashboardMode', 'sprint.defaultDashboardMode', 'string'],
+  ];
+
+  const out = {};
+  for (const [field, key, type] of SPEC) {
+    let v;
+    try { v = getConfig(key, undefined); } catch (_) { continue; }
+    if (type === 'number' && typeof v === 'number' && Number.isFinite(v) && v > 0) out[field] = v;
+    if (type === 'string' && typeof v === 'string' && v.length > 0) out[field] = v;
+  }
+  return out;
+}
+
+/**
+ * The auto-pause triggers a new sprint should arm.
+ *
+ * ENH-454 (v2.1.36) — `sprint.autoPause.armedTriggers` shipped and nothing read
+ * it. Returns undefined when unset or malformed so the entity keeps its own
+ * default; an empty array is NOT accepted, because silently disarming every
+ * safety trigger is exactly the failure this release exists to remove.
+ *
+ * @returns {string[]|undefined}
+ */
+function configuredAutoPauseArmed() {
+  try {
+    const v = require('../../lib/core/config').getConfig('sprint.autoPause.armedTriggers', undefined);
+    if (!Array.isArray(v) || v.length === 0) return undefined;
+    const clean = v.filter((t) => typeof t === 'string' && t.length > 0);
+    return clean.length > 0 ? clean : undefined;
+  } catch (_) {
+    return undefined;
+  }
+}
+
 function normalizeTrustLevel(args) {
-  if (!args) return DEFAULT_TRUST_LEVEL;
+  const fallback = configuredDefaultTrustLevel();
+  if (!args) return fallback;
   const raw = args.trustLevel || args.trust || args.trustLevelAtStart;
-  if (typeof raw !== 'string') return DEFAULT_TRUST_LEVEL;
+  if (typeof raw !== 'string') return fallback;
   const upper = raw.toUpperCase();
-  return VALID_TRUST_LEVELS.includes(upper) ? upper : DEFAULT_TRUST_LEVEL;
+  return VALID_TRUST_LEVELS.includes(upper) ? upper : fallback;
 }
 
 // ============================================================
@@ -508,6 +595,11 @@ function createTaskCreatorForRunner(agentTaskRunner) {
 
 module.exports = {
   normalizeTrustLevel,
+  // ENH-454 (v2.1.36): resolve the shipped sprint defaults at the handler
+  // boundary so the config-free domain entity can receive them as input.
+  configuredDefaultTrustLevel,
+  configuredSprintConfig,
+  configuredAutoPauseArmed,
   isDowngrade,
   severity,
   loadTrustScore,

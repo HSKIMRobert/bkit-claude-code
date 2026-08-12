@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.143+-purple.svg)](https://code.claude.com)
-[![Version](https://img.shields.io/badge/Version-2.1.35-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.1.36-green.svg)](CHANGELOG.md)
 [![Author](https://img.shields.io/badge/Author-POPUP%20STUDIO-orange.svg)](https://popupstudio.ai)
 
 > **Requirement**: bkit requires Claude Code **v2.1.143 or later** (the strict plugin-manifest path recognizes the official `displayName` field only from v2.1.143). On older Claude Code you will see `Validation errors: Unrecognized key: "displayName"` during `claude plugin install`. Run `npm install -g @anthropic-ai/claude-code@latest` to upgrade, or see [`docs/06-guide/cc-compatibility.guide.md`](docs/06-guide/cc-compatibility.guide.md).
@@ -198,7 +198,7 @@ Full M1–M10 + S1 catalog in [README-FULL.md §5](README-FULL.md#5-quality-gate
 
 ## Architecture at a glance
 
-44 skills · 34 agents · 21 hook events / 24 blocks across 28 handlers · 2 MCP servers (19 tools) · 198 lib modules across 22 subdirs · 62 scripts · 40 templates · 383 test files. Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L6, where L6 is host integration: a real `claude -p --plugin-dir` run whose recorded evidence CI checks against the shipped `hooks.json`.
+44 skills · 34 agents · 21 hook events / 24 blocks across 28 handlers · 2 MCP servers (19 tools) · 198 lib modules across 22 subdirs · 62 scripts · 40 templates · 373 test files (3,839 test cases). Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L6, where L6 is host integration: a real `claude -p --plugin-dir` run whose recorded evidence CI checks against the shipped `hooks.json`.
 
 Agents run on a 4-tier role-based model matrix: **fable** (long-horizon orchestration — leads), **opus** (deep reasoning, security & high-frequency PDCA verifiers), **sonnet** (implementers), **haiku** (monitors). The repeated Check/iterate verifiers (gap-detector, design-validator, pdca-iterator) run on Opus 4.8 — strong verification at half Fable's cost.
 
@@ -209,7 +209,7 @@ Full architecture deep-dive: [README-FULL.md §9](README-FULL.md#9-architecture)
 | Path | What's there |
 |---|---|
 | [README-FULL.md](README-FULL.md) | Full command reference, deep workflow internals, agent teams, architecture, Skill Evals |
-| [CHANGELOG.md](CHANGELOG.md) | Release history (single source of truth — latest release: v2.1.35) |
+| [CHANGELOG.md](CHANGELOG.md) | Release history (single source of truth — latest release: v2.1.36) |
 | [CUSTOMIZATION-GUIDE.md](CUSTOMIZATION-GUIDE.md) | Override any bkit component in your `.claude/` directory |
 | [AI-NATIVE-DEVELOPMENT.md](AI-NATIVE-DEVELOPMENT.md) | The 6 AI-Native principles and how bkit implements them |
 | [`bkit-system/philosophy/`](bkit-system/philosophy/) | Core mission, Context Engineering, PDCA methodology, AI-Native principles |
@@ -248,6 +248,29 @@ have been absorbed directly into bkit's regression test suite
   [`docs/external-dogfooders/bj.md`](docs/external-dogfooders/bj.md) for the
   full contribution archive. **Thank you for sharing the precise error
   message that scoped the entire sprint correctly.** 🙏
+
+### v2.1.36 (2026-08-12 — third entry)
+
+- **[@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)**
+  — issue #148. Three Destructive Detector rules were refusing commands that are
+  read-only or narrowly scoped. The report came with a 12-case reproduction
+  harness that included **negative controls**, and the note that makes them
+  matter: a "0 false positives" reading proves nothing unless genuinely
+  destructive commands are still caught in the same run — a point they made after
+  first measuring a bogus green from a one-argument `detect()` call.
+
+  It also named the real cost. A PreToolUse block asks a question, and an
+  unattended run has nobody to answer it, so the agent **stalls silently instead
+  of failing** — ~15 minutes of dead time, twice in one sprint, caught only
+  because an idle-stall monitor was attached.
+
+  Auditing all 16 rules on the strength of that report measured the defect class
+  at roughly 3× what was filed, and found the same root cause producing **false
+  negatives**: `chmod 777 / ; ls` was detected by nothing at all. The harness is
+  absorbed at
+  `test/e2e/external-dogfood/sinclair-seo-148-guardrail-precision.test.js`
+  (Lifecycle Stage 4 Regression Lock). **Thank you for the negative controls —
+  they caught a regression we introduced while fixing this.** 🙏
 
 ## 🚀 bkit Early Adopter Program
 

@@ -19,6 +19,8 @@ const { MATRIX_TYPES } = require('../../lib/infra/sprint/sprint-paths');
 
 const {
   normalizeTrustLevel,
+  configuredSprintConfig,
+  configuredAutoPauseArmed,
   isDowngrade,
   severity,
   loadTrustScore,
@@ -121,6 +123,10 @@ async function handleInit(args, infra) {
     }
   }
 
+  // ENH-454 (v2.1.36): the `sprint.default*` and `sprint.autoPause.armedTriggers`
+  // keys shipped in bkit.config.json and nothing read them. Resolve them here,
+  // at the handler boundary, and hand them to the (config-free) domain entity as
+  // ordinary input. An explicit args.config still wins over the file.
   const sprint = domain.createSprint({
     id: args.id,
     name: args.name,
@@ -128,6 +134,8 @@ async function handleInit(args, infra) {
     context: { ...defaultContext(), ...(resolvedContext || {}) },
     features: Array.isArray(args.features) ? args.features : [],
     trustLevelAtStart: normalizeTrustLevel(args),
+    config: { ...configuredSprintConfig(), ...(args.config || {}) },
+    autoPauseArmed: configuredAutoPauseArmed(),
   });
   await infra.stateStore.save(sprint);
   infra.eventEmitter.emit(domain.SprintEvents.SprintCreated({

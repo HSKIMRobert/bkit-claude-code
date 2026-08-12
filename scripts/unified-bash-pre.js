@@ -273,11 +273,18 @@ if (!blocked) {
       const ruleIds = criticalRules.map((r) => r.id);
       const reason = `bkit Destructive Detector: this command matches ${ruleIds.length > 1 ? 'rules' : 'rule'} `
         + `${ruleIds.join(', ')} (${criticalRules.map((r) => r.name).join('; ')}) and is blocked as critical.`;
-      const alternatives = [
-        'Scope the command to a specific path instead of a broad or root target',
-        'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
-        'Ask the user for explicit confirmation if this destruction is intended',
-      ];
+      /*
+       * ENH-459 (v2.1.36): advice that fits the rule that fired.
+       *
+       * This list was fixed for every rule and led with "Scope the command to a
+       * specific path". Followable for a recursive delete; meaningless for
+       * `curl … | sh`, `DROP TABLE users`, or `dd of=/dev/disk0`, none of which
+       * have a path to scope. Most refusals therefore ended in advice the user
+       * could not act on — the failure the G-001 comment warns about and issue
+       * #148 quoted back. dd.alternativesFor() is shared with the detector's own
+       * getBlockMessage() so the two cannot offer different remedies.
+       */
+      const alternatives = dd.alternativesFor(criticalRules);
 
       // ENH-393 (v2.1.33): record the decision that was actually made.
       // `result` was hardcoded to 'blocked' regardless of outcome; now the
@@ -326,6 +333,9 @@ if (!blocked) {
         pendingAsk = {
           ids,
           confidence: result.confidence,
+          // ENH-459 (v2.1.36): advice that fits the rule, shared with the deny
+          // path and with the detector's own getBlockMessage().
+          alternatives: dd.alternativesFor(askRules),
           command: toolInput.command || '',
           reason:
             `bkit Destructive Detector: this command matches ${ids.length > 1 ? 'rules' : 'rule'} `
@@ -427,9 +437,32 @@ if (!blocked) {
           reason: verdict.reason,
         });
       } catch (_) { /* graceful */ }
-      if (verdict.action === 'deny' || verdict.action === 'ask') {
+      /*
+       * ENH-463 (v2.1.36) — honour the guard's three verdicts instead of two.
+       *
+       * `ask` was emitted through outputBlockWithContext, the same call as
+       * `deny`, so every confirmation this guard computed was presented as a
+       * refusal. shouldGuard() has always returned `ask` for an upstream push —
+       * meaning `git push origin main` was refused outright rather than
+       * confirmed — and the distinction it took the trouble to make was
+       * discarded one line later. Same class as ENH-410: decided, then dropped.
+       *
+       * An `ask` is parked in pendingAsk rather than emitted here, per the
+       * contract documented at the top of this file: outputAsk() exits, so
+       * emitting inline would skip the Memory Enforcer and turn a later DENY
+       * into a click-through.
+       */
+      if (verdict.action === 'deny') {
         outputBlockWithContext(verdict.reason, verdict.alternatives, 'PreToolUse');
         blocked = true;
+      } else if (verdict.action === 'ask' && !pendingAsk) {
+        pendingAsk = {
+          ids: ['ENH-298'],
+          confidence: 1,
+          alternatives: verdict.alternatives,
+          command: toolInput.command || '',
+          reason: verdict.reason,
+        };
       }
     }
   } catch (_) { /* push-event-guard unavailable — fail-open */ }
@@ -625,10 +658,15 @@ if (!blocked && pendingAsk) {
     });
   } catch (_) { /* graceful — auditing must never prevent the prompt */ }
   debugLog('UnifiedBashPre', 'Hook completed', { blocked, ask: pendingAsk.ids });
-  outputAsk(pendingAsk.reason, [
-    'Confirm the exact target is the one you mean',
-    'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
-  ]);
+  // ENH-459 (v2.1.36): the parked advice, which fits the rule that asked. This
+  // was a fixed pair of lines, so a push-guard confirmation and a scoped-delete
+  // confirmation offered identical, generic suggestions.
+  outputAsk(pendingAsk.reason, pendingAsk.alternatives && pendingAsk.alternatives.length
+    ? pendingAsk.alternatives
+    : [
+      'Confirm the exact target is the one you mean',
+      'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
+    ]);
 }
 
 // Allow if neither blocked nor awaiting confirmation

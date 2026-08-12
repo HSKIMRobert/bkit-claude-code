@@ -180,6 +180,14 @@ const CATEGORIES = {
       // files it never opened held the locks for this release's defects.
       // Two runners disagreeing about what "all tests" means is how a gap hides.
       'regression/destructive-bypass.test.js',
+      // v2.1.36 — guardrail precision. Locks BOTH directions of the operand
+      // boundary defect: the false positives issue #148 reported, and the
+      // false negatives the audit found underneath them.
+      'regression/enh-440-447-guardrail-precision.test.js',
+      // v2.1.36 — the guards as the model sees them. Spawns the hook as a
+      // process and reads its JSON, because five defects in this release lived
+      // between correct modules and no detect()-level test could express them.
+      'regression/enh-459-463-hook-path-guards.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
       'regression/bash-pre-decision.test.js',
@@ -253,6 +261,9 @@ const CATEGORIES = {
       // v2.1.0 E2E additions
       'e2e/pdca-lifecycle.test.js',
       'e2e/pdca-status-persistence.test.js',
+      // v2.1.36 — @Sinclair-Seo issue #148 harness, absorbed verbatim
+      // (external dogfooder Lifecycle Stage 4).
+      'e2e/external-dogfood/sinclair-seo-148-guardrail-precision.test.js',
     ],
     expected: 90,
   },
@@ -293,6 +304,36 @@ const CATEGORIES = {
       'contract/hook-input-schema.test.js',
       'contract/hook-output-schema.test.js',
       'contract/mcp-protocol.test.js',
+      /*
+       * v2.1.36 — thirteen contract tests ran in CI and NOWHERE else.
+       *
+       * This release reported "3870/3874 PASS, 0 FAIL" from this runner and
+       * pushed; CI then failed on L6 live-run freshness, because
+       * hooks/hooks.json had changed and the recorded dispatch evidence no
+       * longer described what was being shipped. The gate was right. It simply
+       * was not reachable from the command every contributor runs.
+       *
+       * v2.1.34 already wrote down what this costs: "Two runners disagreeing
+       * about what 'all tests' means is how a gap hides." That release moved six
+       * regression files INTO this runner; the contract layer had drifted the
+       * other way and nobody noticed, because a green local run looked complete.
+       *
+       * These are listed here as well as in the workflow. Duplication across the
+       * two is deliberate: CI must not be the only place a contract is checked,
+       * and a contributor must be able to reproduce a CI failure locally.
+       */
+      'contract/hooks-config-contract.test.js',
+      'contract/shipped-scripts-parse.test.js',
+      'contract/trigger-locale-contract.test.js',
+      'contract/integration-runtime.test.js',
+      'contract/l2-smoke.test.js',
+      'contract/l2-hook-attribution.test.js',
+      'contract/l3-mcp-compat.test.js',
+      'contract/l3-mcp-runtime.test.js',
+      'contract/host-integration/live-run-freshness.test.js',
+      'contract/deprecation-registry-schema.test.js',
+      'contract/ci-gating-contract.test.js',
+      'contract/docs-code-sync.test.js',
     ],
     expected: 40,
   },

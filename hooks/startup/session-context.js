@@ -533,11 +533,21 @@ function buildVersionEnhancementsContext(detectedLevel) {
   ctx += `- Architecture: 44 Skills, 34 Agents, 21 Hook Events (24 blocks / 28 handlers), 198 Lib Modules (22 subdirs, 8 Port↔Adapter pairs), 2 MCP Servers (19 tools), Sprint Management (v2.1.13 GA)\n`;
   ctx += `- v2.1.35: bkit's hooks DO work in a git worktree (measured) — the old advisory said otherwise; a subdirectory of a plain checkout is no longer misread as a worktree; every child_process call passes argv, never a shell string\n`;
   // ENH-265: ENABLE_PROMPT_CACHING_1H hint (CC v2.1.108+, 30-40% token savings on long sessions)
-  const _caching1h = process.env.ENABLE_PROMPT_CACHING_1H === '1' || process.env.ENABLE_PROMPT_CACHING_1H === 'true';
+  // ENH-456 (v2.1.36): `performance.promptCaching1h.envVar` shipped in
+  // bkit.config.json duplicating this variable name, and nothing read it. The
+  // name now comes from the config so the two cannot drift apart; the shipped
+  // value is the same, so behaviour is unchanged.
+  let _cachingVar = 'ENABLE_PROMPT_CACHING_1H';
+  try {
+    const configured = require('../../lib/core/config').getConfig('performance.promptCaching1h.envVar', _cachingVar);
+    if (typeof configured === 'string' && /^[A-Z][A-Z0-9_]*$/.test(configured)) _cachingVar = configured;
+  } catch (_) { /* keep the built-in name */ }
+  const _caching1hRaw = process.env[_cachingVar];
+  const _caching1h = _caching1hRaw === '1' || _caching1hRaw === 'true';
   if (_caching1h) {
     ctx += `- Prompt caching 1H: ✅ enabled (30-40% token savings on long PDCA sessions)\n`;
   } else {
-    ctx += `- Prompt caching 1H: ⚠️ disabled — set ENABLE_PROMPT_CACHING_1H=1 before launching CC for 30-40% token savings on long sessions (see docs/03-analysis/prompt-caching-optimization.md)\n`;
+    ctx += `- Prompt caching 1H: ⚠️ disabled — set ${_cachingVar}=1 before launching CC for 30-40% token savings on long sessions (see docs/03-analysis/prompt-caching-optimization.md)\n`;
   }
   ctx += `- PDCA: state machine (20 transitions), L0-L4 automation, quality gates (M1-M10)\n`;
   ctx += `- Dashboard: progress-bar, workflow-map, impact-view, agent-panel, control-panel\n`;
