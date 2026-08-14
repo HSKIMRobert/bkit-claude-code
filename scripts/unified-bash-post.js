@@ -176,11 +176,20 @@ try {
   });
 } catch (_) { /* graceful — reachability ping is best-effort */ }
 
-// Output allow (PostToolUse doesn't block normal flow)
-// v2.1.14 ENH-303: emit hookSpecificOutput with continueOnBlock=true and
-// audit reason for any downstream block decisions. PostToolUse outputAllow
-// already produces the minimal envelope; the layer-6-audit alarm/rollback
-// path emits its own audit log entries via auditLogger.
+/*
+ * Output allow. PostToolUse does not block normal flow.
+ *
+ * ENH-432 (v2.1.37) — the comment that stood here said this call emits
+ * `hookSpecificOutput` with `continueOnBlock=true` and an audit reason. It does
+ * not, and it never could: `outputAllow('', 'PostToolUse')` emits the minimal
+ * envelope, and `continueOnBlock` is a configuration field on a PROMPT-type hook
+ * definition — confirmed at three places in the v2.1.232 binary — while all 28
+ * bkit hook handlers are `"type": "command"`. There is no spelling of this call
+ * that would have worked.
+ *
+ * The layer-6 audit above does write its own entries through auditLogger, and
+ * that part was always true. What was never true was the block-decision half.
+ */
 outputAllow('', 'PostToolUse');
 
 debugLog('UnifiedBashPost', 'Hook completed');

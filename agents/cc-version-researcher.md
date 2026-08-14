@@ -204,7 +204,7 @@ Framework — stable / latest / next).
 
 ### Differentiation Impact Assessment
 
-For each new ENH candidate, evaluate against bkit's 6 differentiations:
+For each new ENH candidate, evaluate against bkit's 5 differentiations:
 
 | # | Differentiation | ENH | Note |
 |:-:|------|-----|------|
@@ -212,8 +212,20 @@ For each new ENH candidate, evaluate against bkit's 6 differentiations:
 | 2 | Defense Layer 6 (post-hoc audit + alarm + auto-rollback) | ENH-289 | Sub-Sprint 2 |
 | 3 | Sequential dispatch (sub-agent caching 10x mitigation) | ENH-292 | Sub-Sprint 1 |
 | 4 | Effort-aware Adaptive Defense | ENH-300 | Sub-Sprint 4 |
-| 5 | PostToolUse continueOnBlock | ENH-303 | Sub-Sprint 2 |
-| 6 | Heredoc-pipe bypass defense (CC #58904 immune) | ENH-310 | Sub-Sprint 2 |
+| 5 | Heredoc-pipe bypass defense (CC #58904 immune) | ENH-310 | Sub-Sprint 2 |
+
+**Withdrawn (v2.1.37, ENH-432): "PostToolUse continueOnBlock" (ENH-303).** It was
+not unimplemented — it is unimplementable from where bkit stands.
+`continueOnBlock` is a configuration field on a **prompt-type** hook definition,
+confirmed at three places in the v2.1.232 binary: it sits among the
+`PromptHookSchema` keys, its own `describe` text says "for this specific prompt
+evaluation", and the consumer reads it off the hook definition object
+(`preventContinuation: !u && e.continueOnBlock !== !0`) inside the
+"Prompt hook condition was not met" branch. All 28 bkit hook handlers are
+`"type": "command"`, so no bkit hook can carry the field at all.
+
+Do not reinstate it as a differentiation without first measuring that a
+command-type hook can influence `preventContinuation`.
 
 Report whether the CC change auto-strengthens an existing differentiation,
 introduces a new differentiation candidate, or has no differentiation impact.

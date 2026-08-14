@@ -68,14 +68,72 @@ record('C-06 cc-version-researcher.md includes release_drift_score formula', () 
   assert.ok(/dist-tag\(stable\)/.test(src) || /dist-tag/.test(src));
 });
 
-record('C-07 cc-version-researcher.md lists 6 differentiations', () => {
+/*
+ * C-07 (v2.1.37, ENH-432) — this test is the reason the withdrawn claim survived
+ * three releases.
+ *
+ * It asserted that the string "PostToolUse continueOnBlock" appeared in a
+ * markdown file. That is true of a claim nobody implemented, true of a claim
+ * nobody CAN implement, and true of a claim that is simply wrong — so it passed
+ * while bkit advertised a differentiation that was unreachable by construction:
+ * `continueOnBlock` is a field on a PROMPT-type hook definition, and all bkit
+ * hook handlers are `"type": "command"`.
+ *
+ * A regex over source text does not verify a feature. The replacement asserts
+ * the property that actually matters — that every differentiation bkit claims is
+ * one it can reach — and it is written so that reinstating an unreachable claim
+ * fails here rather than shipping.
+ */
+record('C-07 cc-version-researcher.md lists the 5 surviving differentiations', () => {
   const src = readFile('agents/cc-version-researcher.md');
-  assert.ok(/Memory Enforcer/.test(src));
-  assert.ok(/Defense Layer 6/.test(src));
-  assert.ok(/Sequential dispatch/.test(src));
-  assert.ok(/Effort-aware/.test(src));
-  assert.ok(/PostToolUse continueOnBlock/.test(src));
-  assert.ok(/Heredoc/.test(src));
+  for (const name of ['Memory Enforcer', 'Defense Layer 6', 'Sequential dispatch',
+    'Effort-aware', 'Heredoc']) {
+    assert.ok(new RegExp(name).test(src), `differentiation missing: ${name}`);
+  }
+});
+
+record('C-07b the withdrawn differentiation is not advertised anywhere', () => {
+  // Three surfaces carried it: the agent's table, the marketplace description a
+  // user reads before installing, and a code comment claiming the emission.
+  const researcher = readFile('agents/cc-version-researcher.md');
+  const table = researcher.slice(0, researcher.indexOf('**Withdrawn'));
+  assert.ok(!/\|\s*\d\s*\|\s*PostToolUse continueOnBlock/.test(table),
+    'the differentiation table still lists PostToolUse continueOnBlock');
+
+  const marketplace = readFile('.claude-plugin/marketplace.json');
+  assert.ok(!/6 differentiations \([^)]*continueOnBlock/.test(marketplace),
+    'marketplace.json still advertises continueOnBlock as a differentiation');
+});
+
+record('C-07c bkit cannot emit continueOnBlock, so nothing claims it does', () => {
+  // The behavioural half. `continueOnBlock` is read off a hook DEFINITION by
+  // Claude Code, and only for prompt-type hooks — so a command-type hook has no
+  // way to set it, whatever it writes to stdout. This asserts the precondition
+  // rather than the prose: if bkit ever ships a prompt-type hook, this test
+  // fails and the claim can be re-examined on evidence.
+  const hooks = JSON.parse(readFile('hooks/hooks.json'));
+  const types = new Set();
+  for (const blocks of Object.values(hooks.hooks || {})) {
+    for (const block of blocks) for (const h of (block.hooks || [])) types.add(h.type);
+  }
+  assert.deepEqual([...types], ['command'],
+    'a non-command hook type would change whether continueOnBlock is reachable');
+
+  // And no runtime module may claim to emit it.
+  for (const file of ['scripts/unified-bash-post.js', 'lib/audit/audit-logger.js']) {
+    const src = readFile(file);
+    const claims = src.split('\n').filter((l) =>
+      /continueOnBlock/.test(l) && /emit|emitted|produces|sets/i.test(l) && !/never|not|cannot|could/i.test(l));
+    assert.deepEqual(claims, [], `${file} still claims to emit continueOnBlock`);
+  }
+});
+
+record('C-07d the audit trail declares no action type nothing can write', () => {
+  // `post_tool_block_recorded` was declared for this feature and never written.
+  // The old defense-contract test asserted it EXISTED, which is how it survived.
+  const { ACTION_TYPES } = require(require('path').join(projectRoot, 'lib/audit/audit-logger'));
+  assert.ok(!ACTION_TYPES.includes('post_tool_block_recorded'),
+    'post_tool_block_recorded records a block decision bkit cannot make');
 });
 
 record('C-08 version-policy guide enumerates dist-tag 3-Bucket Framework', () => {

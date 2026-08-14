@@ -123,7 +123,10 @@ record('C-08 audit-logger ACTION_TYPES contains all Sub-Sprint 2 actions', () =>
     'layer_6_alarm_triggered',
     'heredoc_bypass_blocked',
     'git_push_intercepted',
-    'post_tool_block_recorded',
+    // ENH-432 (v2.1.37): `post_tool_block_recorded` removed. Asserting an action
+    // type exists is exactly the shape of assertion that let this ship — nothing
+    // ever wrote it, and the block decision it recorded cannot be made from a
+    // command-type hook. The replacement assertion is below.
     'hook_reachability_lost',
     'memory_directive_enforced', // Sub-Sprint 4 carry slot
   ];
