@@ -26,8 +26,6 @@ tools:
   - Task(code-analyzer)
   - Task(gap-detector)
 
-linked-from-skills:
-  - deploy
 ---
 
 # Self-Healing Agent

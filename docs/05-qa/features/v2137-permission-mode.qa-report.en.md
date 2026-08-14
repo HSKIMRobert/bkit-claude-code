@@ -67,6 +67,72 @@ an isolated project directory.
 | Hook dispatch | 10 events observed live: SessionStart, UserPromptExpansion, UserPromptSubmit, Stop, SessionEnd, PreToolUse, PostToolUse, PostToolUseFailure, SubagentStart, SubagentStop — PASS |
 | Session title not forced (#77) | PASS |
 
+## 3b. Full-surface live QA — every shipped feature
+
+The section above samples. This one does not: `node test/qa-harness-full-live.js`
+with no `--layer` runs all four layers against real Claude Code sessions.
+
+**Result: 139 / 140 PASS**, on CC v2.1.231.
+
+| Layer | Cases | Result | What is proven |
+|---|---|---|---|
+| skills | 44 + inventory | **44 / 45** | every skill resolves and answers; the inventory case reads `Loaded N skills from plugin bkit` out of the host's own debug log, so a whole directory failing to register cannot pass |
+| agents | 34 | **34 / 34** | every agent is dispatchable — asserted from `SubagentStart` in the hook ledger, not from the model's prose |
+| hooks | 23 | **23 / 23** | all 21 events observed dispatching |
+| mcp | 38 | **38 / 38** | all 19 tools over both servers |
+
+The single miss was `cc-version-analysis` exceeding its 600 s budget. Measured in
+isolation immediately afterwards: **exit 0 in 1330 s**, Phase 1 research complete
+and its artifact written. The skill researches a Claude Code release across docs,
+blogs and GitHub; minutes is its normal shape. The harness budget was raised above
+the measurement rather than the result being explained away — a QA report that
+carries "not necessarily broken" is teaching its reader to discount it.
+
+**Why this section exists.** An earlier draft of this report led with the 18-case
+sample and did not say what it had left out. 5 of 44 skills, 1 of 34 agents and 1
+of 19 MCP tools had been exercised live. The numbers in it were true and the
+impression it gave was not.
+
+## 3c. What bkit's own QA skill found, running against this repo
+
+The full-surface sweep ran `/bkit:qa-phase` against bkit itself, and it wrote a report. Its
+verdict was **CONDITIONAL PASS — 0 product defects, 1 test-infrastructure defect** — and the
+defect it names is the root cause of both mistakes this release made on its way through QA.
+
+**`lib/core/platform.js:47`**
+
+```js
+const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+```
+
+`PROJECT_DIR` is a module-load-time constant, and every bkit state read and write resolves
+through it. So the two things a test does to isolate itself — `process.chdir(tmpDir)`, or
+writing fixtures under the repo root — **cannot work**: the constant was frozen before either
+happened, and `loadFresh()` busts the require cache for the module under test but not for
+`platform.js`.
+
+Consequences it observed directly:
+
+- **Two identical `--unit` runs produced different results**: 4 FAIL / 2 SKIP, then
+  3 FAIL / 1 SKIP. A suite whose answer changes on identical input cannot gate a release.
+- Tests wrote into the live project: a `trust-profile.json` (score 72 / L3), three checkpoint
+  files, and `pdca-status.json` growing from ~0.7 KB to 5.6 KB.
+- A fixture leaked on failure — `TC-F4-1-U5` restores its backup *after* its assertions, so a
+  throwing assert skips the restore.
+
+**Why it matters past the tests**: `trust-profile.json` drives the L0–L4 automation gate and
+the destructive-operation guardrails. A leaked profile changes what bkit does without asking.
+In that run a fresh temp project resolved to trustScore 72 / L3 where the documented default
+is 38 / L0 — not from a code bug, but from state bleeding across contexts.
+
+**This report's own numbers are qualified by that finding.** The 0-FAIL run in §2 was real and
+repeatable here, and the same defect is what made two earlier runs of this suite disagree with
+each other. Treat §2 as "0 FAIL on this machine, on these runs", not as a property of the tree.
+
+**Not fixed in v2.1.37.** It is test infrastructure, its blast radius is every state-touching
+test, and folding it into a behaviour release would confound both. Carried to v2.1.38 with the
+input-contract gate.
+
 ## 4. The new contract, measured live
 
 The enforcement group is where this release is proven. It was **restructured rather than

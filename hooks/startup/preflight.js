@@ -35,19 +35,59 @@ function checkAgentTeamsEnv() {
  * Render a CC version-check report into a single human-readable warning string,
  * or null when no warning should surface.
  *
+ * ENH-437 (v2.1.37): a version at or above the recommendation can now still
+ * warrant a warning, when bkit has measured something about that release (see
+ * KNOWN_ISSUES in cc-version-checker). Those read differently from a
+ * too-old-version warning — the user is not behind, so telling them to upgrade
+ * would be wrong — so they get their own sentence naming the issue and the
+ * mitigation instead of the inactive-feature list, which is empty up there
+ * anyway.
+ *
  * @param {object} report from cc-version-checker.checkCCVersion()
  * @returns {string | null}
  */
 function renderCCVersionWarning(report) {
   if (!report || report.skipped) return null;
   if (!report.current) return null;
-  if (report.severity === 'ok') return null;
 
-  const featureList = (report.inactive || []).join(', ') || 'none';
+  const knownIssues = report.knownIssues || [];
+
   if (report.severity === 'error') {
+    const featureList = (report.inactive || []).join(', ') || 'none';
     return `CC v${report.min}+ required — current v${report.current}. Inactive features: ${featureList}.`;
   }
-  return `CC v${report.recommended}+ recommended — current v${report.current}. Inactive features: ${featureList}.`;
+
+  // Behind the recommendation: the upgrade advice is the useful part.
+  if (report.severity === 'warn' && report.recommended
+      && compareCcVersions(report.current, report.recommended) < 0) {
+    const featureList = (report.inactive || []).join(', ') || 'none';
+    return `CC v${report.recommended}+ recommended — current v${report.current}. Inactive features: ${featureList}.`;
+  }
+
+  if (knownIssues.length > 0) {
+    const summaries = knownIssues.map((i) => i.summary).join('; ');
+    return `CC v${report.current}: ${summaries}. bkit recommends v${report.recommended}; `
+      + `run \`/bkit\` or see docs/06-guide/cc-compatibility.guide.md for the mitigation.`;
+  }
+
+  return null;
+}
+
+/**
+ * Version comparison for the render path only. Delegates to the checker so the
+ * two can never disagree about ordering, and degrades to 0 (treat as equal) if
+ * the module cannot be loaded — this renderer must never throw into SessionStart.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+function compareCcVersions(a, b) {
+  try {
+    return require('../../lib/infra/cc-version-checker').compareVersion(a, b);
+  } catch {
+    return 0;
+  }
 }
 
 /**

@@ -26,8 +26,6 @@ tools:
   - WebSearch
   - WebFetch
   - Task(Explore)
-linked-from-skills:
-  - cc-version-analysis: research
 ---
 
 ## When NOT to use this agent

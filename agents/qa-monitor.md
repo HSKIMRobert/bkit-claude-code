@@ -11,8 +11,6 @@ description: |
 model: haiku
 effort: low
 maxTurns: 15
-imports:
-  - ${PLUGIN_ROOT}/templates/shared/error-handling-patterns.md
 # permissionMode: acceptEdits  # CC ignores for plugin agents
 memory: project
 tools:
@@ -25,6 +23,12 @@ tools:
 skills:
   - zero-script-qa
 ---
+
+## Shared references
+
+Read this when classifying an error signature found in the logs:
+
+- `${CLAUDE_PLUGIN_ROOT}/templates/shared/error-handling-patterns.md`
 
 ## When NOT to use this agent
 

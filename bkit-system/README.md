@@ -164,7 +164,7 @@ flowchart LR
 | `iterator-stop.js` | `lib/common.js` → `lib/task/` | Task update, phase transition |
 | `pdca-skill-stop.js` | `lib/task/` | Task chain creation (v1.4.7) |
 | `pdca` skill | `templates/*.md` | Template imports |
-| `agents/*.md` | `skills` | `skills_preload` fields |
+| `agents/*.md` | `skills` | `skills` frontmatter field (preloads the full skill content at subagent startup) |
 
 **Library Module Structure (v1.4.7):**
 ```

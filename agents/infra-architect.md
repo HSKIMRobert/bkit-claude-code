@@ -11,8 +11,6 @@ description: |
 model: opus
 effort: high
 maxTurns: 30
-linked-from-skills:
-  - enterprise: infra
 # permissionMode: acceptEdits  # CC ignores for plugin agents
 memory: project
 disallowedTools:

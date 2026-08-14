@@ -476,6 +476,7 @@ const CATEGORIES = {
        * than it looks.
        */
       'contract/agent-deprecation.test.js',
+      'contract/agent-frontmatter-fields.test.js',
       'contract/agents/sprint-orchestrator-task-dispatch.test.js',
       'contract/aggregate-scope.test.js',
       'contract/audit-logger-c1-c2.test.js',

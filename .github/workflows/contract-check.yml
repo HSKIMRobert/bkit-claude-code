@@ -186,6 +186,17 @@ jobs:
       - name: Release Gate — docs-code-sync (counts SoT drift detector)
         run: node test/contract/docs-code-sync.test.js
 
+      # v2.1.37 (ENH-434 / ENH-480): agent frontmatter keys Claude Code actually
+      # reads. Plugin-bundled agents skip frontmatter validation, so an
+      # undocumented key is loaded and silently ignored — six of them had
+      # accumulated across twenty-three declarations, including three agents whose
+      # skill preloading never happened because the key was `skills_preload` and
+      # the real field is `skills`. Nothing failed; nothing worked either.
+      # Listed here AND in test/run-all.js on purpose (ENH-465): a contract
+      # checked in only one runner is a contract that drifts in the other.
+      - name: Release Gate — agent frontmatter fields (CC 16-field spec)
+        run: node --test test/contract/agent-frontmatter-fields.test.js
+
       # v2.1.20 (F6 + ENH-322): plugin manifest 21-key whitelist validation.
       # Trigger: 외부 dogfooder 정병진 (@bj) 2026-05-26 install failure
       # (`Validation errors: : Unrecognized key: "displayName"` — CC ≤ v2.1.142

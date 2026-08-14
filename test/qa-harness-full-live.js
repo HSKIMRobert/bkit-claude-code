@@ -244,8 +244,19 @@ if (LAYERS.includes('skills')) {
    * failure would train the reader to discount the whole report.
    */
   const LONG_RUNNING = {
-    // Reaches the network to compare the installed CC version against npm.
-    'cc-version-analysis': 600000,
+    /*
+     * Reaches the network to compare the installed CC version against npm.
+     *
+     * v2.1.37: raised from 600 s after the full sweep killed it and reported a
+     * failure. Measured in isolation immediately afterwards: **exit 0 in 1330 s**,
+     * having completed Phase 1 research and written its artifact. So 600 s was
+     * this harness running out of patience, and the report said "not necessarily
+     * broken" — a hedge, which is the wrong thing for a QA report to contain. The
+     * budget now sits above the measurement instead of asking the reader to
+     * assume. This skill researches a CC release across docs, blogs and GitHub;
+     * minutes is its normal shape, not a symptom.
+     */
+    'cc-version-analysis': 1800000,
     /*
      * v2.1.34: measured 136 s in isolation (exit 0, correct behaviour — it
      * reports that the throwaway directory has nothing to QA, and its PRE-SCAN
