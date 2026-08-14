@@ -315,6 +315,7 @@ const CATEGORIES = {
       // process and reads its JSON, because five defects in this release lived
       // between correct modules and no detect()-level test could express them.
       'regression/enh-459-463-hook-path-guards.test.js',
+      'regression/enh-475-476-unmeasured-honesty.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
       'regression/bash-pre-decision.test.js',
