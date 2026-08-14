@@ -316,6 +316,7 @@ const CATEGORIES = {
       // between correct modules and no detect()-level test could express them.
       'regression/enh-459-463-hook-path-guards.test.js',
       'regression/enh-475-476-unmeasured-honesty.test.js',
+      'regression/enh-433-hook-output-visibility.test.js',
       'regression/enh-477-git-destruction-guards.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
