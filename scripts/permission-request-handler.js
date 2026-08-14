@@ -17,6 +17,7 @@
 const { readStdinSync } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getAutomationLevel } = require('../lib/pdca/automation');
+const { normalizeMode } = require('../lib/domain/policy/permission-mode-policy');
 
 // Safe bash command patterns (prefix match)
 const SAFE_BASH_PREFIXES = [
@@ -26,12 +27,29 @@ const SAFE_BASH_PREFIXES = [
   'echo ', 'head ', 'tail ', 'wc ',
 ];
 
-// Always deny patterns (substring match in command)
+/**
+ * Always-deny patterns (substring match in command).
+ *
+ * ENH-472 (v2.1.37) — `git reset --hard` was removed from this list.
+ *
+ * It is the only entry here that the Destructive Detector does not consider
+ * critical: G-003 grades it `high`/`ask`, and v2.1.34 spent a release making that
+ * distinction mean something. So the same command was refused outright by this
+ * handler and merely confirmed by the Bash guard — two bkit surfaces disagreeing
+ * about one command, which is the two-tables failure ENH-468 removes elsewhere in
+ * this release.
+ *
+ * The tie is broken in favour of asking, and for a reason specific to this event:
+ * PermissionRequest fires precisely BECAUSE Claude Code is about to show a
+ * prompt. A human is present by construction. Auto-denying an ask-grade command
+ * here takes the decision away from the one person who is definitely available to
+ * make it. Everything left in this list is critical in the detector's terms and
+ * stays denied, in every permission mode.
+ */
 const ALWAYS_DENY_PATTERNS = [
   'rm -rf /',
   'git push --force',
   'git push -f ',
-  'git reset --hard',
   'chmod 777',
   '>/dev/',
   'mkfs.',
@@ -60,7 +78,19 @@ const toolName = input.tool_name || input.toolName || '';
 const toolInput = input.tool_input || input.toolInput || {};
 const suggestions = input.permission_suggestions || [];
 
-debugLog('PermissionRequest', 'Hook started', { toolName, suggestions });
+/*
+ * ENH-466 (v2.1.37): recorded for traceability, not for gating.
+ *
+ * Every decision this handler makes is either an auto-APPROVAL (which no mode
+ * needs to relax) or a critical denial (which no mode may relax — maintainer
+ * decision D3). There is therefore no ask tier here to suppress, and adding a
+ * mode gate that could not change an outcome would advertise a policy that does
+ * not exist. The value is carried into the audit trail so a session can still be
+ * reconstructed. See lib/domain/policy/permission-mode-policy.js.
+ */
+const permissionMode = normalizeMode(input.permission_mode);
+
+debugLog('PermissionRequest', 'Hook started', { toolName, suggestions, permissionMode });
 
 // Determine automation level
 let autoLevel = 'manual';
@@ -120,7 +150,7 @@ try {
           category: 'control',
           target: command.substring(0, 200),
           targetType: 'feature',
-          details: { tool: 'Bash', reason: 'dangerous_command' },
+          details: { tool: 'Bash', reason: 'dangerous_command', permissionMode },
           result: 'blocked',
           reason: 'Dangerous bash command blocked by permission handler',
           destructiveOperation: true,

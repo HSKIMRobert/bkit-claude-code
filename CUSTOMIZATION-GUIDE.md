@@ -177,7 +177,7 @@ For deeper understanding, explore the `bkit-system/` folder:
 
 bkit is not just a collection of prompts—it's a **production-grade plugin architecture** with carefully designed components that work together as a cohesive system.
 
-### Component Inventory (v2.1.36 — runtime-measured 2026-08-12)
+### Component Inventory (v2.1.37 — runtime-measured 2026-08-14)
 
 > Measured by `lib/infra/docs-code-scanner.js`, not typed by hand, and locked by
 > `test/contract/component-inventory.test.js`. This table went four releases
@@ -192,12 +192,12 @@ bkit is not just a collection of prompts—it's a **production-grade plugin arch
 | **Scripts** | 62 | Hook execution scripts (v2.1.13 added `sprint-handler.js` 660 LOC + `sprint-memory-writer.js` 138 LOC; v2.1.11 adds check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh) |
 | **Templates** | 40 | Document templates (PDCA + 9 phases + shared + **7 sprint templates** v2.1.13: master-plan/prd/plan/design/iterate/qa/report) |
 | **Hooks** | 21 events / 24 blocks | Event-driven automation (centralized in hooks.json, invariant maintained, 3 attribution sites: Stop/SessionEnd/SubagentStop) |
-| **lib/** | 198 modules across 22 subdirs | **Clean Architecture 4-Layer with 7 Port↔Adapter pairs**: Domain (ports 7 + guards 4 + rules) / Application (cc-regression + pdca + pdca-lifecycle + **sprint-lifecycle** v2.1.13 + team) / Infrastructure (cc-bridge + telemetry + docs-code-scanner + mcp-port-registry + mcp-test-harness + cc-version-checker + branding + **sprint** v2.1.13 with 9 adapters) / Presentation (hooks + scripts). Subdirs: application, audit, cc-regression, control, core, dashboard, defense, discovery, domain, evals, i18n, infra, intent, orchestrator, pdca, qa, quality, sprint, task, team, ui, util. |
+| **lib/** | 199 modules across 22 subdirs | **Clean Architecture 4-Layer with 7 Port↔Adapter pairs**: Domain (ports 7 + guards 4 + rules + **policy** v2.1.37) / Application (cc-regression + pdca + pdca-lifecycle + **sprint-lifecycle** v2.1.13 + team) / Infrastructure (cc-bridge + telemetry + docs-code-scanner + mcp-port-registry + mcp-test-harness + cc-version-checker + branding + **sprint** v2.1.13 with 9 adapters) / Presentation (hooks + scripts). Subdirs: application, audit, cc-regression, control, core, dashboard, defense, discovery, domain, evals, i18n, infra, intent, orchestrator, pdca, qa, quality, sprint, task, team, ui, util. |
 | **Output Styles** | 4 | Level-based response formatting (bkit-learning, bkit-pdca-guide, bkit-enterprise, bkit-pdca-enterprise) |
 | **MCP Servers** | 2 | `bkit-pdca-server` (13 tools — v2.1.13 added `bkit_sprint_list` · `bkit_sprint_status` · `bkit_master_plan_read`), `bkit-analysis-server` (6 tools). **19 tools total**, registered via `lib/infra/mcp-port-registry.js` per FR-δ1. |
 | **ACTION_TYPES** | 20 | v2.1.13 added `sprint_paused` + `sprint_resumed` + `master_plan_created` + `task_created`. Categories also expanded 10→11 (`sprint` added). |
 | **Test Files** | 376 (qa-aggregate scope) | 4,364 assertions via `node test/run-all.js` and ~7,000 via qa-aggregate, 0 failures (v2.1.36 measured; +3 files this release — the reporter's harness, the detector regression suite, and the hook-path suite that spawns the hooks as processes) |
-| **BKIT_VERSION** | 2.1.36 | `bkit.config.json` single source of truth; 5-location invariant enforced by `scripts/docs-code-sync.js` (PASS 9-streak: v2.1.120/121/123/129/132/133/137/139, F9-120 closure carryover monitoring complete) |
+| **BKIT_VERSION** | 2.1.37 | `bkit.config.json` single source of truth; 5-location invariant enforced by `scripts/docs-code-sync.js` (PASS 9-streak: v2.1.120/121/123/129/132/133/137/139, F9-120 closure carryover monitoring complete) |
 
 **Total: 730+ components** working in harmony across **Clean Architecture 4-Layer + Defense-in-Depth 4-Layer + Invocation Contract L1~L6 + 3-Layer Orchestration + Application Layer pilot (v2.1.11 γ2 introduction; v2.1.12 hardens the evals path; v2.1.13 GA introduces Sprint Management as the first non-PDCA workflow primitive: +1 skill + 4 agents + 7 templates + 3 MCP tools + 2 core infrastructure adapters + 9 application-layer modules + 8 contract test cases = 27+ new components, plus −2,333 LOC tech debt cleanup)**.
 

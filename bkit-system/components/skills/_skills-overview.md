@@ -1,6 +1,8 @@
 # Skills Overview
 
 > 44 Skills defined in bkit (v2.1.13)
+> **v2.1.37**: Permission-mode awareness release — skill count unchanged (44). No skill definition or trigger change. Under `--dangerously-skip-permissions`, `dontAsk` or `acceptEdits`, bkit no longer raises confirmation prompts that nobody can answer; critical refusals are unaffected in every mode. CC recommended: v2.1.220.
+>
 > **v2.1.36**: Guardrail precision release — skill count unchanged (44). No skill definition or trigger change. Guardrail rules are now matched against a single command segment rather than the whole input, so a chained command cannot lend its tokens to a neighbour: 12 measured false positives fell to 1 (an intended grading change) and three false negatives were closed, including `chmod 777 / ; ls`, which had been detected by nothing. CC recommended: v2.1.220.
 >
 > **v2.1.35**: Correction release — skill count unchanged (44). No skill definition or trigger change. bkit no longer advises leaving a git worktree: a live `claude -p --plugin-dir` session inside a linked worktree dispatched the same hook events as a matched control in the primary checkout, so the claim that plugin hooks "may not fire" there is withdrawn, along with its citation of anthropics/claude-code#46808 (closed as not planned, and about project-level `.claude/settings.json` rather than plugin `hooks/hooks.json`). CC recommended: v2.1.220.

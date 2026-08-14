@@ -186,7 +186,8 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 - **Audit Trail**: JSONL logging with decision traces for full AI transparency
 - **Quality Gates**: 7-stage gates with configurable thresholds per project level
 - **Checkpoint/Rollback**: Automatic checkpoint on phase transitions, manual rollback support
-- **Destructive Detection**: 16 known-pattern rules, each matched against a single command segment so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete and find-based delete — a broad target denies and a specific one asks. A denylist holds only for the spellings someone wrote down, and the rules cannot be switched off at runtime (ADR 0016).
+- **Destructive Detection**: 16 known-pattern rules, each matched against a single command segment so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete and find-based delete — a broad target denies and a specific one asks. A rule matches an operation, not a mention: the delete verb has to be the command, and a search invocation that provably cannot execute anything is exempt (v2.1.37). A denylist holds only for the spellings someone wrote down, and the rules cannot be switched off at runtime (ADR 0016).
+- **Permission-mode awareness** (v2.1.37): a confirmation is only worth raising where someone can answer it. In `bypassPermissions`, `dontAsk` and `acceptEdits` bkit stands its ask tier down; `critical` refusals and the user's own written directives hold in every mode. The line is the decision's grade, not the mode — Claude Code draws the same one, keeping a circuit breaker on `rm -rf /` even in bypass, and bkit has no reason to be looser than its host.
 - **MCP Servers**: bkit-pdca (10 tools) + bkit-analysis (6 tools) for external integration
 - **Multi-Language Support**: 8 languages (EN, KO, JA, ZH, ES, FR, DE, IT)
 

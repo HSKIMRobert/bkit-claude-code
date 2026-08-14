@@ -1,6 +1,8 @@
 # Agents Overview
 
 > List of 34 Agents defined in bkit and their roles (v2.1.13)
+> **v2.1.37**: Permission-mode awareness release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to the hook decision layer (bkit now reads `permission_mode`) and to guardrail rule precision. CC recommended: v2.1.220.
+>
 > **v2.1.36**: Guardrail precision release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to Destructive Detector rule precision (issue #148), config wiring, and the runtime-immutability decision recorded in ADR 0016. CC recommended: v2.1.220.
 >
 > **v2.1.35**: Correction release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to git-worktree detection correctness, the advisory text that described it, and the repository-wide `child_process` argv migration. CC recommended: v2.1.220.

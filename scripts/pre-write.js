@@ -44,6 +44,22 @@ try {
   debugLog('PreToolUse', 'cc-regression not available', { error: e.message });
 }
 
+/**
+ * ENH-471 (v2.1.37): the CC version SessionStart already detected, or null.
+ * Optional by design — a missing checker or cache retires nothing, which is the
+ * behaviour bkit had before guard lifecycles were applied at all.
+ *
+ * @returns {string|null}
+ */
+function readCachedCcVersion() {
+  try {
+    return require('../lib/infra/cc-version-checker').readCachedVersion();
+  } catch (e) {
+    debugLog('PreToolUse', 'cc-version cache unavailable', { error: e.message });
+    return null;
+  }
+}
+
 const PDCA_DOC_PATTERNS = [
   /docs\/01-plan\/.*\.plan\.md$/,
   /docs\/02-design\/.*\.design\.md$/,
@@ -330,6 +346,22 @@ function runScopeLimiter(ctx) {
 /**
  * Stage 8.5 (v2.1.10 NEW): CC regression attribution — ENH-262/263.
  * bkit does NOT block — only provides user attribution when CC will surface a prompt.
+ *
+ * ENH-469 (v2.1.37) — `bypassPermissions` now comes from the field Claude Code
+ * actually sends.
+ *
+ * It used to read `ctx.input.bypassPermissions`, a top-level key that does not
+ * exist. The measured PreToolUse payload is exactly: cwd, effort,
+ * hook_event_name, permission_mode, prompt_id, session_id, tool_input, tool_name,
+ * tool_use_id, transcript_path. So the flag was always `undefined` → `false`, and
+ * the ENH-263 guard, whose first condition is `if (!ctx.bypassPermissions)`, has
+ * never fired in production since it shipped in v2.1.10. The wrong field name
+ * came from lib/domain/ports/cc-payload.port.js, which documented a `permissions`
+ * object CC has never sent; that typedef is corrected in the same change.
+ *
+ * `permissionDecision` is deliberately left absent rather than defaulted. It is a
+ * hook OUTPUT field, not an input one, and inventing a value for it here would
+ * make the ENH-262 guard fire on a condition nobody measured.
  */
 function runCCRegressionCheck(ctx) {
   if (!ccRegression) return null;
@@ -337,9 +369,13 @@ function runCCRegressionCheck(ctx) {
     const result = ccRegression.checkCCRegression({
       tool: ctx.input.tool_name || 'Write',
       filePath: ctx.filePath,
-      bypassPermissions: !!ctx.input.bypassPermissions,
+      bypassPermissions: ctx.permissionMode === 'bypassPermissions',
       permissionDecision: ctx.input.permissionDecision,
       envOverrides: ctx.input.envOverrides || {},
+      // ENH-471 (v2.1.37): lets the coordinator retire guards whose regression CC
+      // has already fixed. Read from SessionStart's cache — never re-detected, so
+      // no subprocess runs on the hook path.
+      ccVersion: readCachedCcVersion(),
     });
     if (result.attributions && result.attributions.length > 0) {
       return result.attributions.join(' | ');
@@ -382,8 +418,10 @@ function runAuditLog(ctx, opts = {}) {
 
 function main() {
   const input = readStdinSync();
-  const { filePath, content } = parseHookInput(input);
-  debugLog('PreToolUse', 'Hook started', { filePath: filePath || 'none' });
+  // v2.1.37: `permissionMode` is normalized by parseHookInput — absent or
+  // unrecognized becomes 'default', which changes nothing.
+  const { filePath, content, permissionMode } = parseHookInput(input);
+  debugLog('PreToolUse', 'Hook started', { filePath: filePath || 'none', permissionMode });
 
   if (!filePath) {
     debugLog('PreToolUse', 'Skipped - no file path');
@@ -391,7 +429,14 @@ function main() {
     process.exit(0);
   }
 
-  const ctx = { input, filePath, content };
+  /*
+   * Every decision this pipeline can make is `critical` or `policy` grade — a
+   * denied path (secrets, keys, VCS internals), a symlink escape, a null byte,
+   * or the permission policy itself. None of those relax under any permission
+   * mode, so the mode is carried for attribution (ENH-469) rather than gating.
+   * See lib/domain/policy/permission-mode-policy.js §"WHAT IS AND IS NOT RELAXED".
+   */
+  const ctx = { input, filePath, content, permissionMode };
   const contextParts = [];
 
   // Stage 0: Permission

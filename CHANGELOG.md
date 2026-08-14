@@ -5,6 +5,152 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.37] - 2026-08-14
+
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
+> **Status**: Permission-mode awareness release. Reported by the maintainer
+> running `claude --dangerously-skip-permissions` and being stopped at
+> `PreToolUse` anyway, every session. Measured against Claude Code v2.1.231.
+
+### Headline
+
+**bkit reinstated a confirmation step the user had explicitly switched off.**
+
+Claude Code sends `permission_mode` on every hook event. Through v2.1.36, bkit
+read it in exactly zero places:
+
+```
+$ grep -rn "permission_mode" scripts lib hooks agents skills
+(0 results)
+```
+
+So all ten of bkit's decision surfaces behaved identically whether the session
+had asked for maximum oversight or had turned confirmation off.
+
+This is **not** a Claude Code defect, and that had to be established before
+anything was changed. PreToolUse hooks run *before* the permission prompt, so a
+hook decision is not something `bypassPermissions` can bypass. Measured with a
+throwaway project containing one hook that returns `ask` and nothing else, no
+bkit present:
+
+```
+claude -p --dangerously-skip-permissions "Run the bash command: echo HELLO_FROM_BASH"
+→ "permission_denials":[{"tool_name":"Bash","tool_input":{"command":"echo HELLO_FROM_BASH"}}]
+```
+
+A bare `echo`, stopped in bypass mode, by the host behaving exactly as
+documented. bkit was the component ignoring stated intent.
+
+**Why it mattered beyond annoyance**: a `PreToolUse` question needs a human
+answer, and an unattended run has nobody to give one — so the agent stalls
+rather than fails. Issue #148 measured that cost at ~15 minutes per incident.
+`bypassPermissions` is the strongest available signal that nobody is watching,
+which made this the most expensive place to keep asking.
+
+### The measured before / after
+
+7 permission modes x 21 commands, fed to the shipped hooks:
+
+| | before | after |
+|---|---|---|
+| benign commands stopped | **14** | **0** |
+| negative controls still refused | 49/49 | **49/49** |
+| ask-grade rows that vary by mode | 0 — every column identical | 4 of 4 |
+
+The middle row is the one that matters. A release that makes a guard quieter is
+only credible if genuinely destructive commands are still stopped in the same
+run — the point [@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)
+made in v2.1.36 after measuring a bogus green, now a permanent fixture of this
+project's harnesses.
+
+### What is and is not relaxed
+
+The boundary is the decision's **grade**, never the mode alone:
+
+| grade | example | relaxed? |
+|---|---|---|
+| `critical` | `rm -rf /`, force push, `curl … \| sh`, `DROP TABLE` | **never, in any mode** |
+| `policy` | a CLAUDE.md directive, a denied path, a symlink escape | **never, in any mode** |
+| `ask` | scoped `rm -rf ./build`, `git reset --hard`, push to `main` | suppressed in `acceptEdits`, `dontAsk`, `bypassPermissions` |
+
+Claude Code draws the same line — even in `bypassPermissions` it keeps a circuit
+breaker on removals targeting `/` and `~`. bkit has no reason to be looser than
+its host. `auto` was not measurable here (account eligibility), so it is treated
+as human-present rather than guessed permissive.
+
+### Added
+
+- **ENH-466** — `lib/domain/policy/permission-mode-policy.js`, a pure domain
+  module holding the whole decision table. `parseHookInput()` now exposes a
+  normalized `permissionMode`, and `outputAsk()` takes it as a third argument.
+  Call sites check the policy themselves (that is where the audit context lives);
+  `outputAsk` re-checks as a backstop for a call site added later that forgets to.
+  An absent or unrecognized mode resolves to `default`, so older Claude Code
+  builds keep today's behaviour exactly.
+
+### Fixed
+
+- **ENH-467** — the phase-9 deployment guard refused on the bare substrings
+  `--force` and `production`, so `npm install --force` was a "Deployment safety"
+  refusal with no route forward. Those two name a flag and an environment, not an
+  operation; they now ask. The four that name a real destroy operation still deny,
+  and a command carrying a dry-run flag produces no finding at all — the guard
+  used to refuse the rehearsal its own advice recommended.
+- **ENH-468** — the Zero-Script-QA guard carried its own nine-entry substring
+  table, a second and cruder copy of rules the Destructive Detector already owns.
+  Wrong in both directions: `rm -r ./tmp/qa-fixtures` was refused, while
+  `chmod 777 /` was not in the table at all. It now delegates to the shared
+  detector and contributes the one thing it knows that the detector does not —
+  that a QA session is running.
+- **ENH-469** — `pre-write.js` read `ctx.input.bypassPermissions`, a top-level key
+  the measured payload does not contain. The ENH-263 guard's first condition tests
+  that flag, so **it had never fired once since v2.1.10**. The wrong field name
+  came from `cc-payload.port.js`, which documented a `permissions` object Claude
+  Code has never sent; the typedef is corrected against a captured payload.
+- **ENH-470** — G-007 ("Mass file deletion") matched the *word* `delete` or
+  `remove` anywhere in a segment, so `grep -rn delete src a b c d e` — read-only —
+  asked for confirmation, and so did `npm remove lodash react vue axios dayjs`.
+  The verb must now be the segment's command head, seen through `sudo`,
+  `VAR=value` prefixes and a path. Same defect class as #148, one level down:
+  #148 fixed reading across command separators, this fixes reading across the
+  command name.
+- **ENH-471** — both regression guards export `removeWhen(ccVersion)`, true from
+  CC v2.1.118, and nothing ever called it. On v2.1.231 they were still watching
+  for regressions fixed 113 releases earlier. The coordinator now applies it,
+  reading the version SessionStart already cached rather than spawning
+  `claude --version` on the hook path. Shipped together with ENH-469 on purpose:
+  reviving a dead guard without retiring an obsolete one would have started
+  blaming a regression that no longer exists.
+- **ENH-472** — `git reset --hard` was an always-deny in the PermissionRequest
+  handler while the Bash guard graded it `ask`: two bkit surfaces disagreeing
+  about one command. Removed, and for a reason specific to that event —
+  PermissionRequest fires *because* a prompt is about to be shown, so a human is
+  present by construction, and auto-denying takes the decision away from the one
+  person who is definitely available to make it.
+- **ENH-473** — found during the related-surface sweep, not in the report:
+  searching for a dangerous string was graded as performing one. A `grep` for two
+  rule patterns was refused as "Recursive delete; SQL table drop" while this
+  release was being written. A segment is now exempt only when its command head
+  is a search tool with no write mode (`echo` is deliberately excluded — it is how
+  `echo "…" | sh` starts) **and** it carries no shell metacharacter outside
+  quotes. Quote-awareness is load-bearing: `grep -rlE "DROP|rm" lib` holds a `|`
+  inside a regex, and reading it as a pipe would have left the commonest form of
+  the false positive unfixed.
+
+### Test coverage
+
+- **148 test files ran nowhere** — neither `test/run-all.js` nor any workflow
+  referenced them. Run by hand, 147 passed and one failed: `component-inventory`,
+  which was catching this release adding a lib module while two documents kept
+  saying 198. All 148 are now registered. A test nobody runs is documentation
+  with a `.test.js` extension, and it is the same failure v2.1.36 wrote down one
+  release earlier — "two runners disagreeing about what 'all tests' means is how
+  a gap hides" — except these had fallen out of *both*.
+- New: `test/unit/permission-mode-policy.test.js` (the 6x3 table, exhaustive),
+  `test/regression/enh-466-473-permission-mode.test.js`,
+  `test/e2e/permission-mode-matrix.test.js` (the release acceptance matrix).
+
 ## [2.1.36] - 2026-08-12
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
