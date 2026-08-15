@@ -107,7 +107,7 @@ Based on research from industry leaders (Addy Osmani, Sapphire Ventures, DevOps.
 - **Quality Gates (7 stages)**: Configurable thresholds per phase transition
 - **Audit trail**: JSONL logging + decision tracer for full transparency
 - **Emergency stop**: Immediate pause with checkpoint/rollback support
-- **Destructive detection**: 16 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops). Rules are matched against a single command segment, not the whole input, so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete (G-001) and find-based delete (G-013) — a broad target denies and a specific one asks; the other rules describe shapes that are dangerous regardless of target and do not grade. A denylist holds only for the spellings someone wrote down, so this is a known-pattern guard, not a complete defense, and the rules cannot be switched off at runtime (ADR 0016).
+- **Destructive detection**: 19 known-pattern rules (recursive delete, force push, obfuscated execution, raw-device writes, remote-script piping, SQL/NoSQL drops, untracked-file deletion, uncommitted-change discard, reflog destruction). Rules are matched against a single command segment, not the whole input, so a chained command cannot lend its tokens to a neighbour (v2.1.36). Where the target decides the stakes — recursive delete (G-001) and find-based delete (G-013) — a broad target denies and a specific one asks; the other rules describe shapes that are dangerous regardless of target and do not grade. A denylist holds only for the spellings someone wrote down, so this is a known-pattern guard, not a complete defense, and the rules cannot be switched off at runtime (ADR 0016).
 
 ---
 
@@ -145,7 +145,7 @@ Context Engineering is the **systematic design of information flow to LLMs**—g
 Domain Knowledge (44 Skills) ────────┐
 Behavioral Rules (34 Agents) ────────┤
 State Management (195 modules / 22 subdirs, Clean Arch 4-Layer + Application pilot) ─┤
-3-Layer Orchestration ────┼─→ 21-Event Hook System (24 blocks, 62 scripts)
+3-Layer Orchestration ────┼─→ 21-Event Hook System (24 blocks, 63 scripts)
   ├─ intent-router (feature>skill>agent)                         │    ─→ Dynamic Context Injection
   ├─ next-action-engine (Stop-family)                           │
   ├─ team-protocol (PM/CTO/QA Lead)                             │
@@ -194,8 +194,8 @@ bkit implements **Context Engineering**—the systematic curation of context tok
 | **Convention Skill (Phase 2)** | Defines naming, structure, patterns |
 | **CLAUDE.md Files** | Project-specific AI instructions |
 | **Skill System (44 skills)** | Domain-specific knowledge (v2.1.11 added bkit-evals, bkit-explore, pdca-watch, pdca-fast-track) |
-| **21-Event Hook System** | Centralized context injection via hooks.json (21 events / 24 blocks, 62 scripts); 3 attribution sites (Stop/SessionEnd/SubagentStop) |
-| **lib/ (198 modules)** | 22 subdirectories Clean Architecture 4-Layer with 7 Port↔Adapter pairs: application (v2.1.11 γ2 pilot), audit, cc-regression, control, core, **dashboard** (v2.1.11 β4), **defense**, **discovery** (v2.1.11 β1), **domain**, **evals** (v2.1.11 β2), **i18n** (v2.1.11 β3/β6), **infra**, intent, **orchestrator**, pdca, qa, quality, **sprint** (v2.1.13), task, team, ui, **util** |
+| **21-Event Hook System** | Centralized context injection via hooks.json (21 events / 24 blocks, 63 scripts); 3 attribution sites (Stop/SessionEnd/SubagentStop) |
+| **lib/ (200 modules)** | 22 subdirectories Clean Architecture 4-Layer with 7 Port↔Adapter pairs: application (v2.1.11 γ2 pilot), audit, cc-regression, control, core, **dashboard** (v2.1.11 β4), **defense**, **discovery** (v2.1.11 β1), **domain**, **evals** (v2.1.11 β2), **i18n** (v2.1.11 β3/β6), **infra**, intent, **orchestrator**, pdca, qa, quality, **sprint** (v2.1.13), task, team, ui, **util** |
 
 **Context Engineering Architecture (v2.1.13)**:
 ```

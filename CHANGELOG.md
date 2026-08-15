@@ -5,6 +5,317 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.37] - 2026-08-15
+
+> **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
+
+> **Status**: Two responses in one release. Permission-mode awareness, reported by
+> the maintainer running `claude --dangerously-skip-permissions` and being stopped
+> at `PreToolUse` anyway; and the Claude Code v2.1.228–v2.1.232 impact response.
+> Measured against Claude Code v2.1.231 and v2.1.232.
+
+### Claude Code v2.1.228 → v2.1.232 response
+
+100 CHANGELOG bullets across four releases (v2.1.230 was never published).
+Breaking changes: **0** — the hook contract is byte-identical across all four
+binaries, which takes consecutive compatible releases to **171**. What changed is
+a default, and defaults are harder to notice than contracts.
+
+**CC v2.1.232 turns fork mode on by default in interactive sessions, and removes
+the Agent tool's `run_in_background` parameter with it.** A subagent's result now
+arrives as a notification on a later turn, and the model cannot ask for the
+foreground. bkit's skill path is unaffected — v2.1.31's `background: false` on the
+eight `context: fork` skills still holds, confirmed in the binary rather than
+inferred, because the skill's background decision never consults the fork gate.
+The Agent-spawn path is affected, and five sprint sites await a result inside the
+turn that spawned it.
+
+Ten items were carried over from earlier cycles rather than renumbered. ENH-420
+through ENH-439 had produced exactly one landed item across two releases while
+the ledger advanced to 473; assigning fresh numbers to the same work is how that
+happens.
+
+#### Withdrawn
+
+- **ENH-432** — **"PostToolUse continueOnBlock" was not unimplemented. It was
+  unimplementable.** `continueOnBlock` is a configuration field on a PROMPT-type
+  hook definition, confirmed at three places in the v2.1.232 binary: it sits among
+  the `PromptHookSchema` keys, its `describe` text reads "for this specific prompt
+  evaluation", and the consumer reads it off the hook definition object inside the
+  "Prompt hook condition was not met" branch. All 28 bkit hook handlers are
+  `"type": "command"`. No bkit hook can carry the field.
+
+  It was advertised on four surfaces: the differentiation table, the marketplace
+  description a user reads before installing, a code comment claiming the emission,
+  and a dedicated `post_tool_block_recorded` action type that nothing ever wrote
+  (ACTION_TYPES 41 → 40). bkit now claims five differentiations.
+
+  The test that let it survive matters more than the claim. C-07 asserted that the
+  string "PostToolUse continueOnBlock" appeared in a markdown file — true of a
+  claim nobody implemented, true of a claim nobody can implement, true of a claim
+  that is simply wrong. A regex over source text does not verify a feature. Its
+  replacement asserts that every hook handler is still command-type, so if bkit
+  ever ships a prompt hook the claim can be re-examined on evidence.
+
+#### Fixed
+
+- **ENH-437** — the CC version check had no upper bound. `MIN_VERSION` and
+  `RECOMMENDED_VERSION` are both floors, so every release above the recommendation
+  was graded `ok` and `renderCCVersionWarning()` returns null on `ok`. bkit held
+  its recommendation at v2.1.220 across five CC releases while classifying
+  v2.1.232's fork default as unvalidated, and said nothing, because there was no
+  branch in which it could. `KNOWN_ISSUES` is a range list rather than a version
+  list — a changed default persists into every later release — and an entry
+  suppresses itself when a documented mitigation is already set.
+
+- **ENH-477** — **G-005 had never fired for the file it names, and had been firing
+  on ordinary JavaScript instead.** `\b` is a transition between a word and a
+  non-word character, and the character before a leading `.` is a space, a `/`, or
+  the start of the string. Measured against the shipped rule: `.env`, `cat .env`
+  and `./.env` produced no match, while `process.env.NODE_ENV` and
+  `import.meta.env.VITE_KEY` matched. Wrong in both directions at once, which is
+  why neither half surfaced as a complaint — the false negative is silent by
+  construction, and the false positive looked like the guard working. v2.1.36's
+  false-positive audit did not catch it because its corpus was Bash commands, and
+  `process.env.X` arrives through `content` on an Edit.
+
+- **ENH-481** — the Write/Edit path tested `rule.pattern` and nothing else,
+  skipping `suppressIf` entirely, so both suppressed rules answered differently
+  depending on which tool carried the payload. `ls -la ./certs/server.pem` was
+  exempt under ENH-445 for a Bash command and was not exempt here. Found while
+  fixing G-005, when a suppressor that returned true for its segment did not
+  suppress the rule. Same class as ENH-441.
+
+- **ENH-476** — four of the five ways a gap measurement can fail to happen
+  returned `matchRate: 0, measured: true`, which asserts two things that are both
+  false. The cost was not only the wrong number: `isMeasured()` accepts any finite
+  matchRate, so a 0 from `parse_fail` looked like a real measurement and the
+  iterate loop ran auto-fix up to maxIterations against a gap list whose one entry
+  was "no JSON in output". Reported honestly the loop exits at once and still
+  fails the gate. ENH-412's ruling on an unusable number inside valid JSON stands.
+
+- **ENH-433** — `outputAllow` printed bare text for every event except two, and
+  Claude Code writes that to the debug log rather than showing it to the model.
+  26 of 32 call sites passed a non-empty message on such an event. The nine events
+  that document `additionalContext` now deliver through it; the rest still print,
+  because Claude Code logs it and bkit's Stop tests read the line as a liveness
+  signal, but the debug entry says it was not delivered. What changed is the
+  belief, not the bytes.
+
+- **ENH-434 / ENH-480** — 23 agent frontmatter declarations across six keys Claude
+  Code does not read. Plugin-bundled agents skip frontmatter validation, so each
+  loaded and was ignored: `skills_preload` (4, the field is `skills`, and three
+  agents had no `skills` key at all so six preload entries never loaded — including
+  code-analyzer's, which runs the PDCA Check phase), `linked-from-skills` (10, a
+  reverse index of a link already live in the other direction), `imports` (4, whose
+  resolver accepts agent files but whose callers all pass a skill path, and Claude
+  Code loads agent definitions so bkit has no injection point), `context` and
+  `mergeResult` (2 each, skill fields that made two agents look like fork agents),
+  `when_to_use` (1, merged into `description`).
+
+#### Added
+
+- **ENH-477** — three guardrail rules for git commands that destroy work, taking
+  the rule set to 19. G-016 `git clean -f*` deletes untracked files with no reflog
+  entry to recover from; G-017 covers the three spellings that discard uncommitted
+  work, graded `ask` to match `git reset --hard` rather than grading one
+  consequence three ways; G-018 covers expiring the reflog and pruning now, which
+  destroys the safety net the others depend on.
+
+  `--amend` and `--no-verify` are deliberately NOT guarded, and the tests say so.
+  An amended commit survives in the reflog and publishing the rewrite needs a
+  force push, which is G-002; `--no-verify` bypasses a check and destroys nothing.
+  Adding them would have regressed v2.1.36's twelve-false-positives-to-one.
+
+- **ENH-421** — `scripts/cc-binary-equivalence.js`. Three cycles reconstructed the
+  same binary measurement by hand and twice got the command form wrong first. The
+  script reproduces cycle #37's hand measurements exactly, in one read per build
+  instead of one grep per needle, and carries each erratum beside the line that
+  enforces it.
+
+- **ENH-420 / ENH-422** — the opaque-release protocol and binary provenance, in
+  the skill. CC v2.1.226 shipped one non-specific bullet, which leaves a cycle to
+  either invent an answer or measure one. The provenance record's last field is
+  the platforms NOT examined: `GIT_SHA` moved between 225 and 226 while the bundle
+  did not, so the honest claim is scoped to one binary.
+
+- **ENH-474** — a `fork` layer in the live QA harness. Every existing case runs
+  with `-p`, which is exactly where fork mode is off, so the harness could not
+  reach the surface whose default changed. `CLAUDE_CODE_FORK_SUBAGENT=1` puts a
+  scripted session on the same path, and the layer proves the gate is live before
+  asserting anything under it. Measured live: 5 pass, 0 fail.
+
+- **ENH-475** — `lib/domain/policy/fork-mode-advisory.js`. Five spawn sites
+  described the symptom ("no JSON in output", "expected { output: string }", and
+  in auto-fixer's case nothing at all). The advisory names the likely cause and
+  the remedy, as a lead rather than a diagnosis — bkit cannot observe fork mode —
+  and suppresses itself once a documented mitigation is set.
+
+#### Recorded, not fixed
+
+- **ENH-482** — no Stop script uses `outputStopSurface`; all seven emit through
+  `outputAllow(msg, 'Stop')`, so unified-stop.js's next-action hint has never
+  reached the model. The only channel that would deliver it is
+  `{decision:'block', reason}`, which forces the turn to continue. Turning every
+  clean stop into a continuation is a product decision, and making it as a side
+  effect of an output-routing fix would be the wrong way to decide it.
+
+#### Docs = Code
+
+Consecutive compatible releases 170 → **171**. Guardrail rules 16 → **19** (ADR
+0016 in both languages, AI-NATIVE-DEVELOPMENT). Lib modules 199 → **200**, scripts
+62 → **63**, ACTION_TYPES 41 → **40**, across README, README-FULL,
+CUSTOMIZATION-GUIDE, AI-NATIVE-DEVELOPMENT and marketplace.json. The historical
+counts in README and CHANGELOG describe what the v2.1.36 audit covered and are
+left alone: a count that states current fact and a count that records history are
+different claims.
+
+`docs/` bilingual completeness restored — a repository-wide audit found exactly
+one unpaired base of 56, and `cc-v2225-v2226-impact-analysis.report.en.md` closes
+it (ENH-436).
+
+Reports: `docs/04-report/features/cc-v2228-v2232-impact-analysis.report.{ko,en}.md`.
+
+### Permission-mode awareness
+
+### Headline
+
+**bkit reinstated a confirmation step the user had explicitly switched off.**
+
+Claude Code sends `permission_mode` on every hook event. Through v2.1.36, bkit
+read it in exactly zero places:
+
+```
+$ grep -rn "permission_mode" scripts lib hooks agents skills
+(0 results)
+```
+
+So all ten of bkit's decision surfaces behaved identically whether the session
+had asked for maximum oversight or had turned confirmation off.
+
+This is **not** a Claude Code defect, and that had to be established before
+anything was changed. PreToolUse hooks run *before* the permission prompt, so a
+hook decision is not something `bypassPermissions` can bypass. Measured with a
+throwaway project containing one hook that returns `ask` and nothing else, no
+bkit present:
+
+```
+claude -p --dangerously-skip-permissions "Run the bash command: echo HELLO_FROM_BASH"
+→ "permission_denials":[{"tool_name":"Bash","tool_input":{"command":"echo HELLO_FROM_BASH"}}]
+```
+
+A bare `echo`, stopped in bypass mode, by the host behaving exactly as
+documented. bkit was the component ignoring stated intent.
+
+**Why it mattered beyond annoyance**: a `PreToolUse` question needs a human
+answer, and an unattended run has nobody to give one — so the agent stalls
+rather than fails. Issue #148 measured that cost at ~15 minutes per incident.
+`bypassPermissions` is the strongest available signal that nobody is watching,
+which made this the most expensive place to keep asking.
+
+### The measured before / after
+
+7 permission modes x 21 commands, fed to the shipped hooks:
+
+| | before | after |
+|---|---|---|
+| benign commands stopped | **14** | **0** |
+| negative controls still refused | 49/49 | **49/49** |
+| ask-grade rows that vary by mode | 0 — every column identical | 4 of 4 |
+
+The middle row is the one that matters. A release that makes a guard quieter is
+only credible if genuinely destructive commands are still stopped in the same
+run — the point [@Sinclair-Seo](https://github.com/popup-studio-ai/bkit-claude-code/issues/148)
+made in v2.1.36 after measuring a bogus green, now a permanent fixture of this
+project's harnesses.
+
+### What is and is not relaxed
+
+The boundary is the decision's **grade**, never the mode alone:
+
+| grade | example | relaxed? |
+|---|---|---|
+| `critical` | `rm -rf /`, force push, `curl … \| sh`, `DROP TABLE` | **never, in any mode** |
+| `policy` | a CLAUDE.md directive, a denied path, a symlink escape | **never, in any mode** |
+| `ask` | scoped `rm -rf ./build`, `git reset --hard`, push to `main` | suppressed in `acceptEdits`, `dontAsk`, `bypassPermissions` |
+
+Claude Code draws the same line — even in `bypassPermissions` it keeps a circuit
+breaker on removals targeting `/` and `~`. bkit has no reason to be looser than
+its host. `auto` was not measurable here (account eligibility), so it is treated
+as human-present rather than guessed permissive.
+
+### Added
+
+- **ENH-466** — `lib/domain/policy/permission-mode-policy.js`, a pure domain
+  module holding the whole decision table. `parseHookInput()` now exposes a
+  normalized `permissionMode`, and `outputAsk()` takes it as a third argument.
+  Call sites check the policy themselves (that is where the audit context lives);
+  `outputAsk` re-checks as a backstop for a call site added later that forgets to.
+  An absent or unrecognized mode resolves to `default`, so older Claude Code
+  builds keep today's behaviour exactly.
+
+### Fixed
+
+- **ENH-467** — the phase-9 deployment guard refused on the bare substrings
+  `--force` and `production`, so `npm install --force` was a "Deployment safety"
+  refusal with no route forward. Those two name a flag and an environment, not an
+  operation; they now ask. The four that name a real destroy operation still deny,
+  and a command carrying a dry-run flag produces no finding at all — the guard
+  used to refuse the rehearsal its own advice recommended.
+- **ENH-468** — the Zero-Script-QA guard carried its own nine-entry substring
+  table, a second and cruder copy of rules the Destructive Detector already owns.
+  Wrong in both directions: `rm -r ./tmp/qa-fixtures` was refused, while
+  `chmod 777 /` was not in the table at all. It now delegates to the shared
+  detector and contributes the one thing it knows that the detector does not —
+  that a QA session is running.
+- **ENH-469** — `pre-write.js` read `ctx.input.bypassPermissions`, a top-level key
+  the measured payload does not contain. The ENH-263 guard's first condition tests
+  that flag, so **it had never fired once since v2.1.10**. The wrong field name
+  came from `cc-payload.port.js`, which documented a `permissions` object Claude
+  Code has never sent; the typedef is corrected against a captured payload.
+- **ENH-470** — G-007 ("Mass file deletion") matched the *word* `delete` or
+  `remove` anywhere in a segment, so `grep -rn delete src a b c d e` — read-only —
+  asked for confirmation, and so did `npm remove lodash react vue axios dayjs`.
+  The verb must now be the segment's command head, seen through `sudo`,
+  `VAR=value` prefixes and a path. Same defect class as #148, one level down:
+  #148 fixed reading across command separators, this fixes reading across the
+  command name.
+- **ENH-471** — both regression guards export `removeWhen(ccVersion)`, true from
+  CC v2.1.118, and nothing ever called it. On v2.1.231 they were still watching
+  for regressions fixed 113 releases earlier. The coordinator now applies it,
+  reading the version SessionStart already cached rather than spawning
+  `claude --version` on the hook path. Shipped together with ENH-469 on purpose:
+  reviving a dead guard without retiring an obsolete one would have started
+  blaming a regression that no longer exists.
+- **ENH-472** — `git reset --hard` was an always-deny in the PermissionRequest
+  handler while the Bash guard graded it `ask`: two bkit surfaces disagreeing
+  about one command. Removed, and for a reason specific to that event —
+  PermissionRequest fires *because* a prompt is about to be shown, so a human is
+  present by construction, and auto-denying takes the decision away from the one
+  person who is definitely available to make it.
+- **ENH-473** — found during the related-surface sweep, not in the report:
+  searching for a dangerous string was graded as performing one. A `grep` for two
+  rule patterns was refused as "Recursive delete; SQL table drop" while this
+  release was being written. A segment is now exempt only when its command head
+  is a search tool with no write mode (`echo` is deliberately excluded — it is how
+  `echo "…" | sh` starts) **and** it carries no shell metacharacter outside
+  quotes. Quote-awareness is load-bearing: `grep -rlE "DROP|rm" lib` holds a `|`
+  inside a regex, and reading it as a pipe would have left the commonest form of
+  the false positive unfixed.
+
+### Test coverage
+
+- **148 test files ran nowhere** — neither `test/run-all.js` nor any workflow
+  referenced them. Run by hand, 147 passed and one failed: `component-inventory`,
+  which was catching this release adding a lib module while two documents kept
+  saying 198. All 148 are now registered. A test nobody runs is documentation
+  with a `.test.js` extension, and it is the same failure v2.1.36 wrote down one
+  release earlier — "two runners disagreeing about what 'all tests' means is how
+  a gap hides" — except these had fallen out of *both*.
+- New: `test/unit/permission-mode-policy.test.js` (the 6x3 table, exhaustive),
+  `test/regression/enh-466-473-permission-mode.test.js`,
+  `test/e2e/permission-mode-matrix.test.js` (the release acceptance matrix).
+
 ## [2.1.36] - 2026-08-12
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.

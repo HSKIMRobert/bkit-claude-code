@@ -5,7 +5,11 @@ description: |
   Provides step-by-step guidance based on project level (Starter/Dynamic/Enterprise).
 
   Use proactively when user asks about development order, mentions "where to start"
-  or "what should I do first", or starts a new project without clear direction.
+  or "what should I do first", starts a new project without clear direction, says
+  they have little development experience, or runs a /pipeline-* command.
+
+  Do NOT use when an experienced developer has said they want to proceed on their
+  own, or for non-development work such as documents and analysis.
 
   Triggers: development pipeline, phase, development order, where to start, what to do first,
   how to begin, new project, project setup
@@ -18,15 +22,6 @@ disallowedTools:
   - Write
   - Edit
   - Bash
-when_to_use: |
-  Auto-activates in the following situations:
-  - When user expresses "I have little development experience"
-  - When /pipeline-* commands are used
-  - When expressions like "I'm new", "How do I start?" are used
-
-  Deactivation conditions:
-  - When experienced developer says they want to proceed freely
-  - Non-development AI work (documents, analysis, etc.)
 tools: [Read, Glob, Grep]
 color: cyan
 skills:

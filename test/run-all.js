@@ -36,6 +36,77 @@ const CATEGORIES = {
   unit: {
     name: 'Unit Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'i18n/trigger-accuracy.test.js',
+      'unit/active-skill-marker.test.js',
+      'unit/application-pdca-lifecycle.test.js',
+      'unit/audit-logger-full.test.js',
+      'unit/automation-full.test.js',
+      'unit/branding.test.js',
+      'unit/cc-version-checker.test.js',
+      'unit/check-skills-docs-code-sync.test.js',
+      'unit/checkpoint-behavior.test.js',
+      'unit/control/external-feedback-tracker.test.js',
+      'unit/control/trust-engine-7component.test.js',
+      'unit/decision-tracer-full.test.js',
+      'unit/docs-code-scanner-oneliner.test.js',
+      'unit/evals-runner-wrapper.test.js',
+      'unit/explorer.test.js',
+      'unit/extract-feature-from-context.test.js',
+      'unit/fast-track.test.js',
+      'unit/feature-manager-full.test.js',
+      'unit/file-extract-feature.test.js',
+      'unit/first-run.test.js',
+      'unit/i18n-detector.test.js',
+      'unit/i18n-translator.test.js',
+      'unit/lifecycle-full.test.js',
+      'unit/lint-skill-md.test.js',
+      'unit/metrics-collector-full.test.js',
+      'unit/pdca-state-machine.test.js',
+      'unit/pdca-status-full.test.js',
+      'unit/pdca-status-gating.test.js',
+      'unit/preflight.test.js',
+      'unit/project-isolation.test.js',
+      'unit/quality-gates-m1-m10.test.js',
+      'unit/quality-gates/failure-reporter-resolution.test.js',
+      'unit/quality/sqm-calculator-evolve.test.js',
+      'unit/quality/sqm-calculator.test.js',
+      'unit/quality/sqm-history.test.js',
+      'unit/remaining-exports-coverage.test.js',
+      'unit/session-title.test.js',
+      'unit/skill-invocation-effects.test.js',
+      'unit/skill-md-path-fix.test.js',
+      'unit/sprint-executive-summary.test.js',
+      'unit/sprint-handler-trust-action.test.js',
+      'unit/sprint-handler/annotate-action.test.js',
+      'unit/sprint-handler/default-level-warning.test.js',
+      'unit/sprint-handler/dogfood-action.test.js',
+      'unit/sprint-lifecycle/advance-phase-transition-summary.test.js',
+      'unit/sprint-lifecycle/context-importer.test.js',
+      'unit/sprint-lifecycle/generate-report-carry-rationale.test.js',
+      'unit/sprint-lifecycle/generate-report-lessons-auto.test.js',
+      'unit/sprint-lifecycle/generate-report-sot.test.js',
+      'unit/sprint-lifecycle/kpi-resolver.test.js',
+      'unit/sprint-skill-audit.test.js',
+      'unit/sprint-skill-stop.test.js',
+      'unit/sprint-trust-normalization.test.js',
+      'unit/token-report.test.js',
+      'unit/trust-engine-reconcile.test.js',
+      'unit/ui/sqm-panel.test.js',
+      'unit/user-prompt-expansion-handler.test.js',
+      'unit/watch.test.js',
+      'unit/workflow-engine-full.test.js',
+      'unit/workflow-parser-full.test.js',
+      'unit/worktree-detector.test.js',
       'unit/ambiguity.test.js',
       'unit/trigger.test.js',
       'unit/creator.test.js',
@@ -48,6 +119,8 @@ const CATEGORIES = {
       'unit/stop-failure.test.js',
       'unit/plugin-data.test.js',
       'unit/constants.test.js',
+      // v2.1.37 (ENH-466): the permission-mode decision table, asserted exhaustively.
+      'unit/permission-mode-policy.test.js',
       'unit/errors.test.js',
       'unit/state-store.test.js',
       'unit/state-machine.test.js',
@@ -102,6 +175,23 @@ const CATEGORIES = {
   integration: {
     name: 'Integration Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'integration/hook-behavior.test.js',
+      'integration/hook-behavioral-bash-pre.test.js',
+      'integration/issue77-hook-e2e.test.js',
+      'integration/mcp-behavior.test.js',
+      'integration/sprint-alpha-e2e.test.js',
+      'integration/sprint-beta.test.js',
+      'integration/version-centralization.test.js',
       'integration/config-sync.test.js',
       'integration/module-chain.test.js',
       'integration/hook-chain.test.js',
@@ -133,6 +223,17 @@ const CATEGORIES = {
   security: {
     name: 'Security Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'security/scope-evasion.test.js',
       'security/agent-frontmatter.test.js',
       'security/config-permissions.test.js',
       'security/runtime-security.test.js',
@@ -153,6 +254,32 @@ const CATEGORIES = {
   regression: {
     name: 'Regression Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'regression/enh-388-389-393-destructive-enforcement.test.js',
+      'regression/enh-410-block-reason-contract.test.js',
+      'regression/enh-417-sprint-stop-false-report.test.js',
+      'regression/enh-419-session-title-not-forced.test.js',
+      'regression/issue-118-cursor-pretooluse.test.js',
+      'regression/issue-119-session-id-env.test.js',
+      'regression/issue-129-description-budget.test.js',
+      'regression/issue-130-learning-stop-stdin.test.js',
+      'regression/issue-132-slash-reach.test.js',
+      'regression/issue-135-multiaction-guidance.test.js',
+      'regression/issue-137-predecessor-task-completion.test.js',
+      'regression/issue-139-stdin-bounded.test.js',
+      'regression/scanner-comment-blindness.test.js',
+      'regression/v2132-lock-mutual-exclusion.test.js',
+      'v2110-qa/01-guards.test.js',
+      'v2110-qa/02-cc-regression.test.js',
       'regression/pdca-core.test.js',
       'regression/skills-28.test.js',
       'regression/agents-21.test.js',
@@ -188,17 +315,34 @@ const CATEGORIES = {
       // process and reads its JSON, because five defects in this release lived
       // between correct modules and no detect()-level test could express them.
       'regression/enh-459-463-hook-path-guards.test.js',
+      'regression/enh-475-476-unmeasured-honesty.test.js',
+      'regression/enh-420-422-binary-equivalence.test.js',
+      'regression/enh-433-hook-output-visibility.test.js',
+      'regression/enh-477-git-destruction-guards.test.js',
       'regression/bkit-state-isolation.test.js',
       'regression/hook-failure-observability.test.js',
       'regression/bash-pre-decision.test.js',
       'regression/pdca-doc-changed.test.js',
       'regression/gap-detector-unmeasured.test.js',
+      // v2.1.37: permission-mode awareness + the five defects coupled to it.
+      'regression/enh-466-473-permission-mode.test.js',
     ],
     expected: 610,
   },
   performance: {
     name: 'Performance Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'perf/sprint-alpha-perf.test.js',
       'performance/hook-perf.test.js',
       'performance/core-function-perf.test.js',
       'performance/benchmark-perf.test.js',
@@ -254,6 +398,28 @@ const CATEGORIES = {
   e2e: {
     name: 'E2E Tests (Node)',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'e2e/external-dogfood/cc-min-version.test.js',
+      'e2e/external-dogfood/dandi-100-orchestrator-task-tool.test.js',
+      'e2e/external-dogfood/dandi-101-trust-mutation.test.js',
+      'e2e/external-dogfood/dandi-102-trust-alias.test.js',
+      'e2e/external-dogfood/dandi-107-skill-md-path.test.js',
+      'e2e/external-dogfood/dandi-general-l1-workflow.test.js',
+      'e2e/pdca-full-cycle-9scenario.test.js',
+      'e2e/pdca-resume.test.js',
+      'e2e/self-dogfood/ci-gate.test.js',
+      'e2e/sprint-l1-lockout-recovery.test.js',
+      'e2e/sprint-orchestrator/live-dispatch.test.js',
+      'e2e/sqm-baseline/measure.test.js',
       'e2e/eval-benchmark.test.js',
       'e2e/checkpoint-rollback.test.js',
       'e2e/pdca-auto-cycle.test.js',
@@ -264,6 +430,8 @@ const CATEGORIES = {
       // v2.1.36 — @Sinclair-Seo issue #148 harness, absorbed verbatim
       // (external dogfooder Lifecycle Stage 4).
       'e2e/external-dogfood/sinclair-seo-148-guardrail-precision.test.js',
+      // v2.1.37: the release acceptance matrix — 7 modes x 21 cases, controls attached.
+      'e2e/permission-mode-matrix.test.js',
     ],
     expected: 90,
   },
@@ -301,6 +469,66 @@ const CATEGORIES = {
   contract: {
     name: 'Contract Tests',
     files: [
+      /*
+       * v2.1.37 — adopted from the gap sweep.
+       *
+       * These files existed, passed, and ran NOWHERE: neither this runner nor
+       * the workflow referenced them. 148 were in that state; 147 passed when
+       * run by hand and the one that failed was catching a real drift this
+       * release introduced. A test nobody runs is documentation with a .test.js
+       * extension, and a green run that skips it is a green run that means less
+       * than it looks.
+       */
+      'contract/agent-deprecation.test.js',
+      'contract/agent-frontmatter-fields.test.js',
+      'contract/agents/sprint-orchestrator-task-dispatch.test.js',
+      'contract/aggregate-scope.test.js',
+      'contract/audit-logger-c1-c2.test.js',
+      'contract/baseline/skills-convention.test.js',
+      'contract/baseline/sqm-result-schema.test.js',
+      'contract/cc-bridge.test.js',
+      'contract/cc-regression-integration.test.js',
+      'contract/child-process-policy.test.js',
+      'contract/ci-host-integration-wiring.test.js',
+      'contract/context-fork-l1.test.js',
+      'contract/cross-matrix.test.js',
+      'contract/cursor-pretooluse-json-118.test.js',
+      'contract/extended-scenarios.test.js',
+      'contract/guard-registry.test.js',
+      'contract/guards-edge-cases.test.js',
+      'contract/host-integration/hook-dispatch.test.js',
+      'contract/mcp-deprecation.test.js',
+      'contract/mcp-port.test.js',
+      'contract/orchestrator.test.js',
+      'contract/pre-write-pipeline.test.js',
+      'contract/registry-expected-fix.test.js',
+      'contract/session-id-env-119.test.js',
+      'contract/sprint-agents-tools.test.js',
+      'contract/sprint-alpha-contract.test.js',
+      'contract/sprint-restore-e2e.test.js',
+      'contract/sprint-restore-slice1.test.js',
+      'contract/sprint-restore-slice2-followups.test.js',
+      'contract/sprint-restore-slice2.test.js',
+      'contract/sprint-restore-slice3-acceptance.test.js',
+      'contract/sprint-restore-slice3-completion.test.js',
+      'contract/sprint-restore-slice3-report.test.js',
+      'contract/sprint-restore-slice3.test.js',
+      'contract/sprint-restore-slice4.test.js',
+      'contract/sprint-restore-slice5.test.js',
+      'contract/sprint-skill-handler-registration.test.js',
+      'contract/state-schema-keys.test.js',
+      'contract/status-split.test.js',
+      'contract/telemetry.test.js',
+      'contract/test-manifest-integrity.test.js',
+      'contract/v2112-deep-qa-invariants.contract.test.js',
+      'contract/v2112-evals-wrapper.contract.test.js',
+      'contract/v2113-sprint-contracts.test.js',
+      'contract/v2114-caching-cost-contract.test.js',
+      'contract/v2114-defense-contract.test.js',
+      'contract/v2114-doc-contract.test.js',
+      'contract/v2114-e-defense-contract.test.js',
+      'contract/v2114-observability-contract.test.js',
+      'contract/v2122-stop-hook-output-schema.test.js',
       'contract/hook-input-schema.test.js',
       'contract/hook-output-schema.test.js',
       'contract/mcp-protocol.test.js',
@@ -334,6 +562,24 @@ const CATEGORIES = {
       'contract/deprecation-registry-schema.test.js',
       'contract/ci-gating-contract.test.js',
       'contract/docs-code-sync.test.js',
+      /*
+       * v2.1.37 — this gate ran NOWHERE. Not in this runner, not in the
+       * workflow.
+       *
+       * It asserts that the component counts printed in CUSTOMIZATION-GUIDE.md
+       * and AI-NATIVE-DEVELOPMENT.md match what the repository actually holds,
+       * and it caught this release adding a lib module while both documents kept
+       * saying 198. Nobody would have seen that: a green local run and a green CI
+       * run were both reachable with the guide teaching a number that was false.
+       *
+       * Exactly the failure v2.1.36 documented one comment above — "two runners
+       * disagreeing about what 'all tests' means is how a gap hides" — except
+       * this file had fallen out of BOTH. A sweep during this release found 148
+       * test files in that state; the other 147 pass today and their adoption is
+       * a separate decision, recorded in
+       * docs/03-analysis/features/v2137-permission-mode.analysis.en.md.
+       */
+      'contract/component-inventory.test.js',
     ],
     expected: 40,
   },

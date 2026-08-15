@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.143+-purple.svg)](https://code.claude.com)
-[![Version](https://img.shields.io/badge/Version-2.1.36-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.1.37-green.svg)](CHANGELOG.md)
 [![Author](https://img.shields.io/badge/Author-POPUP%20STUDIO-orange.svg)](https://popupstudio.ai)
 
 > **Requirement**: bkit requires Claude Code **v2.1.143 or later** (the strict plugin-manifest path recognizes the official `displayName` field only from v2.1.143). On older Claude Code you will see `Validation errors: Unrecognized key: "displayName"` during `claude plugin install`. Run `npm install -g @anthropic-ai/claude-code@latest` to upgrade, or see [`docs/06-guide/cc-compatibility.guide.md`](docs/06-guide/cc-compatibility.guide.md).
@@ -184,6 +184,15 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 Recommended Claude Code runtime: **v2.1.220** (bkit explicitly handles v2.1.218's `context: fork` background-by-default change and v2.1.219's nested-subagent depth-3 default; Claude 5 alias resolution — `sonnet` → Sonnet 5 needs ≥ v2.1.197). Model floor: **v2.1.170+** required by the 6 Fable-pinned agents (below it they fail to spawn; bkit shows a SessionStart advisory with a workaround). Install minimum **v2.1.143**; runtime minimum **v2.1.78**.
 
+**On Claude Code v2.1.232 and later**, fork mode is on by default in interactive
+sessions: a subagent's result arrives as a notification on a *later* turn, and the
+Agent tool no longer accepts `run_in_background`. bkit's skills are unaffected.
+Sprint gates that measure through a subagent will report **"not measured"** rather
+than a score, and name the cause — a missing number, never a wrong one. Set
+`CLAUDE_CODE_FORK_SUBAGENT=0` to get in-turn results back. bkit shows this once at
+SessionStart and does not block. Verified against v2.1.232; Breaking changes 0
+across v2.1.228–v2.1.232 (171 consecutive compatible releases).
+
 ## Quality gates — the safety net explained
 
 A "quality gate" is a hard stop that won't let the workflow advance until a measurable condition is true. bkit ships 11 of them. The ones that matter most for new users:
@@ -198,7 +207,7 @@ Full M1–M10 + S1 catalog in [README-FULL.md §5](README-FULL.md#5-quality-gate
 
 ## Architecture at a glance
 
-44 skills · 34 agents · 21 hook events / 24 blocks across 28 handlers · 2 MCP servers (19 tools) · 198 lib modules across 22 subdirs · 62 scripts · 40 templates · 373 test files (3,839 test cases). Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L6, where L6 is host integration: a real `claude -p --plugin-dir` run whose recorded evidence CI checks against the shipped `hooks.json`.
+44 skills · 34 agents · 21 hook events / 24 blocks across 28 handlers · 2 MCP servers (19 tools) · 200 lib modules across 22 subdirs · 63 scripts · 40 templates · 382 test files (5,277 test cases). Clean Architecture 4-Layer · Defense-in-Depth 4-Layer · Invocation Contract L1–L6, where L6 is host integration: a real `claude -p --plugin-dir` run whose recorded evidence CI checks against the shipped `hooks.json`.
 
 Agents run on a 4-tier role-based model matrix: **fable** (long-horizon orchestration — leads), **opus** (deep reasoning, security & high-frequency PDCA verifiers), **sonnet** (implementers), **haiku** (monitors). The repeated Check/iterate verifiers (gap-detector, design-validator, pdca-iterator) run on Opus 4.8 — strong verification at half Fable's cost.
 
@@ -209,7 +218,7 @@ Full architecture deep-dive: [README-FULL.md §9](README-FULL.md#9-architecture)
 | Path | What's there |
 |---|---|
 | [README-FULL.md](README-FULL.md) | Full command reference, deep workflow internals, agent teams, architecture, Skill Evals |
-| [CHANGELOG.md](CHANGELOG.md) | Release history (single source of truth — latest release: v2.1.36) |
+| [CHANGELOG.md](CHANGELOG.md) | Release history (single source of truth — latest release: v2.1.37) |
 | [CUSTOMIZATION-GUIDE.md](CUSTOMIZATION-GUIDE.md) | Override any bkit component in your `.claude/` directory |
 | [AI-NATIVE-DEVELOPMENT.md](AI-NATIVE-DEVELOPMENT.md) | The 6 AI-Native principles and how bkit implements them |
 | [`bkit-system/philosophy/`](bkit-system/philosophy/) | Core mission, Context Engineering, PDCA methodology, AI-Native principles |

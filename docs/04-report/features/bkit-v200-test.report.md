@@ -1,7 +1,7 @@
 # bkit v2.0.5 Comprehensive Test Report
 
-> Generated: 2026-08-12T13:07:31.786Z
-> Total: 4364 TC, 4360 PASS, 0 FAIL, 4 SKIP
+> Generated: 2026-08-15T01:57:42.458Z
+> Total: 5277 TC, 5272 PASS, 0 FAIL, 5 SKIP
 > Pass Rate: 99.9%
 
 ---
@@ -10,39 +10,39 @@
 
 | Category | Total | Passed | Failed | Skipped | Rate |
 |----------|:-----:|:------:|:------:|:-------:|:----:|
-| Unit Tests | 1540 | 1540 | 0 | 0 | 100.0% PASS |
-| Integration Tests | 556 | 556 | 0 | 0 | 100.0% PASS |
-| Security Tests | 249 | 249 | 0 | 0 | 100.0% PASS |
-| Regression Tests | 676 | 676 | 0 | 0 | 100.0% PASS |
+| Unit Tests | 1980 | 1980 | 0 | 0 | 100.0% PASS |
+| Integration Tests | 611 | 611 | 0 | 0 | 100.0% PASS |
+| Security Tests | 267 | 267 | 0 | 0 | 100.0% PASS |
+| Regression Tests | 796 | 796 | 0 | 0 | 100.0% PASS |
 | Performance Tests | 161 | 157 | 0 | 4 | 97.5% PASS |
 | Philosophy Tests | 140 | 140 | 0 | 0 | 100.0% PASS |
 | UX Tests | 185 | 185 | 0 | 0 | 100.0% PASS |
-| E2E Tests (Node) | 102 | 102 | 0 | 0 | 100.0% PASS |
+| E2E Tests (Node) | 151 | 151 | 0 | 0 | 100.0% PASS |
 | Architecture Tests | 100 | 100 | 0 | 0 | 100.0% PASS |
 | Controllable AI Tests | 80 | 80 | 0 | 0 | 100.0% PASS |
 | behavioral | 45 | 45 | 0 | 0 | 100.0% PASS |
-| contract | 530 | 530 | 0 | 0 | 100.0% PASS |
-| **Total** | **4364** | **4360** | **0** | **4** | **99.9%** |
+| contract | 761 | 760 | 0 | 1 | 99.9% PASS |
+| **Total** | **5277** | **5272** | **0** | **5** | **99.9%** |
 
 ## Version Comparison: v1.6.2 → v2.0.0
 
 | Metric | v1.6.2 | v2.0.0 | Delta |
 |--------|:------:|:------:|:-----:|
 | Categories | 8 | 12 | +4 |
-| Total TC | 1151 | 4364 | +3213 |
-| Unit Tests | 450 | 1540 | +1090 |
-| Integration Tests | 130 | 556 | +426 |
-| Security Tests | 80 | 249 | +169 |
-| Regression Tests | 200 | 676 | +476 |
+| Total TC | 1151 | 5277 | +4126 |
+| Unit Tests | 450 | 1980 | +1530 |
+| Integration Tests | 130 | 611 | +481 |
+| Security Tests | 80 | 267 | +187 |
+| Regression Tests | 200 | 796 | +596 |
 | Performance Tests | 76 | 161 | +85 |
 | Philosophy Tests | 60 | 140 | +80 |
 | UX Tests | 60 | 185 | +125 |
-| E2E Tests (Node) | 20 | 102 | +82 |
+| E2E Tests (Node) | 20 | 151 | +131 |
 | Architecture Tests | N/A | 100 | NEW |
 | Controllable AI Tests | N/A | 80 | NEW |
 | behavioral | N/A | 45 | NEW |
-| contract | N/A | 530 | NEW |
+| contract | N/A | 761 | NEW |
 
 ## Verdict
 
-**ALL TESTS PASSED** - bkit v2.1.36 is ready for release.
+**ALL TESTS PASSED** - bkit v2.1.37 is ready for release.

@@ -12,13 +12,7 @@ description: |
 model: opus
 effort: high
 maxTurns: 30
-linked-from-skills:
-  - code-review: default
-  - phase-8-review: default
-imports:
-  - ${PLUGIN_ROOT}/templates/shared/error-handling-patterns.md
-  - ${PLUGIN_ROOT}/templates/shared/naming-conventions.md
-skills_preload:
+skills:
   - phase-2-convention
   - phase-8-review
   - code-review
@@ -31,6 +25,13 @@ tools:
   - Task(Explore)
   - LSP
 ---
+
+## Shared references
+
+Read these when the finding turns on a convention rather than on the code alone:
+
+- `${CLAUDE_PLUGIN_ROOT}/templates/shared/error-handling-patterns.md`
+- `${CLAUDE_PLUGIN_ROOT}/templates/shared/naming-conventions.md`
 
 ## When NOT to use this agent
 

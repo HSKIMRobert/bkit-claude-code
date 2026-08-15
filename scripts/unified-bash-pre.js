@@ -23,6 +23,10 @@
 const { readStdinSync, parseHookInput, outputAllow, outputBlockWithContext, outputAsk } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getActiveSkill, getActiveAgent } = require('../lib/task/context');
+// v2.1.37 (ENH-466): the host's permission mode decides whether an `ask` reaches
+// anyone. See lib/domain/policy/permission-mode-policy.js for what is and is not
+// relaxed — `critical` never is.
+const { isAskSuppressed } = require('../lib/domain/policy/permission-mode-policy');
 
 // ============================================================
 // ENH-264: Alternative suggestions for blocked commands (CC v2.1.110+)
@@ -120,36 +124,75 @@ function getAlternativesForCommand(command) {
 // ============================================================
 
 /**
- * Phase 9 deployment safety checks
+ * Flags that make a deployment command a preview rather than a change.
+ *
+ * ENH-467 (v2.1.37). Every tool this guard watches has a rehearsal mode, and the
+ * guard's own advice recommends using it — "Preview with `kubectl get ...` or
+ * `--dry-run=client` first", "Use `terraform plan -destroy` to preview". A guard
+ * that refuses the command it just told you to run is the failure v2.1.34 wrote
+ * onto G-001: advice the rule makes impossible to act on.
+ */
+const DEPLOY_PREVIEW_FLAGS = [
+  '--dry-run',
+  '-o yaml',
+  '-o json',
+  '--output=yaml',
+  '--output=json',
+  '--server-dry-run',
+];
+
+/**
+ * Phase 9 deployment safety checks.
+ *
+ * ENH-467 (v2.1.37) — graded, not a flat refusal.
+ *
+ * This guard used to refuse on a bare substring match, so `npm install --force`
+ * and `echo "deploying to production"` were both "Deployment safety" refusals
+ * with no route forward, while `phase-9-deployment` was the active skill. Two of
+ * its six patterns — `--force` and `production` — describe a flag and a word, not
+ * an operation, and neither can be graded by target because neither names one.
+ * They ask. The four that name an actual destroy operation still deny.
+ *
  * @param {Object} input - Hook input
- * @returns {boolean} True if blocked
+ * @returns {{action: 'deny'|'ask', reason: string, alternatives: string[]}|null}
+ *   null when nothing matched
  */
 function handlePhase9DeployPre(input) {
   const { command } = parseHookInput(input);
-  if (!command) return false;
+  if (!command) return null;
 
-  // Dangerous deployment patterns that require manual confirmation
-  const dangerousPatterns = [
-    { pattern: 'kubectl delete', reason: 'Kubernetes resource deletion' },
-    { pattern: 'terraform destroy', reason: 'Infrastructure destruction' },
-    { pattern: 'aws ec2 terminate', reason: 'EC2 instance termination' },
-    { pattern: 'helm uninstall', reason: 'Helm release removal' },
-    { pattern: '--force', reason: 'Force flag detected' },
-    { pattern: 'production', reason: 'Production environment detected' }
+  const lowered = command.toLowerCase();
+
+  // A previewed destroy is not a destroy.
+  if (DEPLOY_PREVIEW_FLAGS.some((f) => lowered.includes(f))) return null;
+  if (/\bterraform\s+plan\b/.test(lowered)) return null;
+
+  const patterns = [
+    { pattern: 'kubectl delete', reason: 'Kubernetes resource deletion', action: 'deny' },
+    { pattern: 'terraform destroy', reason: 'Infrastructure destruction', action: 'deny' },
+    { pattern: 'aws ec2 terminate', reason: 'EC2 instance termination', action: 'deny' },
+    { pattern: 'helm uninstall', reason: 'Helm release removal', action: 'deny' },
+    { pattern: '--force', reason: 'Force flag detected', action: 'ask' },
+    { pattern: 'production', reason: 'Production environment detected', action: 'ask' },
   ];
 
-  for (const { pattern, reason } of dangerousPatterns) {
-    if (command.toLowerCase().includes(pattern.toLowerCase())) {
-      // ENH-264: provide alternatives via additionalContext
-      outputBlockWithContext(
-        `Deployment safety: ${reason}. Command '${pattern}' requires manual confirmation.`,
-        getAlternativesForCommand(command) || getAlternativesForCommand(pattern)
-      );
-      return true;
+  for (const { pattern, reason, action } of patterns) {
+    if (lowered.includes(pattern.toLowerCase())) {
+      return {
+        action,
+        reason: action === 'deny'
+          ? `Deployment safety: ${reason}. Command '${pattern}' is refused during the deployment phase.`
+          : `Deployment safety: ${reason} in '${pattern}'. This is a confirmation, not a refusal — `
+            + 'the pattern describes a flag or an environment name, not a destructive operation.',
+        // ENH-264: alternatives travel with the decision via additionalContext.
+        alternatives: getAlternativesForCommand(command).length
+          ? getAlternativesForCommand(command)
+          : getAlternativesForCommand(pattern),
+      };
     }
   }
 
-  return false;
+  return null;
 }
 
 // ============================================================
@@ -157,38 +200,59 @@ function handlePhase9DeployPre(input) {
 // ============================================================
 
 /**
- * QA destructive command prevention
+ * QA destructive command prevention.
+ *
+ * ENH-468 (v2.1.37) — delegates to the shared Destructive Detector.
+ *
+ * This handler carried its own nine-entry substring table: a second, cruder copy
+ * of rules the detector already owns, with none of the grading the detector spent
+ * v2.1.34 and v2.1.36 acquiring. The consequences were both directions of wrong.
+ * `rm -r ./tmp/qa-fixtures` — clearing a scratch directory, which is ordinary QA
+ * work — was refused outright, while `chmod 777 /` was not in the table at all
+ * and passed. Two tables for one concept is also how they drift: every precision
+ * fix landed on one of them.
+ *
+ * The detector is now the single source, so this handler contributes the one
+ * thing it actually knows that the detector does not — that a QA session is in
+ * progress — by treating any finding as reaching the user rather than passing
+ * silently. Critical findings still deny; everything else asks.
+ *
  * @param {Object} input - Hook input
- * @returns {boolean} True if blocked
+ * @returns {{action: 'deny'|'ask', reason: string, alternatives: string[]}|null}
+ *   null when nothing matched
  */
 function handleQaPreBash(input) {
   const { command } = parseHookInput(input);
-  if (!command) return false;
+  if (!command) return null;
 
-  const DESTRUCTIVE_PATTERNS = [
-    { pattern: 'rm -rf', reason: 'Recursive force deletion' },
-    { pattern: 'rm -r', reason: 'Recursive deletion' },
-    { pattern: 'DROP TABLE', reason: 'SQL table drop' },
-    { pattern: 'DROP DATABASE', reason: 'SQL database drop' },
-    { pattern: 'DELETE FROM', reason: 'SQL mass deletion' },
-    { pattern: 'TRUNCATE', reason: 'SQL table truncation' },
-    { pattern: '> /dev/', reason: 'Device write' },
-    { pattern: 'mkfs', reason: 'Filesystem creation' },
-    { pattern: 'dd if=', reason: 'Low-level disk operation' }
-  ];
-
-  for (const { pattern, reason } of DESTRUCTIVE_PATTERNS) {
-    if (command.includes(pattern)) {
-      // ENH-264: provide alternatives via additionalContext
-      outputBlockWithContext(
-        `QA safety: ${reason}. Destructive command '${pattern}' blocked during testing.`,
-        getAlternativesForCommand(pattern)
-      );
-      return true;
-    }
+  let result;
+  let dd;
+  try {
+    dd = require('../lib/control/destructive-detector');
+    result = dd.detect('Bash', command);
+  } catch (e) {
+    debugLog('UnifiedBashPre', 'qa guard: detector unavailable', { error: e.message });
+    return null;
   }
 
-  return false;
+  if (!result || !result.detected || !Array.isArray(result.rules) || result.rules.length === 0) {
+    return null;
+  }
+
+  const critical = result.rules.filter((r) => r.severity === 'critical');
+  const relevant = critical.length ? critical : result.rules;
+  const ids = relevant.map((r) => r.id);
+  const names = relevant.map((r) => r.name).join('; ');
+
+  return {
+    action: critical.length ? 'deny' : 'ask',
+    reason: critical.length
+      ? `QA safety: this command matches ${ids.length > 1 ? 'rules' : 'rule'} ${ids.join(', ')} `
+        + `(${names}) and is refused while a QA session is running.`
+      : `QA safety: this command matches ${ids.length > 1 ? 'rules' : 'rule'} ${ids.join(', ')} `
+        + `(${names}). A QA session is running, so it is confirmed rather than passed silently.`,
+    alternatives: dd.alternativesFor(relevant),
+  };
 }
 
 // ============================================================
@@ -212,7 +276,46 @@ try {
 const activeSkill = getActiveSkill();
 const activeAgent = getActiveAgent();
 
-debugLog('UnifiedBashPre', 'Context', { activeSkill, activeAgent });
+/*
+ * v2.1.37 — the permission mode the host is running in.
+ *
+ * Read once here and threaded to every ask decision below. Before this, bkit read
+ * `permission_mode` in no place at all, so a session started with
+ * `--dangerously-skip-permissions` was interrupted exactly as often as one that
+ * had asked to be. See lib/domain/policy/permission-mode-policy.js.
+ */
+const { permissionMode } = parseHookInput(input);
+const askSuppressed = isAskSuppressed(permissionMode);
+
+debugLog('UnifiedBashPre', 'Context', {
+  activeSkill, activeAgent, permissionMode, askSuppressed,
+});
+
+/**
+ * Record an ask that the permission mode stood down, then let the command run.
+ *
+ * Suppression must leave a trail. A guard that goes quiet without one is
+ * indistinguishable from a guard that is broken, and this file already carries
+ * the scars of that class: ENH-388 wrote `result: 'blocked'` for a command it
+ * then executed, and ENH-393 had to go back and make the audit entry name what
+ * actually happened. The same standard applies to going quiet on purpose.
+ *
+ * @param {{ids: string[], reason: string, command: string}} ask
+ * @param {string} source - which guard raised it
+ */
+function auditSuppressedAsk(ask, source) {
+  try {
+    const audit = require('../lib/audit/audit-logger');
+    audit.writeAuditLog({
+      actor: 'hook', actorId: 'unified-bash-pre',
+      action: 'confirmation_suppressed_by_permission_mode', category: 'control',
+      target: String(ask.command || '').substring(0, 100), targetType: 'file',
+      details: { rules: ask.ids, permissionMode, source },
+      result: 'success', destructiveOperation: true,
+      reason: `${ask.reason} — not raised: permission_mode is "${permissionMode}".`,
+    });
+  } catch (_) { /* graceful — auditing must never change the decision */ }
+}
 
 let blocked = false;
 
@@ -230,14 +333,44 @@ let blocked = false;
  */
 let pendingAsk = null;
 
+/**
+ * Apply a graded verdict from one of the context guards.
+ *
+ * ENH-467/468 (v2.1.37). Both guards used to emit their own refusal inline, which
+ * is the pattern the pendingAsk comment above exists to forbid: an inline emit
+ * exits the process and skips every deny-capable guard below it. Now they return
+ * a verdict and this routes it — deny immediately, park an ask.
+ *
+ * @param {{action: 'deny'|'ask', reason: string, alternatives: string[]}|null} verdict
+ * @param {string} source
+ * @returns {boolean} true when the command was denied
+ */
+function applyContextVerdict(verdict, source) {
+  if (!verdict) return false;
+  if (verdict.action === 'deny') {
+    outputBlockWithContext(verdict.reason, verdict.alternatives, 'PreToolUse');
+    return true;
+  }
+  if (!pendingAsk) {
+    pendingAsk = {
+      ids: [source],
+      confidence: 1,
+      alternatives: verdict.alternatives,
+      command: parseHookInput(input).command || '',
+      reason: verdict.reason,
+    };
+  }
+  return false;
+}
+
 // Phase 9 deployment checks
 if (activeSkill === 'phase-9-deployment') {
-  blocked = handlePhase9DeployPre(input);
+  blocked = applyContextVerdict(handlePhase9DeployPre(input), 'phase-9-deployment');
 }
 
 // QA checks (zero-script-qa skill or qa-monitor agent)
 if (!blocked && (activeSkill === 'zero-script-qa' || activeAgent === 'qa-monitor')) {
-  blocked = handleQaPreBash(input);
+  blocked = applyContextVerdict(handleQaPreBash(input), 'zero-script-qa');
 }
 
 // ============================================================
@@ -628,6 +761,17 @@ if (!blocked) {
       command: toolInput.command,
       envOverrides,
       permissionDecision: input.permissionDecision || 'allow',
+      // ENH-469 (v2.1.37): from the field CC actually sends. The old
+      // `input.bypassPermissions` read a top-level key that is not in the
+      // measured payload, so it was always false.
+      bypassPermissions: permissionMode === 'bypassPermissions',
+      // ENH-471 (v2.1.37): retire guards whose regression CC has already fixed.
+      // Read from SessionStart's cache — no subprocess on the hook path.
+      ccVersion: (() => {
+        try {
+          return require('../lib/infra/cc-version-checker').readCachedVersion();
+        } catch (_) { return null; }
+      })(),
     });
     if (result && Array.isArray(result.attributions) && result.attributions.length > 0) {
       ccRegressionAttr = ' | ' + result.attributions.join(' | ');
@@ -645,6 +789,21 @@ if (!blocked) {
 // trail records the decision that was actually taken — an `ask` entry written
 // where the ask was merely *considered* would be the same false-assurance the
 // hardcoded `result: 'blocked'` used to produce (ENH-393).
+if (!blocked && pendingAsk && askSuppressed) {
+  /*
+   * ENH-466 (v2.1.37) — the first of the two checks described in the design.
+   *
+   * It lives here rather than only inside outputAsk() because this is where the
+   * audit context is: the rule ids, the confidence, the command. outputAsk()
+   * re-checks as a backstop for a call site added later that forgets this one.
+   */
+  auditSuppressedAsk(pendingAsk, 'destructive-detector');
+  debugLog('UnifiedBashPre', 'Ask suppressed by permission mode', {
+    permissionMode, ask: pendingAsk.ids,
+  });
+  pendingAsk = null;
+}
+
 if (!blocked && pendingAsk) {
   try {
     const audit = require('../lib/audit/audit-logger');
@@ -652,7 +811,7 @@ if (!blocked && pendingAsk) {
       actor: 'hook', actorId: 'unified-bash-pre',
       action: 'destructive_confirmation_requested', category: 'control',
       target: pendingAsk.command.substring(0, 100), targetType: 'file',
-      details: { rules: pendingAsk.ids, confidence: pendingAsk.confidence },
+      details: { rules: pendingAsk.ids, confidence: pendingAsk.confidence, permissionMode },
       result: 'ask', destructiveOperation: true,
       reason: pendingAsk.reason,
     });
@@ -661,12 +820,16 @@ if (!blocked && pendingAsk) {
   // ENH-459 (v2.1.36): the parked advice, which fits the rule that asked. This
   // was a fixed pair of lines, so a push-guard confirmation and a scoped-delete
   // confirmation offered identical, generic suggestions.
-  outputAsk(pendingAsk.reason, pendingAsk.alternatives && pendingAsk.alternatives.length
-    ? pendingAsk.alternatives
-    : [
-      'Confirm the exact target is the one you mean',
-      'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
-    ]);
+  outputAsk(
+    pendingAsk.reason,
+    pendingAsk.alternatives && pendingAsk.alternatives.length
+      ? pendingAsk.alternatives
+      : [
+        'Confirm the exact target is the one you mean',
+        'Run the operation on a copy, or dry-run it first, to confirm the blast radius',
+      ],
+    permissionMode
+  );
 }
 
 // Allow if neither blocked nor awaiting confirmation

@@ -54,18 +54,53 @@ function freshIo() {
 // 1. Claude Code format (default, CURSOR_VERSION unset) — REGRESSION GUARD
 // ---------------------------------------------------------------------------
 
-tc('CC allow: plain text on stdout when context present, nothing when empty', () => {
+tc('CC allow: never emits Cursor\'s schema, and delivers context through CC\'s own channel', () => {
   const io = freshIo();
-  // With context -> plain text (NOT JSON). This is the documented CC behavior.
+  /*
+   * v2.1.37 (ENH-433) — this assertion used to require the output NOT be JSON at
+   * all, and read "plain text ... This is the documented CC behavior".
+   *
+   * The invariant issue #118 is about is narrower than that: under Claude Code,
+   * bkit must never emit CURSOR's schema (`permission` / `agent_message` /
+   * `user_message`), because Cursor's bridge and Claude Code expect different
+   * shapes. Forbidding every JSON shape also forbade Claude Code's own
+   * documented context channel, and that is what the old assertion locked in.
+   *
+   * Claude Code's contract for PreToolUse: plain stdout goes to the debug log
+   * and is not shown to Claude, while `hookSpecificOutput.additionalContext` is
+   * "String added to Claude's context alongside the tool result"
+   * (code.claude.com/docs/en/hooks). So the old shape printed a carefully
+   * composed message into a log nobody reads during the session.
+   */
   const withCtx = captureOutput(() => io.outputAllow('Minor change (5 lines).', 'PreToolUse'));
   assert.strictEqual(withCtx.length, 1, 'should print exactly one line');
-  assert.strictEqual(withCtx[0], 'Minor change (5 lines).');
-  // Must NOT be valid JSON object (that's the whole point of the bug).
-  assert.ok(!/^\{.*\}$/.test(withCtx[0]), 'CC allow must be plain text, not JSON');
+
+  // The #118 invariant: not Cursor's schema.
+  const parsed = JSON.parse(withCtx[0]);
+  assert.equal(parsed.permission, undefined, 'CC output must not carry Cursor\'s `permission`');
+  assert.equal(parsed.agent_message, undefined, 'CC output must not carry Cursor\'s `agent_message`');
+  assert.equal(parsed.user_message, undefined, 'CC output must not carry Cursor\'s `user_message`');
+
+  // And the message must actually be delivered, not merely printed.
+  assert.equal(parsed.hookSpecificOutput.hookEventName, 'PreToolUse');
+  assert.equal(parsed.hookSpecificOutput.additionalContext, 'Minor change (5 lines).');
 
   // Without context -> no output at all.
   const empty = captureOutput(() => io.outputAllow('', 'PreToolUse'));
   assert.strictEqual(empty.length, 0, 'CC allow with no context prints nothing');
+});
+
+tc('CC allow: an event with no context channel still prints, and says so in the debug log', () => {
+  // ENH-433/ENH-482. Stop has neither model-visible stdout nor an
+  // additionalContext field, so its message cannot reach the model. It is still
+  // printed — Claude Code logs it, and bkit's Stop integration tests read the
+  // line as a liveness signal — but nothing should mistake printing for
+  // delivery. Changing this to the one channel that WOULD deliver
+  // (`{decision:'block'}`) would turn every clean stop into a continuation.
+  const io = freshIo();
+  const out = captureOutput(() => io.outputAllow('Stop event processed.', 'Stop'));
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0], 'Stop event processed.');
 });
 
 tc('CC allow: SessionStart/UserPromptSubmit emit {success,message} JSON (unchanged)', () => {

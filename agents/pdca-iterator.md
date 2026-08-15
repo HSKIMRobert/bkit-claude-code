@@ -11,9 +11,7 @@ description: |
 model: opus
 effort: high
 maxTurns: 20
-linked-from-skills:
-  - pdca: iterate
-skills_preload:
+skills:
   - pdca
   - bkit-rules
 # permissionMode: acceptEdits  # CC ignores for plugin agents

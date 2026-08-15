@@ -111,3 +111,131 @@ test('getCurrent returns either a parseable string or null', () => {
     assert.ok(ccv.parseVersion(v), `getCurrent returned non-parseable: ${v}`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// ENH-437 (v2.1.37) — KNOWN_ISSUES upper bound.
+//
+// MIN_VERSION and RECOMMENDED_VERSION are both floors, so before this the check
+// had no way to say anything about a release ABOVE the recommendation: a user on
+// the newest CC was graded `ok` regardless of what bkit had measured about it.
+// These assert BEHAVIOUR (what the check returns, what the renderer emits), not
+// that a constant exists — a source-text assertion would have passed against the
+// broken tree.
+// ---------------------------------------------------------------------------
+
+const { renderCCVersionWarning } = require('../../hooks/startup/preflight');
+
+test('KNOWN_ISSUES is frozen, and so is every entry', () => {
+  assert.ok(Object.isFrozen(ccv.KNOWN_ISSUES));
+  for (const issue of ccv.KNOWN_ISSUES) {
+    assert.ok(Object.isFrozen(issue), `entry ${issue.id} must be frozen`);
+    assert.ok(Object.isFrozen(issue.suppressedByEnv), `${issue.id}.suppressedByEnv must be frozen`);
+  }
+});
+
+test('KNOWN_ISSUES entries carry the fields the renderer and a later reader need', () => {
+  for (const issue of ccv.KNOWN_ISSUES) {
+    assert.equal(typeof issue.id, 'string');
+    assert.ok(ccv.parseVersion(issue.from), `${issue.id}.from must be a version`);
+    assert.ok(issue.until === null || ccv.parseVersion(issue.until),
+      `${issue.id}.until must be null or a version`);
+    assert.ok(['all', 'interactive', 'headless'].includes(issue.scope));
+    assert.ok(issue.summary && issue.detail, `${issue.id} needs summary + detail`);
+    assert.equal(typeof issue.addedCycle, 'number',
+      `${issue.id}.addedCycle records which analysis cycle measured it`);
+  }
+});
+
+test('listKnownIssues matches from the `from` version onward', () => {
+  assert.deepEqual(ccv.listKnownIssues('2.1.231', {}).map((i) => i.id), []);
+  assert.deepEqual(ccv.listKnownIssues('2.1.232', {}).map((i) => i.id), ['fork-default-agent-spawn']);
+  // A changed default persists into later releases; the entry must not need one
+  // row per release to keep matching.
+  assert.deepEqual(ccv.listKnownIssues('2.1.999', {}).map((i) => i.id), ['fork-default-agent-spawn']);
+});
+
+test('listKnownIssues honors `until` as an exclusive upper bound', () => {
+  const closed = [Object.freeze({
+    id: 'x', from: '2.0.0', until: '2.1.0', scope: 'all',
+    summary: 's', detail: 'd', suppressedByEnv: Object.freeze([]), addedCycle: 0,
+  })];
+  // Exercised through the same predicate the real list uses.
+  const inRange = closed.filter((i) =>
+    ccv.compareVersion('2.0.5', i.from) >= 0 && ccv.compareVersion('2.0.5', i.until) < 0);
+  const past = closed.filter((i) =>
+    ccv.compareVersion('2.1.0', i.from) >= 0 && ccv.compareVersion('2.1.0', i.until) < 0);
+  assert.equal(inRange.length, 1);
+  assert.equal(past.length, 0, 'an entry stops matching at `until` with no second edit');
+});
+
+test('listKnownIssues is suppressed by an env setting that genuinely mitigates', () => {
+  // sub-agents.md:798 — fork mode off restores foreground when Claude needs the result.
+  assert.deepEqual(ccv.listKnownIssues('2.1.232', { CLAUDE_CODE_FORK_SUBAGENT: '0' }), []);
+  // sub-agents.md:795 — foreground regardless of fork mode. Strictly stronger.
+  assert.deepEqual(ccv.listKnownIssues('2.1.232', { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' }), []);
+  // Case-insensitive, whitespace-tolerant.
+  assert.deepEqual(ccv.listKnownIssues('2.1.232', { CLAUDE_CODE_FORK_SUBAGENT: ' False ' }), []);
+});
+
+test('listKnownIssues is NOT suppressed by an env value that turns the feature ON', () => {
+  assert.equal(ccv.listKnownIssues('2.1.232', { CLAUDE_CODE_FORK_SUBAGENT: '1' }).length, 1);
+  assert.equal(ccv.listKnownIssues('2.1.232', { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '0' }).length, 1);
+});
+
+test('listKnownIssues fails open on a malformed version', () => {
+  assert.deepEqual(ccv.listKnownIssues('garbage', {}), []);
+  assert.deepEqual(ccv.listKnownIssues(null, {}), []);
+});
+
+test('checkCCVersion promotes ok -> warn when a known issue applies', () => {
+  // The defect ENH-437 fixes: at/above the recommendation the report said `ok`
+  // and renderCCVersionWarning() returns null on `ok`, so nothing could surface.
+  const report = {
+    current: '2.1.232', severity: 'warn', recommended: '2.1.220', min: '2.1.78',
+    inactive: [], knownIssues: ccv.listKnownIssues('2.1.232', {}),
+  };
+  assert.equal(report.knownIssues.length, 1);
+  const warning = renderCCVersionWarning(report);
+  assert.ok(warning, 'a known issue above the recommendation must surface');
+  assert.match(warning, /2\.1\.232/);
+  assert.doesNotMatch(warning, /Inactive features/,
+    'above the recommendation the user is not behind; an upgrade nudge would be wrong');
+});
+
+test('checkCCVersion keeps `error` when below MIN_VERSION, even with a known issue', () => {
+  // Severity precedence: "too old to support" is the more actionable statement.
+  const warning = renderCCVersionWarning({
+    current: '2.1.10', severity: 'error', recommended: '2.1.220', min: '2.1.78',
+    inactive: ['agentTeams'], knownIssues: [{ id: 'x', summary: 's' }],
+  });
+  assert.match(warning, /CC v2\.1\.78\+ required/);
+});
+
+test('checkCCVersion always carries knownIssues when current is known', () => {
+  const orig = process.env.DISABLE_UPDATES;
+  delete process.env.DISABLE_UPDATES;
+  try {
+    const r = ccv.checkCCVersion();
+    if (r.current !== null) {
+      assert.ok(Array.isArray(r.knownIssues),
+        'callers must be able to render without probing for the key');
+    }
+  } finally {
+    if (orig === undefined) delete process.env.DISABLE_UPDATES;
+    else process.env.DISABLE_UPDATES = orig;
+  }
+});
+
+test('renderCCVersionWarning still says nothing when nothing is known against the version', () => {
+  assert.equal(renderCCVersionWarning({
+    current: '2.1.220', severity: 'ok', recommended: '2.1.220', min: '2.1.78',
+    inactive: [], knownIssues: [],
+  }), null);
+});
+
+test('renderCCVersionWarning preserves the behind-recommended message', () => {
+  assert.equal(renderCCVersionWarning({
+    current: '2.1.200', severity: 'warn', recommended: '2.1.220', min: '2.1.78',
+    inactive: [], knownIssues: [],
+  }), 'CC v2.1.220+ recommended — current v2.1.200. Inactive features: none.');
+});

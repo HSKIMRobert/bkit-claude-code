@@ -12,13 +12,6 @@ description: |
 model: opus
 effort: high
 maxTurns: 30
-linked-from-skills:
-  - pdca: analyze
-  - phase-8-review: gap
-imports:
-  - ${PLUGIN_ROOT}/templates/shared/api-patterns.md
-context: fork
-mergeResult: false
 # permissionMode: plan  # CC ignores for plugin agents
 memory: project
 disallowedTools:
@@ -34,6 +27,12 @@ skills:
   - phase-2-convention
   - pdca
 ---
+
+## Shared references
+
+Read this when a gap turns on an API-shape convention rather than on the diff alone:
+
+- `${CLAUDE_PLUGIN_ROOT}/templates/shared/api-patterns.md`
 
 ## When NOT to use this agent
 

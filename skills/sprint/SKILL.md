@@ -260,6 +260,25 @@ const runner = createTaskToolRunner({
 await handleSprintAction('measure', { id, gate }, { agentTaskRunner: runner });
 ```
 
+> **Fork mode changes when the result arrives (ENH-478, v2.1.37).**
+>
+> The snippet above assumes `callTaskTool` resolves to the subagent's finished
+> text. On Claude Code v2.1.232 and later that assumption does not hold in an
+> interactive session: fork mode is on by default, the Agent tool loses its
+> `run_in_background` parameter, and "a background subagent's results reach Claude
+> as a completion notification in a later turn"
+> (code.claude.com/docs/en/sub-agents). The result is not lost — it arrives on a
+> later turn — but it is not available inside the turn that spawned the subagent.
+>
+> A dispatcher that awaits it in-turn therefore receives nothing, and the gate
+> reports `no_output`: an honest "not measured" rather than a wrong score, with
+> the likely cause named in the message. To measure inside one turn, either run
+> non-interactively (`-p`, where fork mode is off) or set
+> `CLAUDE_CODE_FORK_SUBAGENT=0`.
+>
+> Nothing here is a workaround for a defect. It is the shape of the runtime, and
+> a dispatcher that spans turns is the correct adaptation to it.
+
 **Two invocation paths:**
 
 1. **In-process (primary, main session):** the LLM dispatcher calls

@@ -11,12 +11,6 @@ description: |
 model: opus
 effort: high
 maxTurns: 30
-linked-from-skills:
-  - phase-8-review: validate
-imports:
-  - ${PLUGIN_ROOT}/templates/shared/api-patterns.md
-context: fork
-mergeResult: false
 # permissionMode: plan  # CC ignores for plugin agents
 memory: project
 disallowedTools:
@@ -32,6 +26,12 @@ skills:
   - bkit-templates
   - phase-8-review
 ---
+
+## Shared references
+
+Read this when validating an API contract against bkit's shared shape:
+
+- `${CLAUDE_PLUGIN_ROOT}/templates/shared/api-patterns.md`
 
 ## When NOT to use this agent
 

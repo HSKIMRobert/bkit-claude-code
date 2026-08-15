@@ -45,7 +45,7 @@ const layerArg = args.find((a) => a.startsWith('--layer'));
 const LAYERS = layerArg
   ? (layerArg.includes('=') ? layerArg.split('=')[1] : args[args.indexOf(layerArg) + 1] || '')
       .split(',').map((s) => s.trim()).filter(Boolean)
-  : ['skills', 'agents', 'hooks', 'mcp'];
+  : ['skills', 'agents', 'hooks', 'mcp', 'fork'];
 
 // ---------------------------------------------------------------------------
 // CLI discovery — never hardcode a path. v2.1.33's harness pinned an absolute
@@ -180,7 +180,10 @@ function session(prompt, opts = {}) {
       // will never get — 44 skills would spend two minutes on a warning.
       input: '',
       timeout: opts.timeout || 240000,
-      env: { ...process.env, CLAUDE_PROJECT_DIR: work },
+      // ENH-474 (v2.1.37): `opts.env` lets a case set the environment the case is
+      // about. The fork layer needs CLAUDE_CODE_FORK_SUBAGENT=1, which is the only
+      // way a `-p` session can reach the gate whose default flipped in v2.1.232.
+      env: { ...process.env, CLAUDE_PROJECT_DIR: work, ...(opts.env || {}) },
     }
   );
   return { work, status: r.status, out: (r.stdout || '') + (r.stderr || ''), error: r.error };
@@ -244,8 +247,19 @@ if (LAYERS.includes('skills')) {
    * failure would train the reader to discount the whole report.
    */
   const LONG_RUNNING = {
-    // Reaches the network to compare the installed CC version against npm.
-    'cc-version-analysis': 600000,
+    /*
+     * Reaches the network to compare the installed CC version against npm.
+     *
+     * v2.1.37: raised from 600 s after the full sweep killed it and reported a
+     * failure. Measured in isolation immediately afterwards: **exit 0 in 1330 s**,
+     * having completed Phase 1 research and written its artifact. So 600 s was
+     * this harness running out of patience, and the report said "not necessarily
+     * broken" — a hedge, which is the wrong thing for a QA report to contain. The
+     * budget now sits above the measurement instead of asking the reader to
+     * assume. This skill researches a CC release across docs, blogs and GitHub;
+     * minutes is its normal shape, not a symptom.
+     */
+    'cc-version-analysis': 1800000,
     /*
      * v2.1.34: measured 136 s in isolation (exit 0, correct behaviour — it
      * reports that the throwaway directory has nothing to QA, and its PRE-SCAN
@@ -690,6 +704,117 @@ if (LAYERS.includes('mcp')) {
 
     try { fs.rmSync(callWork, { recursive: true, force: true }); } catch (_) { /* ignore */ }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Layer: fork — what bkit does when a subagent reports back on a later turn
+//
+// ENH-474 (v2.1.37). Every case above runs with `-p`, and `-p` is where Claude
+// Code leaves fork mode OFF (code.claude.com/docs/en/sub-agents). So this
+// harness, which exists to catch dead surfaces, could not reach the surface
+// whose default flipped in v2.1.232 — the one that removes the Agent tool's
+// `run_in_background` parameter and delivers a subagent's result as a
+// notification on a later turn.
+//
+// The gap cannot be closed by making `-p` interactive. It CAN be closed at the
+// gate: "`1` turns fork mode on in non-interactive mode and the Agent SDK as
+// well" (sub-agents.md). Setting CLAUDE_CODE_FORK_SUBAGENT=1 puts a scripted
+// session on the same code path the interactive default now takes, which is the
+// thing worth testing.
+//
+// What this layer asserts is NOT that sprint measurement succeeds under fork
+// mode — it does not, by construction, because the result arrives after the turn
+// ends. It asserts the failure is HONEST: an unmeasured gate rather than a
+// score, and a message that names the likely cause. A wrong number and a missing
+// number are the same length in a report; only one of them is safe.
+// ---------------------------------------------------------------------------
+if (LAYERS.includes('fork')) {
+  console.log('\n=== fork mode (CLAUDE_CODE_FORK_SUBAGENT=1) ===');
+
+  const forkWork = fs.mkdtempSync(path.join(os.tmpdir(), 'bkit-fullqa-fork-'));
+  const FORK_ON = { CLAUDE_CODE_FORK_SUBAGENT: '1' };
+
+  // 1. The gate is reachable at all. If Claude Code ever stops honouring the env
+  //    var, every assertion below would pass vacuously against fork mode OFF —
+  //    which is exactly the "a dead surface looks like an unsampled one" failure
+  //    this harness was written to end. Proven by the Agent tool's own schema:
+  //    with fork on, `run_in_background` is removed from it.
+  {
+    const r = session(
+      'Without calling any tool, answer this from the Agent tool\'s parameter list '
+      + 'only: does the Agent tool accept a `run_in_background` parameter? '
+      + 'Reply with exactly one word, YES or NO.',
+      { cwd: forkWork, env: FORK_ON, timeout: 180000 }
+    );
+    const said = (r.out || '').toUpperCase();
+    const removed = /\bNO\b/.test(said) && !/\bYES\b/.test(said);
+    record('fork', 'fork gate is live: Agent tool has no run_in_background',
+      removed,
+      removed ? '' : `expected the parameter to be absent under fork mode; session said: ${(r.out || '').trim().slice(0, 200)}`);
+  }
+
+  // 2. A sprint gate measured under fork mode reports "not measured", never a
+  //    number. This is ENH-476's encoding observed end to end rather than in a
+  //    unit test: matchRate null and measured false, which routes iterate to
+  //    blocked and keeps M1 failing closed.
+  {
+    const probe = path.join(forkWork, 'fork-gate-probe.js');
+    fs.writeFileSync(probe, [
+      "const a = require(" + JSON.stringify(path.join(PROJECT_ROOT, 'lib/infra/sprint/gap-detector.adapter.js')) + ");",
+      '// The shape a background subagent produces for an in-turn await: nothing yet.',
+      "const r = a.parseGapDetectorOutput({ output: '' });",
+      'console.log(JSON.stringify({ matchRate: r.matchRate, measured: r.measured, gap: r.gaps[0] && r.gaps[0].id, detail: r.gaps[0] && r.gaps[0].description }));',
+    ].join('\n'));
+    const out = require('node:child_process')
+      .execFileSync(process.execPath, [probe], { encoding: 'utf8', env: { ...process.env, ...FORK_ON } });
+    let parsed = null;
+    try { parsed = JSON.parse(out.trim()); } catch (_) { /* handled below */ }
+    const honest = !!parsed && parsed.matchRate === null && parsed.measured === false;
+    record('fork', 'a gate that could not be measured reports no score', honest,
+      honest ? '' : `expected {matchRate:null, measured:false}, got: ${out.trim().slice(0, 200)}`);
+
+    const named = !!parsed && /fork mode/i.test(parsed.detail || '');
+    record('fork', 'the failure names fork mode as the likely cause', named,
+      named ? '' : `message did not mention fork mode: ${(parsed && parsed.detail || '').slice(0, 200)}`);
+  }
+
+  // 3. The version advisory fires for the release that made this the default.
+  //    ENH-437 exists so a user on v2.1.232 hears about it; a live check is what
+  //    distinguishes "the constant is present" from "the advisory reaches them".
+  {
+    const probe = path.join(forkWork, 'known-issue-probe.js');
+    fs.writeFileSync(probe, [
+      "const c = require(" + JSON.stringify(path.join(PROJECT_ROOT, 'lib/infra/cc-version-checker.js')) + ");",
+      "const { renderCCVersionWarning } = require(" + JSON.stringify(path.join(PROJECT_ROOT, 'hooks/startup/preflight.js')) + ");",
+      "const issues = c.listKnownIssues('2.1.232', {});",
+      "const w = renderCCVersionWarning({ current: '2.1.232', severity: 'warn', recommended: c.RECOMMENDED_VERSION, min: c.MIN_VERSION, inactive: [], knownIssues: issues });",
+      'console.log(JSON.stringify({ count: issues.length, warning: w }));',
+    ].join('\n'));
+    const out = require('node:child_process')
+      .execFileSync(process.execPath, [probe], { encoding: 'utf8' });
+    let parsed = null;
+    try { parsed = JSON.parse(out.trim()); } catch (_) { /* handled below */ }
+    const surfaced = !!parsed && parsed.count > 0 && typeof parsed.warning === 'string' && parsed.warning.length > 0;
+    record('fork', 'v2.1.232 surfaces a known-issue advisory at SessionStart', surfaced,
+      surfaced ? '' : `expected a rendered warning, got: ${out.trim().slice(0, 200)}`);
+
+    // And it must go quiet once the user has actually mitigated it, or it is
+    // noise that trains people to ignore the preflight block.
+    const probe2 = path.join(forkWork, 'known-issue-suppressed.js');
+    fs.writeFileSync(probe2, [
+      "const c = require(" + JSON.stringify(path.join(PROJECT_ROOT, 'lib/infra/cc-version-checker.js')) + ");",
+      "console.log(JSON.stringify({ n: c.listKnownIssues('2.1.232', { CLAUDE_CODE_FORK_SUBAGENT: '0' }).length }));",
+    ].join('\n'));
+    const out2 = require('node:child_process')
+      .execFileSync(process.execPath, [probe2], { encoding: 'utf8' });
+    let p2 = null;
+    try { p2 = JSON.parse(out2.trim()); } catch (_) { /* handled below */ }
+    const quiet = !!p2 && p2.n === 0;
+    record('fork', 'the advisory goes quiet once fork mode is turned off', quiet,
+      quiet ? '' : `expected 0 known issues with the mitigation set, got: ${out2.trim().slice(0, 120)}`);
+  }
+
+  try { fs.rmSync(forkWork, { recursive: true, force: true }); } catch (_) { /* ignore */ }
 }
 
 // ---------------------------------------------------------------------------

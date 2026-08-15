@@ -33,10 +33,6 @@ skills:
   - bkend-auth
   - bkend-storage
   - bkend-cookbook
-skills_preload:
-  - bkend-data
-  - bkend-auth
-  - bkend-storage
 ---
 
 ## When NOT to use this agent

@@ -26,9 +26,7 @@ tools:
   - Bash
   - Task(Explore)
   - Task(code-analyzer)
-linked-from-skills:
-  - cc-version-analysis: analyze
-skills_preload:
+skills:
   - bkit-rules
 ---
 

@@ -315,12 +315,17 @@ test('EXPECTED_COUNTS.hookBlocks = 24', () => assert.strictEqual(invariants.EXPE
 test('EXPECTED_COUNTS.mcpServers = 2', () => assert.strictEqual(invariants.EXPECTED_COUNTS.mcpServers, 2));
 test('EXPECTED_COUNTS.mcpTools = 19', () => assert.strictEqual(invariants.EXPECTED_COUNTS.mcpTools, 19));
 test('diffCounts with correct counts returns []', () => {
-  const d = invariants.diffCounts({ skills: 44, agents: 34, hookEvents: 21, hookBlocks: 24, mcpServers: 2, mcpTools: 19, actionTypes: 41 });
-  assert.deepStrictEqual(d, []);
+  // v2.1.37 (ENH-432): the SoT IS the correct counts, so restating them here
+  // only created a second place for them to go stale.
+  assert.deepStrictEqual(invariants.diffCounts({ ...invariants.EXPECTED_COUNTS }), []);
 });
 test('diffCounts detects skills drift', () => {
-  // Drift case: pass measured=45 while SoT=44 (drift +1 should be detected)
-  const d = invariants.diffCounts({ skills: 45, agents: 34, hookEvents: 21, hookBlocks: 24, mcpServers: 2, mcpTools: 19, actionTypes: 41 });
+  // v2.1.37 (ENH-432): derived from the SoT rather than hardcoded. The previous
+  // fixture restated every count, so changing any one of them failed this test
+  // for a field it was not about — which is the very drift these invariants
+  // exist to prevent, reproduced inside their own test.
+  const sot = invariants.EXPECTED_COUNTS;
+  const d = invariants.diffCounts({ ...sot, skills: sot.skills + 1 });
   assert.strictEqual(d.length, 1);
   assert.strictEqual(d[0].field, 'skills');
 });
