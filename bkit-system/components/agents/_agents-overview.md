@@ -3,6 +3,17 @@
 > List of 34 Agents defined in bkit and their roles (v2.1.13)
 > **v2.1.37**: Permission-mode awareness release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to the hook decision layer (bkit now reads `permission_mode`) and to guardrail rule precision. CC recommended: v2.1.220.
 >
+> **v2.1.37**: Permission-mode awareness + CC v2.1.228–v2.1.232 response — agent
+> count unchanged (34, model matrix invariant). Six agent definitions changed, none
+> of them a count or a model: 23 frontmatter declarations across six keys Claude
+> Code does not read were removed or moved to a field it does. Three agents whose
+> `skills` preloading had never happened — the key was `skills_preload`, which
+> appears nowhere in Claude Code's documentation — now preload the five skills they
+> declared, including code-analyzer's three, which the PDCA Check phase depends on.
+> `cc-version-researcher` drops the withdrawn sixth differentiation (ENH-432), and
+> `sprint-orchestrator` records that "await completion" may now span turns under
+> fork mode (ENH-478).
+>
 > **v2.1.36**: Guardrail precision release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to Destructive Detector rule precision (issue #148), config wiring, and the runtime-immutability decision recorded in ADR 0016. CC recommended: v2.1.220.
 >
 > **v2.1.35**: Correction release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to git-worktree detection correctness, the advisory text that described it, and the repository-wide `child_process` argv migration. CC recommended: v2.1.220.

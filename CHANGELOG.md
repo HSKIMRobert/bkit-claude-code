@@ -5,13 +5,178 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.37] - 2026-08-14
+## [2.1.37] - 2026-08-15
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
 
-> **Status**: Permission-mode awareness release. Reported by the maintainer
-> running `claude --dangerously-skip-permissions` and being stopped at
-> `PreToolUse` anyway, every session. Measured against Claude Code v2.1.231.
+> **Status**: Two responses in one release. Permission-mode awareness, reported by
+> the maintainer running `claude --dangerously-skip-permissions` and being stopped
+> at `PreToolUse` anyway; and the Claude Code v2.1.228–v2.1.232 impact response.
+> Measured against Claude Code v2.1.231 and v2.1.232.
+
+### Claude Code v2.1.228 → v2.1.232 response
+
+100 CHANGELOG bullets across four releases (v2.1.230 was never published).
+Breaking changes: **0** — the hook contract is byte-identical across all four
+binaries, which takes consecutive compatible releases to **171**. What changed is
+a default, and defaults are harder to notice than contracts.
+
+**CC v2.1.232 turns fork mode on by default in interactive sessions, and removes
+the Agent tool's `run_in_background` parameter with it.** A subagent's result now
+arrives as a notification on a later turn, and the model cannot ask for the
+foreground. bkit's skill path is unaffected — v2.1.31's `background: false` on the
+eight `context: fork` skills still holds, confirmed in the binary rather than
+inferred, because the skill's background decision never consults the fork gate.
+The Agent-spawn path is affected, and five sprint sites await a result inside the
+turn that spawned it.
+
+Ten items were carried over from earlier cycles rather than renumbered. ENH-420
+through ENH-439 had produced exactly one landed item across two releases while
+the ledger advanced to 473; assigning fresh numbers to the same work is how that
+happens.
+
+#### Withdrawn
+
+- **ENH-432** — **"PostToolUse continueOnBlock" was not unimplemented. It was
+  unimplementable.** `continueOnBlock` is a configuration field on a PROMPT-type
+  hook definition, confirmed at three places in the v2.1.232 binary: it sits among
+  the `PromptHookSchema` keys, its `describe` text reads "for this specific prompt
+  evaluation", and the consumer reads it off the hook definition object inside the
+  "Prompt hook condition was not met" branch. All 28 bkit hook handlers are
+  `"type": "command"`. No bkit hook can carry the field.
+
+  It was advertised on four surfaces: the differentiation table, the marketplace
+  description a user reads before installing, a code comment claiming the emission,
+  and a dedicated `post_tool_block_recorded` action type that nothing ever wrote
+  (ACTION_TYPES 41 → 40). bkit now claims five differentiations.
+
+  The test that let it survive matters more than the claim. C-07 asserted that the
+  string "PostToolUse continueOnBlock" appeared in a markdown file — true of a
+  claim nobody implemented, true of a claim nobody can implement, true of a claim
+  that is simply wrong. A regex over source text does not verify a feature. Its
+  replacement asserts that every hook handler is still command-type, so if bkit
+  ever ships a prompt hook the claim can be re-examined on evidence.
+
+#### Fixed
+
+- **ENH-437** — the CC version check had no upper bound. `MIN_VERSION` and
+  `RECOMMENDED_VERSION` are both floors, so every release above the recommendation
+  was graded `ok` and `renderCCVersionWarning()` returns null on `ok`. bkit held
+  its recommendation at v2.1.220 across five CC releases while classifying
+  v2.1.232's fork default as unvalidated, and said nothing, because there was no
+  branch in which it could. `KNOWN_ISSUES` is a range list rather than a version
+  list — a changed default persists into every later release — and an entry
+  suppresses itself when a documented mitigation is already set.
+
+- **ENH-477** — **G-005 had never fired for the file it names, and had been firing
+  on ordinary JavaScript instead.** `\b` is a transition between a word and a
+  non-word character, and the character before a leading `.` is a space, a `/`, or
+  the start of the string. Measured against the shipped rule: `.env`, `cat .env`
+  and `./.env` produced no match, while `process.env.NODE_ENV` and
+  `import.meta.env.VITE_KEY` matched. Wrong in both directions at once, which is
+  why neither half surfaced as a complaint — the false negative is silent by
+  construction, and the false positive looked like the guard working. v2.1.36's
+  false-positive audit did not catch it because its corpus was Bash commands, and
+  `process.env.X` arrives through `content` on an Edit.
+
+- **ENH-481** — the Write/Edit path tested `rule.pattern` and nothing else,
+  skipping `suppressIf` entirely, so both suppressed rules answered differently
+  depending on which tool carried the payload. `ls -la ./certs/server.pem` was
+  exempt under ENH-445 for a Bash command and was not exempt here. Found while
+  fixing G-005, when a suppressor that returned true for its segment did not
+  suppress the rule. Same class as ENH-441.
+
+- **ENH-476** — four of the five ways a gap measurement can fail to happen
+  returned `matchRate: 0, measured: true`, which asserts two things that are both
+  false. The cost was not only the wrong number: `isMeasured()` accepts any finite
+  matchRate, so a 0 from `parse_fail` looked like a real measurement and the
+  iterate loop ran auto-fix up to maxIterations against a gap list whose one entry
+  was "no JSON in output". Reported honestly the loop exits at once and still
+  fails the gate. ENH-412's ruling on an unusable number inside valid JSON stands.
+
+- **ENH-433** — `outputAllow` printed bare text for every event except two, and
+  Claude Code writes that to the debug log rather than showing it to the model.
+  26 of 32 call sites passed a non-empty message on such an event. The nine events
+  that document `additionalContext` now deliver through it; the rest still print,
+  because Claude Code logs it and bkit's Stop tests read the line as a liveness
+  signal, but the debug entry says it was not delivered. What changed is the
+  belief, not the bytes.
+
+- **ENH-434 / ENH-480** — 23 agent frontmatter declarations across six keys Claude
+  Code does not read. Plugin-bundled agents skip frontmatter validation, so each
+  loaded and was ignored: `skills_preload` (4, the field is `skills`, and three
+  agents had no `skills` key at all so six preload entries never loaded — including
+  code-analyzer's, which runs the PDCA Check phase), `linked-from-skills` (10, a
+  reverse index of a link already live in the other direction), `imports` (4, whose
+  resolver accepts agent files but whose callers all pass a skill path, and Claude
+  Code loads agent definitions so bkit has no injection point), `context` and
+  `mergeResult` (2 each, skill fields that made two agents look like fork agents),
+  `when_to_use` (1, merged into `description`).
+
+#### Added
+
+- **ENH-477** — three guardrail rules for git commands that destroy work, taking
+  the rule set to 19. G-016 `git clean -f*` deletes untracked files with no reflog
+  entry to recover from; G-017 covers the three spellings that discard uncommitted
+  work, graded `ask` to match `git reset --hard` rather than grading one
+  consequence three ways; G-018 covers expiring the reflog and pruning now, which
+  destroys the safety net the others depend on.
+
+  `--amend` and `--no-verify` are deliberately NOT guarded, and the tests say so.
+  An amended commit survives in the reflog and publishing the rewrite needs a
+  force push, which is G-002; `--no-verify` bypasses a check and destroys nothing.
+  Adding them would have regressed v2.1.36's twelve-false-positives-to-one.
+
+- **ENH-421** — `scripts/cc-binary-equivalence.js`. Three cycles reconstructed the
+  same binary measurement by hand and twice got the command form wrong first. The
+  script reproduces cycle #37's hand measurements exactly, in one read per build
+  instead of one grep per needle, and carries each erratum beside the line that
+  enforces it.
+
+- **ENH-420 / ENH-422** — the opaque-release protocol and binary provenance, in
+  the skill. CC v2.1.226 shipped one non-specific bullet, which leaves a cycle to
+  either invent an answer or measure one. The provenance record's last field is
+  the platforms NOT examined: `GIT_SHA` moved between 225 and 226 while the bundle
+  did not, so the honest claim is scoped to one binary.
+
+- **ENH-474** — a `fork` layer in the live QA harness. Every existing case runs
+  with `-p`, which is exactly where fork mode is off, so the harness could not
+  reach the surface whose default changed. `CLAUDE_CODE_FORK_SUBAGENT=1` puts a
+  scripted session on the same path, and the layer proves the gate is live before
+  asserting anything under it. Measured live: 5 pass, 0 fail.
+
+- **ENH-475** — `lib/domain/policy/fork-mode-advisory.js`. Five spawn sites
+  described the symptom ("no JSON in output", "expected { output: string }", and
+  in auto-fixer's case nothing at all). The advisory names the likely cause and
+  the remedy, as a lead rather than a diagnosis — bkit cannot observe fork mode —
+  and suppresses itself once a documented mitigation is set.
+
+#### Recorded, not fixed
+
+- **ENH-482** — no Stop script uses `outputStopSurface`; all seven emit through
+  `outputAllow(msg, 'Stop')`, so unified-stop.js's next-action hint has never
+  reached the model. The only channel that would deliver it is
+  `{decision:'block', reason}`, which forces the turn to continue. Turning every
+  clean stop into a continuation is a product decision, and making it as a side
+  effect of an output-routing fix would be the wrong way to decide it.
+
+#### Docs = Code
+
+Consecutive compatible releases 170 → **171**. Guardrail rules 16 → **19** (ADR
+0016 in both languages, AI-NATIVE-DEVELOPMENT). Lib modules 199 → **200**, scripts
+62 → **63**, ACTION_TYPES 41 → **40**, across README, README-FULL,
+CUSTOMIZATION-GUIDE, AI-NATIVE-DEVELOPMENT and marketplace.json. The historical
+counts in README and CHANGELOG describe what the v2.1.36 audit covered and are
+left alone: a count that states current fact and a count that records history are
+different claims.
+
+`docs/` bilingual completeness restored — a repository-wide audit found exactly
+one unpaired base of 56, and `cc-v2225-v2226-impact-analysis.report.en.md` closes
+it (ENH-436).
+
+Reports: `docs/04-report/features/cc-v2228-v2232-impact-analysis.report.{ko,en}.md`.
+
+### Permission-mode awareness
 
 ### Headline
 
