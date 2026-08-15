@@ -112,7 +112,7 @@ Layer 1: hooks.json          → SessionStart, PreToolUse, PostToolUse hooks
 Layer 2: Skill Frontmatter   → hooks: PreToolUse, PostToolUse, Stop
 Layer 3: Agent Frontmatter   → hooks: PreToolUse, PostToolUse
 Layer 4: Description Triggers → "Triggers:" keyword matching
-Layer 5: Scripts             → Actual Node.js logic execution (62 scripts)
+Layer 5: Scripts             → Actual Node.js logic execution (63 scripts)
 ```
 
 This separation allows fine-grained control over when and how automation triggers.
@@ -189,7 +189,7 @@ bkit is not just a collection of prompts—it's a **production-grade plugin arch
 | **Agents** | 34 | Specialized AI subagents (memory persistence). v2.1.13 added 4 sprint agents (`sprint-master-planner` · `sprint-orchestrator` · `sprint-qa-flow` · `sprint-report-writer`). |
 | **Skills** | 44 | Domain knowledge and slash commands (v2.1.13 added `sprint` skill; v2.1.11 added bkit-evals, bkit-explore, pdca-watch, pdca-fast-track) |
 | **Commands** | DEPRECATED | Migrated to Skills in v1.4.4+ |
-| **Scripts** | 62 | Hook execution scripts (v2.1.13 added `sprint-handler.js` 660 LOC + `sprint-memory-writer.js` 138 LOC; v2.1.11 adds check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh) |
+| **Scripts** | 63 | Hook execution scripts (v2.1.13 added `sprint-handler.js` 660 LOC + `sprint-memory-writer.js` 138 LOC; v2.1.11 adds check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh) |
 | **Templates** | 40 | Document templates (PDCA + 9 phases + shared + **7 sprint templates** v2.1.13: master-plan/prd/plan/design/iterate/qa/report) |
 | **Hooks** | 21 events / 24 blocks | Event-driven automation (centralized in hooks.json, invariant maintained, 3 attribution sites: Stop/SessionEnd/SubagentStop) |
 | **lib/** | 200 modules across 22 subdirs | **Clean Architecture 4-Layer with 7 Port↔Adapter pairs**: Domain (ports 7 + guards 4 + rules + **policy** v2.1.37) / Application (cc-regression + pdca + pdca-lifecycle + **sprint-lifecycle** v2.1.13 + team) / Infrastructure (cc-bridge + telemetry + docs-code-scanner + mcp-port-registry + mcp-test-harness + cc-version-checker + branding + **sprint** v2.1.13 with 9 adapters) / Presentation (hooks + scripts). Subdirs: application, audit, cc-regression, control, core, dashboard, defense, discovery, domain, evals, i18n, infra, intent, orchestrator, pdca, qa, quality, sprint, task, team, ui, util. |
@@ -879,7 +879,7 @@ bkit-claude-code/
 ├── hooks/
 │   ├── hooks.json                  # Claude Code hook configuration (21 events)
 │   └── session-start.js            # Session initialization (Node.js)
-├── scripts/                        # Hook execution scripts (62 scripts — v2.1.11 additions: check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh)
+├── scripts/                        # Hook execution scripts (63 scripts — v2.1.11 additions: check-trust-score-reconcile, check-quality-gates-m1-m10, release-plugin-tag.sh)
 │   └── *.js
 ├── output-styles/                  # Level-based response formatting (v1.5.3)
 │   ├── bkit-learning.md            # Starter level style
@@ -1765,6 +1765,14 @@ In your project's `.claude/settings.json`:
   }
 }
 ```
+
+> **Key aliases (Claude Code v2.1.232+)**: `additionalMarketplaces` is accepted as
+> an alias for `extraKnownMarketplaces`, and `allowedMarketplaces` for
+> `strictKnownMarketplaces`. The canonical names above work on every supported
+> version and are what this guide uses. Do not set both spellings of the same key
+> in one file — Claude Code's own note on the alias says so explicitly, and two
+> names for one setting is how a value gets edited in the place that is not being
+> read.
 
 ### Enterprise Deployment via Managed Settings
 

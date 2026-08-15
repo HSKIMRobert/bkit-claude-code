@@ -118,7 +118,9 @@
         "hasSKILLmd": true,
         "frontmatterName": "cc-version-analysis",
         "frontmatterModel": null,
-        "handlerReferences": []
+        "handlerReferences": [
+          "scripts/cc-binary-equivalence.js"
+        ]
       }
     },
     {
@@ -401,6 +403,19 @@
         "frontmatterModel": null,
         "handlerReferences": []
       }
+    }
+  ],
+  "amendments": [
+    {
+      "at": "2026-08-15",
+      "bkitVersion": "2.1.37",
+      "enh": "ENH-420",
+      "skill": "cc-version-analysis",
+      "from": [],
+      "to": [
+        "scripts/cc-binary-equivalence.js"
+      ],
+      "reason": "The opaque-release protocol section added in ENH-420 names the script that performs the binary measurement (ENH-421). findHandlerReferences() matches any scripts/*.js in prose, so a documented diagnostic tool reads as a handler reference; the reference is intended and the freeze is amended rather than edited."
     }
   ]
 }

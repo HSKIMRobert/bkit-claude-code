@@ -66,6 +66,16 @@ NEVER use Promise.all when spawning specialists. Sequential only:
 3. Task({ subagent_type: 'sprint-report-writer', ...  }) — await completion
 ```
 
+**"Await completion" may span turns (ENH-478, v2.1.37).** On Claude Code v2.1.232
+and later, an interactive session runs subagents in the background by default and
+delivers each result as a completion notification on a later turn; the Agent
+tool's `run_in_background` parameter is removed, so the foreground cannot be
+requested. Sequential dispatch still holds — start the next specialist only after
+the previous one's result has arrived — but "after" is now measured in turns
+rather than within one. Do not fabricate or predict a pending subagent's result
+to keep the sequence moving inside a single turn; wait for the notification. With
+`-p` or `CLAUDE_CODE_FORK_SUBAGENT=0` the original in-turn behaviour applies.
+
 This protects against the #56293 sub-agent caching 10x regression that
 remains unresolved upstream in CC. bkit differentiator #3 (Sequential
 Dispatch moat) self-applied.

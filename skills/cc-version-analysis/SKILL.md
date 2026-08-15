@@ -235,6 +235,66 @@ A second fetch against raw CHANGELOG.md is required to catch this.
 | Breaking | N | M | raw CHANGELOG | match / errata |
 | Total bullets | N | M | sum | match / errata |
 
+### Phase 1.6: Opaque Release Protocol (MANDATORY when triggered — ENH-420)
+
+**Trigger**: the range's CHANGELOG carries **≤ 1 bullet**, OR its bullets are
+non-specific ("Bug fixes and reliability improvements"). CC v2.1.226 was the
+first instance and will not be the last.
+
+**Why this exists**: an opaque release makes CHANGELOG-based analysis worth
+exactly nothing, and the cycle either invents an answer or measures one. Cycle
+#35 measured, and the measurement carried the whole report — but it took 15+
+manual tool calls to re-derive a procedure nobody had written down, and it
+produced a false positive along the way (ERRATA-35-1) before catching it.
+
+**Procedure** (main session, not delegated):
+
+1. Run `node scripts/cc-binary-equivalence.js <from> <to>` (ENH-421). It reports
+   file size, sha256, Mach-O segment sizes, and exact `grep -a -o -F` counts for
+   every hook-contract marker, in one pass per build.
+2. Read the segment table before the marker table. Identical `__TEXT` /
+   `__DATA_CONST` / `__DATA` with a moving `__BUN` means a **payload swap**, not a
+   native rebuild — a distinction the file size alone hides.
+3. If no marker moved, the range is **equivalent on the measured surfaces**, and
+   that is the finding. State the surfaces; do not generalize past them.
+4. **Transfer rule**: when two builds are equivalent, every judgement made about
+   the earlier one carries forward unchanged — compatibility, risk, tracked-issue
+   state. Nothing needs re-evaluating, and saying so explicitly is more useful
+   than re-deriving it.
+5. **"No change" is itself a reason RECOMMENDED_VERSION cannot rise.** An
+   equivalent release resolves nothing, so a hold stays a hold.
+
+**Method rules, each of which cost a cycle:**
+
+- **ERRATA-35-1**: a `strings` set diff is NOT evidence. Trailing-byte artifacts
+  alone produced 1,315 added / 1,226 removed on two builds that turned out to be
+  equivalent. Only exact counts on the raw file count.
+- **ERRATA-37-2**: a needle beginning with `-` is parsed as an option by ugrep and
+  silently returns 0, which reads as absence. Use `grep -a -o -F -e '<needle>'`.
+- **ERRATA-37-6**: a misspelled needle also returns a silent 0. Measure spelling
+  variants together — `runInBackground` was 0 in three builds while
+  `run_in_background` was 49.
+- **ERRATA-33-6**: the CHANGELOG paraphrases the implementation. A count of 0 for
+  a term lifted from the release notes does not mean the fix is absent.
+- **ERRATA-36-6**: `cmp -l` over two ~300 MB binaries exceeds a two-minute budget,
+  and `cmp -n` / `-i` return wrong results on this artifact. Do not use them.
+
+**Binary provenance (ENH-422)** — record these in the report and in the cycle
+memory, for every build examined. They scope the claim honestly and make
+cross-platform gaps trackable rather than invisible:
+
+| Field | Where from |
+|-------|-----------|
+| architecture | `file <binary>` (e.g. Mach-O 64-bit x86_64) |
+| file size | `stat` / the script's table |
+| sha256 | the script's table |
+| `GIT_SHA`, `BUILD_TIME` | the build banner inside the bundle |
+| platforms NOT examined | stated explicitly |
+
+The last row is the one that matters. `GIT_SHA` moving while the bundle does not
+means upstream commits exist; the honest claim is "those commits did not change
+the shipped macOS x86_64 bundle", never "there were no commits".
+
 ### Phase 2: Analyze (Agent: bkit-impact-analyst)
 
 **Input**: Phase 1 CC Change Report **PLUS Phase 1.5 verification table**
