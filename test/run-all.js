@@ -330,8 +330,10 @@ const CATEGORIES = {
       'regression/qa-pipeline-wiring.test.js',
       // QA follow-ups — the stdin handoff, QA_RETRY, and three agent/skill gaps.
       'regression/qa-followups.test.js',
+      // The last three Stop handlers that regexed the payload envelope.
+      'regression/stop-handler-extraction.test.js',
     ],
-    expected: 660,
+    expected: 688,
   },
   performance: {
     name: 'Performance Tests',

@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Direct module imports
-const { readStdinSync, outputStopSurface, outputStopAllow } = require('../lib/core/io');
+const { readStdinSync, readHookText, outputStopSurface, outputStopAllow } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getPdcaStatusFull, updatePdcaStatus, extractFeatureFromContext } = require('../lib/pdca/status');
 const {
@@ -53,7 +53,14 @@ try {
   process.exit(0);
 }
 
-const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+/*
+ * Read the skill's OUTPUT, not the envelope it arrived in. `JSON.stringify(input)`
+ * yielded hook_event_name / session_id / transcript_path / cwd, and `actionPattern`
+ * was matched against that — so `action` was always null, and null disables most
+ * of this handler: the PDCA status update, the auto-transition, the executive
+ * summary, and the M8/M10 metrics are all gated on it.
+ */
+const inputText = readHookText(input);
 
 debugLog('Skill:pdca:Stop', 'Input received', {
   inputLength: inputText.length,
@@ -64,7 +71,6 @@ debugLog('Skill:pdca:Stop', 'Input received', {
 // Patterns: "pdca plan", "pdca design", "/pdca analyze", etc.
 const actionPattern = /pdca\s+(pm|plan|design|do|analyze|iterate|qa|report|status|next)/i;
 const actionMatch = inputText.match(actionPattern);
-const action = actionMatch ? actionMatch[1].toLowerCase() : null;
 
 // Extract feature name
 const currentStatus = getPdcaStatusFull();
@@ -72,6 +78,40 @@ const feature = extractFeatureFromContext({
   agentOutput: inputText,
   currentStatus
 });
+
+/*
+ * Fall back to the phase the cycle is actually in.
+ *
+ * The invocation text is the better signal when present, but it is not
+ * guaranteed to be: the skill may be entered without the literal words "pdca
+ * design" appearing in what the model then says. Recorded state is the second
+ * source, and it is the one that cannot be phrased away — pdca-status is
+ * written by the phase transition itself.
+ *
+ * Read through `features[...].phase`, never `status.currentPhase`. That key was
+ * retired by the v3 migration and reading it yields undefined, which does not
+ * throw — the guard it feeds simply never fires. test/contract/
+ * state-schema-keys.test.js exists because exactly that happened once already.
+ */
+const PHASE_TO_ACTION = {
+  pm: 'pm',
+  plan: 'plan',
+  design: 'design',
+  do: 'do',
+  check: 'analyze',
+  act: 'iterate',
+  qa: 'qa',
+  report: 'report',
+};
+
+function actionFromPhase() {
+  const features = currentStatus?.features || {};
+  const key = feature || currentStatus?.primaryFeature;
+  const phase = (key && features[key]?.phase) || currentStatus?.activePdca?.phase;
+  return phase ? (PHASE_TO_ACTION[String(phase).toLowerCase()] || null) : null;
+}
+
+const action = actionMatch ? actionMatch[1].toLowerCase() : actionFromPhase();
 
 debugLog('Skill:pdca:Stop', 'Context extracted', {
   action,

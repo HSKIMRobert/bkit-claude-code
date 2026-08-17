@@ -22,9 +22,10 @@
 // so top-level return is valid.
 if (require.main !== module) { module.exports = {}; return; }
 
-const { readStdinSync, outputStopSurface } = require('../lib/core/io');
+const { readStdinSync, readHookText, outputStopSurface } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getBkitConfig } = require('../lib/core/config');
+const matchRateRules = require('../lib/quality/match-rate');
 const {
   updatePdcaStatus,
   extractFeatureFromContext,
@@ -45,9 +46,18 @@ const {
 // Log execution start
 debugLog('Agent:pdca-iterator:Stop', 'Hook started');
 
-// Read conversation context from stdin
+/*
+ * Read the iterator's REPORT, not the envelope it arrived in.
+ *
+ * `JSON.stringify(input)` yielded the hook payload as text — hook_event_name,
+ * session_id, transcript_path, cwd — and the completion, max-iteration,
+ * improvement and changed-files patterns below were all matched against that.
+ * None of them can appear there, so every one of them was permanently false and
+ * the branch selection fell entirely to its numeric fallbacks. The iterator's
+ * own account of what it did was never read.
+ */
 const input = readStdinSync();
-const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+const inputText = readHookText(input);
 
 debugLog('Agent:pdca-iterator:Stop', 'Input received', {
   inputLength: inputText.length,
@@ -68,7 +78,17 @@ const currentIteration = (featureStatus?.iterationCount || 0) + 1;
 // Try to extract match rate from output (if re-analyzed)
 const matchRatePattern = /(Overall|Match Rate|매치율|일치율|Design Match)[^0-9]*(\d+)/i;
 const matchMatch = inputText.match(matchRatePattern);
-const matchRate = matchMatch ? parseInt(matchMatch[2], 10) : (featureStatus?.matchRate || 0);
+/*
+ * An iteration that stated no rate is UNMEASURED, not 0% — the same distinction
+ * gap-detector-stop.js draws (v2.1.34). `|| 0` mattered more here than it looks:
+ * `isMeasured(0)` is true, so the fabricated zero passed as a real reading into
+ * the M9 efficiency calculation below, where `improvement = 0 - prevMatchRate`
+ * turned a parse failure into a recorded regression.
+ */
+const storedMatchRate = matchRateRules.isMeasured(featureStatus?.matchRate)
+  ? featureStatus.matchRate
+  : null;
+const matchRate = matchMatch ? parseInt(matchMatch[2], 10) : storedMatchRate;
 
 debugLog('Agent:pdca-iterator:Stop', 'Data extracted', {
   feature: feature || 'unknown',
@@ -80,6 +100,10 @@ debugLog('Agent:pdca-iterator:Stop', 'Data extracted', {
 const config = getBkitConfig();
 const threshold = config.pdca?.matchRateThreshold || 90;
 const maxIterations = config.pdca?.maxIterations || 5;
+
+// Declared here rather than beside matchRate because `threshold` is read from
+// config below it. Unmeasured never counts as reaching the target.
+const matchRateReached = matchRateRules.isMeasured(matchRate) && matchRate >= threshold;
 
 // Patterns for detection
 const completionPattern = /(완료|Complete|Completed|>= 90%|매치율.*9[0-9]%|Match Rate.*9[0-9]%|passed|성공|Successfully)/i;
@@ -96,7 +120,7 @@ let status = 'in_progress';
 let userPrompt = null;
 
 // Check if completed successfully
-if (completionPattern.test(inputText) || matchRate >= threshold) {
+if (completionPattern.test(inputText) || matchRateReached) {
   status = 'completed';
   guidance = `✅ pdca-iterator complete!
 
@@ -110,14 +134,14 @@ Next steps:
 🎉 Check-Act iteration succeeded! (${currentIteration} iterations)`;
 
   // Mark feature as completed if match rate >= threshold
-  if (feature && matchRate >= threshold) {
+  if (feature && matchRateReached) {
     completePdcaFeature(feature);
   }
 
   // v1.4.0: Generate completion prompt
   userPrompt = emitUserPrompt({
     questions: [{
-      question: `Improvement complete! (${matchRate}%) Generate report?`,
+      question: `Improvement complete! (${matchRateRules.format(matchRate)}) Generate report?`,
       header: 'Completed',
       options: [
         { label: 'Generate report (Recommended)', description: `Run /pdca-report ${feature || ''}` },
@@ -135,7 +159,7 @@ Next steps:
   guidance = `⚠️ pdca-iterator: Maximum iterations reached (${currentIteration}/${maxIterations})
 
 Auto-improvement repeated but target not reached.
-Current match rate: ${matchRate}%
+Current match rate: ${matchRateRules.format(matchRate)}
 
 Recommended actions:
 1. Manually fix remaining differences
@@ -147,7 +171,7 @@ Recommended actions:
   // v1.4.0: Generate max iterations prompt
   userPrompt = emitUserPrompt({
     questions: [{
-      question: `Maximum iterations reached (${matchRate}%). How to proceed?`,
+      question: `Maximum iterations reached (${matchRateRules.format(matchRate)}). How to proceed?`,
       header: 'Max Iterations',
       options: [
         { label: 'Manual fix', description: 'Fix code manually then re-analyze' },
@@ -164,7 +188,7 @@ Recommended actions:
   guidance = `✅ Improvement complete: ${changedFiles > 0 ? `${changedFiles} files modified` : 'Changes applied'}
 
 Iterations: ${currentIteration}/${maxIterations}
-Current match rate: ${matchRate}%
+Current match rate: ${matchRateRules.format(matchRate)}
 
 Next steps:
 1. Run re-analysis with /pdca-analyze ${feature || ''}
@@ -192,7 +216,7 @@ Next steps:
   guidance = `🔄 pdca-iterator work complete (iteration ${currentIteration})
 
 Modifications complete.
-Current match rate: ${matchRate}%
+Current match rate: ${matchRateRules.format(matchRate)}
 
 Next steps:
 1. Re-evaluate with /pdca-analyze ${feature || ''} to check match rate
@@ -243,7 +267,9 @@ try {
     feature: feature || 'unknown',
     iteration: currentIteration,
     metadata: {
-      matchRateBefore: featureStatus?.matchRate || 0,
+      // `|| 0` here would record a before/after pair implying a regression from
+      // 0% that nobody measured. storedMatchRate is already the vetted value.
+      matchRateBefore: storedMatchRate,
       matchRateAfter: matchRate,
       changedFiles,
       status
@@ -255,7 +281,7 @@ try {
   }
 
   // Auto-create [Report] Task if completed
-  if (status === 'completed' && matchRate >= threshold) {
+  if (status === 'completed' && matchRateReached) {
     const reportTask = autoCreatePdcaTask({
       phase: 'report',
       feature: feature || 'unknown',
@@ -351,7 +377,7 @@ const sessionTitle = generateSessionTitle({ action: 'ACT', feature, sessionId: i
 // hookSpecificOutput/sessionTitle/userPrompt/iterationResult. Diagnostics → debugLog.
 void sessionTitle; void userPrompt;
 const reason = [
-  `Iterator complete. Iterations: ${currentIteration}/${maxIterations}, Match rate: ${matchRate}%`,
+  `Iterator complete. Iterations: ${currentIteration}/${maxIterations}, Match rate: ${matchRateRules.format(matchRate)}`,
   '',
   guidance,
   '',

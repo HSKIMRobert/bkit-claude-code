@@ -124,6 +124,42 @@ the first four.
 Regression coverage: `test/regression/qa-followups.test.js` (27 TC), registered
 in `test/run-all.js`.
 
+### Fixed — the last three Stop handlers read the payload envelope
+
+`gap-detector-stop.js`, `iterator-stop.js` and `pdca-skill-stop.js` all built
+their match target as `typeof input === 'string' ? input : JSON.stringify(input)`
+— the hook envelope (`hook_event_name`, `session_id`, `transcript_path`, `cwd`),
+never the agent's report. Delivering a real payload to these handlers (previous
+entry) was necessary but not sufficient: the envelope carries none of the signals
+they look for, and each is now asserted not to.
+
+- **gap-detector-stop** could never extract a match rate. Its unmeasured handling
+  was already correct (v2.1.34), so the effect was not a wrong number but a
+  permanent absence — M1 and M4 were never collected from the analysis itself.
+
+- **iterator-stop** matched its completion, max-iteration, improvement and
+  changed-files patterns against the envelope, so all four were permanently
+  false and branch selection fell entirely to numeric fallbacks — the iterator's
+  own account of what it did was never read. Its `featureStatus?.matchRate || 0`
+  fallback also fabricated a measurement, and `isMeasured(0)` is `true`, so the
+  fabricated zero passed as a real reading into the M9 efficiency calculation
+  where `improvement = 0 - prevMatchRate` recorded a regression that never
+  happened. Now routed through `lib/quality/match-rate`, matching what
+  gap-detector-stop already does; threshold comparisons go through a measured
+  guard, and user-facing text renders "not measured" instead of `null%`.
+
+- **pdca-skill-stop** matched `pdca (plan|design|…)` against the envelope, so
+  `action` was always `null` — and `null` disables most of the handler: the PDCA
+  status update, the auto-transition, the executive summary, and the M8/M10
+  metrics are all gated on it. Now falls back to the phase recorded in
+  `features[…].phase` when the text is silent. Deliberately not
+  `status.currentPhase`: that key was retired by the v3 migration, and reading it
+  returns `undefined` without throwing, which is the exact failure
+  `test/contract/state-schema-keys.test.js` was written to catch.
+
+Regression coverage: `test/regression/stop-handler-extraction.test.js` (28 TC),
+registered in `test/run-all.js`.
+
 ## [2.1.37] - 2026-08-15
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.
