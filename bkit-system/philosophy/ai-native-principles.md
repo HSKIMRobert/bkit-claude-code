@@ -25,7 +25,7 @@ A development approach where AI operates as **a controllable partner leading the
 
 | Competency | bkit Feature |
 |------------|--------------|
-| Verification | gap-detector agent, quality gates (7 stages), metrics collector (M1-M10), regression guard |
+| Verification | gap-detector agent, quality gates (7 stages), metrics collector (M1-M16), regression guard |
 | Direction | State machine-driven PDCA, design-first workflow, PM Agent Team (5 agents), plan-plus brainstorming |
 | Quality | code-analyzer agent, bkit-rules skill, destructive-detector (19 known-pattern rules, segment-scoped; target-graded where the target decides the stakes), blast radius analysis |
 
@@ -40,7 +40,7 @@ A development approach where AI operates as **a controllable partner leading the
 | **Methodology** | Waterfall or Agile (manual) | Declarative PDCA state machine (25 transitions, 9 guards) |
 | **Automation** | All manual or all-or-nothing | 5-level controllable automation (L0-L4) |
 | **Documentation** | Code first, docs later | State machine enforces Plan → Design → Do |
-| **Quality** | Manual QA team testing | Quality gates (7 stages) + Zero Script QA + metrics (M1-M10) |
+| **Quality** | Manual QA team testing | Quality gates (7 stages) + Zero Script QA + metrics (M1-M16) |
 | **Transparency** | AI decisions opaque | Audit logger + decision tracer + CLI dashboard |
 | **Safety** | Trust the AI blindly | Trust Score + destructive detection + checkpoint/rollback |
 | **Knowledge** | Scattered docs | Regression guard + PDCA report auto-generation |
@@ -107,7 +107,7 @@ To-Be: Configure quality gates + Monitor metrics dashboard
 | **Design-Implementation Gap** | 30-50% | Under 5% (gap-detector + pdca-iterator) |
 | **Code Consistency** | Varies by developer | Auto-applied conventions + regression guard |
 | **Security Vulnerabilities** | Found post-hoc | Destructive detector (19 known-pattern rules, segment-scoped; target-graded where the target decides the stakes) + blast radius analysis |
-| **Technical Debt** | Accumulates | Metrics collector (M1-M10) + continuous monitoring |
+| **Technical Debt** | Accumulates | Metrics collector (M1-M16) + continuous monitoring |
 | **AI Decision Transparency** | None | Full audit trail (JSONL) + decision tracer |
 
 ---

@@ -64,7 +64,7 @@ bkit is a **practical implementation of Context Engineering**, providing a syste
 │  │ (NEW v2.0.0)     │  │ (NEW v2.0.0)     │  │ (NEW v2.0.0)           │   │
 │  │                  │  │                  │  │                          │   │
 │  │ • 7-stage gates  │  │ • JSONL logging  │  │ • Progress bar          │   │
-│  │ • Metrics M1-M10 │  │ • Decision trace │  │ • Workflow map           │   │
+│  │ • Metrics M1-M16 │  │ • Decision trace │  │ • Workflow map           │   │
 │  │ • Regression     │  │ • Explanation gen │  │ • Control panel         │   │
 │  │   guard          │  │                  │  │ • Agent panel            │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────────┘   │
@@ -98,7 +98,7 @@ bkit is a **practical implementation of Context Engineering**, providing a syste
 | `lib/ui/` | 7 | 23 | Progress bar, workflow map, control panel, agent panel, impact view |
 | `lib/audit/` | 3 | 35+ | Audit logger (JSONL), decision tracer, explanation generator |
 | `lib/control/` | 7 | 62+ | Automation controller (L0-L4), trust engine, destructive detector, blast radius, checkpoint manager, scope limiter |
-| `lib/quality/` | 3 | 20+ | Gate manager (7 gates), metrics collector (M1-M10), regression guard |
+| `lib/quality/` | 3 | 20+ | Gate manager (7 gates), metrics collector (M1-M16), regression guard |
 | `lib/adapters/` | 0 | 0 | Reserved for future platform adapters |
 | **Top-level** | 7 | 63 | context-fork, context-hierarchy, import-resolver, memory-store, permission-manager, skill-orchestrator, common (bridge) |
 | `lib/context/` | 7 | 30+ | Living Context loader, invariant checker, impact analyzer, scenario runner, self-healing, ops metrics |
@@ -205,7 +205,7 @@ disallowedTools:      # restricted tools
 │  │  lib/control/    │  │  lib/quality/    │  │  lib/task/       │      │
 │  │  7 files, 62+ exp│  │  3 files, 20+ exp│  │  5 files, 26 exp │      │
 │  │  L0-L4 Levels    │  │  Quality Gates   │  │  Classification  │      │
-│  │  Trust Engine    │  │  Metrics M1-M10  │  │  Context         │      │
+│  │  Trust Engine    │  │  Metrics M1-M16  │  │  Context         │      │
 │  │  Safety (blast,  │  │  Regression      │  │  Creator         │      │
 │  │  checkpoint,     │  │  Guard           │  │  Tracker         │      │
 │  │  scope, destruct)│  │                  │  │                  │      │

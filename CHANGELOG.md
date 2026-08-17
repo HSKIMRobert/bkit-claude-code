@@ -5,9 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-> Version heading is provisional — the maintainer assigns the release number.
+## [2.1.38] - 2026-08-17
 
 ### Fixed — QA pipeline wiring
 
@@ -159,6 +157,48 @@ they look for, and each is now asserted not to.
 
 Regression coverage: `test/regression/stop-handler-extraction.test.js` (28 TC),
 registered in `test/run-all.js`.
+
+### Fixed — the live hook harness could not exercise the task pair
+
+`test/qa-harness-full-live.js` drove `TaskCreated` / `TaskCompleted` with a
+`TaskCreate` + `TaskUpdate` prompt, and on Claude Code v2.1.233 both events came
+back dead. They are not dead. **v2.1.233 withdrew the Todo/Task tool family** —
+`TaskCreate`, `TaskGet`, `TaskUpdate`, `TaskList`, `TodoWrite` — from Opus 4.8 /
+Sonnet 5 / Fable 5 / Mythos 5+, keeping it for Haiku;
+`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` restores it. With no tool to call, a live hook
+reads as a dead one.
+
+Isolated against the dispatch ledger, not against what a model says it has: the
+four isolation flags (`--setting-sources ''`, `--strict-mcp-config`,
+`--permission-mode`, `--no-session-persistence`) were bisected one at a time and
+none of them moved the result, while the same trigger under the **full** flag set
+fires both hooks with the variable set on the default model, and fires unset on
+Haiku. Model self-reports of "which tools do you have" contradicted the ledger in
+both directions, which is why the ledger is what this harness believes.
+
+The task trigger now sets that variable, keeping the harness on the model users
+actually run. Live hooks went 21/23 → **23/23** with the isolation intact, so
+`LRF-8` — the floor that refuses to let a once-observed event be relaid as
+"unverified" — is satisfied by evidence rather than by lowering the floor.
+
+Not fixed here, and tracked with the CC-version response instead: on v2.1.233 a
+default-model user has no `TaskCreate`, so bkit's own `TaskCreated` hook and the
+four `SKILL.md` files that instruct the model to call it are inert for them.
+
+### Changed — docs synchronised with the code
+
+- `metrics-collector` has shipped M11–M15 since v2.1.1 and M16 since this
+  release, while `bkit-system/philosophy/` still described **ten** metrics — and
+  described a *different* ten: its M1 was "Plan accuracy" where the code's M1 is
+  Match Rate, so a reader matching a metric ID against a runtime value was
+  reading two unrelated lists. The table is now generated from `METRIC_SPECS`.
+- Note for readers: three separate M-numbered systems coexist and only the
+  metric IDs changed here — `METRIC_SPECS` M1–M16 (metric IDs), the
+  `docs/reference/quality-gates-m1-m10.md` phase-gate catalog, and the
+  `README-FULL.md` §5 gate table. The catalog and the §5 table are untouched.
+- Version strings advanced across the five-location invariant plus
+  `marketplace.json`, and the component inventory in `CUSTOMIZATION-GUIDE.md`
+  was re-stamped with the release it was measured in.
 
 ## [2.1.37] - 2026-08-15
 
