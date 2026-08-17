@@ -1,6 +1,8 @@
 # Agents Overview
 
 > List of 34 Agents defined in bkit and their roles (v2.1.13)
+> **v2.1.38**: QA measurement release — agent count unchanged (34, model matrix invariant). Three QA agent definitions changed, none of them a count or a model: `qa-test-planner` had `Write` on its disallowed list while its stated role is producing test plan documents, so the plan it exists to write could not be written anywhere; `qa-test-generator` now reads that plan and stops when it is absent; and `qa-lead` sequences planner before generator (the generator's input is the planner's output), dispatches `qa-monitor` for runtime evidence, and records a live Chrome MCP probe. CC recommended: v2.1.220.
+>
 > **v2.1.37**: Permission-mode awareness release — agent count unchanged (34, model matrix invariant). No agent definition, model, or count change; this release is scoped to the hook decision layer (bkit now reads `permission_mode`) and to guardrail rule precision. CC recommended: v2.1.220.
 >
 > **v2.1.37**: Permission-mode awareness + CC v2.1.228–v2.1.232 response — agent

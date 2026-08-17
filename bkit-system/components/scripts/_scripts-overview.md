@@ -2,6 +2,8 @@
 
 > 51 Node.js Scripts used by bkit hooks (v2.1.13)
 >
+> **v2.1.38**: QA measurement release — script count unchanged. No script added or removed; six Stop handlers changed. `unified-stop.js` reads the payload with a reader that destroys stdin and then dispatches handlers with `require()` in the same process, so every self-executing handler read `{}` — `lib/core/io.js` now hands the payload it already read to the later reader, and `readHookText()` resolves it to the assistant's reported text via `transcript_path`. `qa-phase-stop.js` had been calling `.match()` on a parsed object. CC recommended: v2.1.220.
+>
 > **v2.1.37**: Permission-mode awareness release — script count unchanged (62 top-level `scripts/*.js`). `unified-bash-pre.js`, `pre-write.js` and `permission-request-handler.js` now read the host's `permission_mode`; the QA guard's private rule table was deleted in favour of the shared Destructive Detector. One lib module was added (`lib/domain/policy/permission-mode-policy.js`), so lib/ is 199. CC recommended: v2.1.220.
 >
 > **v2.1.36**: Guardrail precision release — script count unchanged (62 top-level `scripts/*.js`, the count `docs-code-scanner.countScripts()` enforces). No script added or removed; `scripts/unified-stop.js` now honours `guardrails.checkpointOnPhaseTransition`, which shipped in bkit.config.json and nothing read, and `scripts/lib/sprint-handler-shared.js` resolves the seven `sprint.default*` keys plus `sprint.autoPause.armedTriggers` at the handler boundary so the config-free domain entity can receive them as input. CC recommended: v2.1.220.

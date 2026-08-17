@@ -136,20 +136,36 @@ Example: Phase 4 (API)
 | Iterate Gate | check → act | matchRate < 90%, iterations < 5 | L2+ |
 | Report Gate | report → archive | Report generated | L3+ |
 
-### Metrics (M1-M10)
+### Metrics (M1-M16)
 
-| Metric | Description | Target |
-|--------|-------------|--------|
-| M1 | Plan accuracy (predicted vs actual changes) | > 80% |
-| M2 | Design coverage (designed vs implemented) | > 90% |
-| M3 | Implementation match rate | > 90% |
-| M4 | Test pass rate | 100% |
-| M5 | Code quality score | > 70/100 |
-| M6 | Convention compliance | > 90% |
-| M7 | Critical issue count | 0 |
-| M8 | PDCA cycle duration | Trending down |
-| M9 | Iteration count | < 3 average |
-| M10 | Regression rate | 0% |
+The IDs, names and collectors below are `METRIC_SPECS` in
+`lib/quality/metrics-collector.js`. This table used to describe a different set
+under the same numbering — its M1 was "Plan accuracy" where the code's M1 is
+Match Rate — so a reader matching a metric ID against a runtime value was
+reading two unrelated lists.
+
+| Metric | Name | Collector | Unit | Better |
+|--------|------|-----------|------|--------|
+| M1 | Match Rate | gap-detector | % | higher |
+| M2 | Code Quality Score | code-analyzer | 0-100 | higher |
+| M3 | Critical Issue Count | code-analyzer | count | lower |
+| M4 | API Compliance Rate | gap-detector | % | higher |
+| M5 | Runtime Error Rate | qa-monitor | % | lower |
+| M6 | P95 Response Time | qa-monitor | ms | lower |
+| M7 | Convention Compliance | code-analyzer | % | higher |
+| M8 | Design Completeness | design-validator | 0-100 | higher |
+| M9 | Iteration Efficiency | pdca-iterator | %p/iteration | higher |
+| M10 | PDCA Cycle Time | computed | hours | lower |
+| M11 | QA Pass Rate | qa-lead | % | higher |
+| M12 | Test Coverage L1 | qa-test-generator | % | higher |
+| M13 | E2E Scenario Coverage | qa-lead | % | higher |
+| M14 | Runtime Error Count | qa-debug-analyst | count | lower |
+| M15 | Data Flow Integrity | qa-lead | % | higher |
+| M16 | QA Critical Count (v2.1.38) | qa-lead | count | lower |
+
+M16 is what the `qa` gate has required since v2.1.1 as `qaCriticalCount === 0`.
+No metric ID produced that name until v2.1.38, and an absent metric does not
+satisfy a condition, so the gate could not return `pass` on any run.
 
 ---
 

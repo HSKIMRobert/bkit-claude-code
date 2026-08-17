@@ -531,8 +531,9 @@ function buildVersionEnhancementsContext(detectedLevel) {
   ctx += `\n## bkit v${BKIT_VERSION} (Current)\n`;
   ctx += `- CC recommended: v2.1.220 (fork background-default handled; Claude 5 alias resolution) | verified against v2.1.232 | model floor: v2.1.170+ for Fable-pinned agents | install floor: v2.1.143 (displayName schema)\n`;
   ctx += `- Architecture: 44 Skills, 34 Agents, 21 Hook Events (24 blocks / 28 handlers), 200 Lib Modules (22 subdirs, 8 Port↔Adapter pairs), 2 MCP Servers (19 tools), 19 guardrail rules, Sprint Management (v2.1.13 GA)\n`;
+  ctx += `- v2.1.38: the QA phase now reports what it measured. Stop handlers receive the hook payload and read the agent's own report, so M1-M16 carry real readings instead of defaults; the \`qa\` gate can reach \`pass\`; L3-L5 browser tests run when Chrome MCP is actually connected; and an unmeasured rate reads "not measured", never 0%\n`;
+  ctx += `- v2.1.38: a QA failure returns to QA. \`act → qa\` (QA_RETRY) is emitted and its counter advances, so \`guardrails.loopBreaker.maxQaRetries\` (default 3) is a real ceiling on the qa ↔ act loop\n`;
   ctx += `- v2.1.37: bkit reads the host's permission mode. Under \`--dangerously-skip-permissions\`, \`dontAsk\` or \`acceptEdits\` it no longer asks for confirmation — but \`rm -rf /\`, force pushes, \`curl … | sh\` and SQL drops stay refused in every mode\n`;
-  ctx += `- v2.1.37: CC v2.1.228–v2.1.232 response. Breaking 0 (171 consecutive compatible). On CC v2.1.232+ fork mode is on by default and a subagent reports back on a LATER turn — sprint gates report "not measured" rather than a score, and say why. \`CLAUDE_CODE_FORK_SUBAGENT=0\` restores in-turn results\n`;
   // ENH-265: ENABLE_PROMPT_CACHING_1H hint (CC v2.1.108+, 30-40% token savings on long sessions)
   // ENH-456 (v2.1.36): `performance.promptCaching1h.envVar` shipped in
   // bkit.config.json duplicating this variable name, and nothing read it. The

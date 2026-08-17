@@ -375,17 +375,40 @@ if (LAYERS.includes('hooks')) {
      * tool fires SubagentStart/SubagentStop and NOTHING else — it does not
      * create a tracked task, so neither TaskCreated nor TaskCompleted reaches
      * a hook. Driving `TaskCreate` + `TaskUpdate` fires both.
+     *
+     * v2.1.38: this case has to switch the tools back on.
+     *
+     * Claude Code v2.1.233 WITHDREW the Todo/Task tool family — TaskCreate,
+     * TaskGet, TaskUpdate, TaskList, TodoWrite — from Opus 4.8 / Sonnet 5 /
+     * Fable 5 / Mythos 5+, leaving it in place for Haiku.
+     * `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` restores it. Without the tools there is
+     * nothing for the model to call, so both hooks read as dead when they are
+     * not: measured against the dispatch ledger under the FULL isolation flag
+     * set above, the pair fires with the variable set on the default model, and
+     * fires unset on Haiku.
+     *
+     * The isolation was never the variable — all four flags were bisected one
+     * at a time and none of them moved the result. Model self-reports of "which
+     * tools do you have" contradicted the ledger in both directions, so the
+     * ledger is what this harness believes.
+     *
+     * Setting it here keeps the harness on the model users actually run while
+     * still exercising the hook. The separate question — that bkit's own
+     * `TaskCreated` hook and the four SKILL.md files instructing `TaskCreate`
+     * are silently inert for default-model users on v2.1.233 — belongs to the
+     * CC-version response, not to this harness.
      */
     ['TaskCreated + TaskCompleted',
       'Use the TaskCreate tool to create one task with subject "probe task" and '
       + 'description "verify the task hooks dispatch". Then use TaskUpdate to set that '
-      + 'task to completed. Then say done.'],
+      + 'task to completed. Then say done.',
+      { env: { CLAUDE_CODE_ENABLE_TODO_TOOLS: '1' } }],
     ['ConfigChange',
       'Use the Write tool to create .claude/settings.json containing exactly {"env":{"BKIT_PROBE":"1"}}. Then say done.'],
   ];
-  for (const [label, prompt] of triggers) {
+  for (const [label, prompt, extra] of triggers) {
     process.stdout.write('~');
-    session(prompt, { cwd: work, timeout: 300000 });
+    session(prompt, { cwd: work, timeout: 300000, ...(extra || {}) });
   }
 
   // PermissionRequest / Notification need a permission mode that actually asks.

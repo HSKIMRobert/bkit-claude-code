@@ -26,7 +26,7 @@
 |------------|-------------|----------------------|
 | **Automation First** | Claude automatically applies PDCA even if user doesn't know commands | State machine (25 transitions, 9 guards) + Workflow Engine (3 YAML presets) + L0-L4 automation levels |
 | **No Guessing** | If unsure, check docs → If not in docs, ask user (never guess) | gap-detector agent + design-validator + quality gates (7 stages) + blast radius analysis |
-| **Docs = Code** | Design first, implement later (maintain design-implementation sync) | PDCA workflow + `/pdca analyze` + metrics collector (M1-M10) + regression guard |
+| **Docs = Code** | Design first, implement later (maintain design-implementation sync) | PDCA workflow + `/pdca analyze` + metrics collector (M1-M16) + regression guard |
 
 ## Four Controllable AI Principles (v2.0.0)
 
@@ -171,7 +171,7 @@ After:  L0-L4 levels + trust score + emergency stop → Controllable AI
 | **Workflow Engine** | state-machine, workflow-engine, workflow-parser, lifecycle | Declarative PDCA with 25 transitions, 9 guards, 3 YAML presets |
 | **Controllable AI** | automation-controller, trust-engine, do-detector, full-auto-do | L0-L4 levels, Trust Score (6 components), phase auto-advance |
 | **Safety** | destructive-detector, blast-radius, scope-limiter, checkpoint-manager, circuit-breaker, loop-breaker | 8 detection rules, blast radius analysis, checkpoint/rollback |
-| **Quality** | gate-manager, metrics-collector, regression-guard | 7 quality gates, 10 metrics (M1-M10), regression rules |
+| **Quality** | gate-manager, metrics-collector, regression-guard | 7 quality gates, 16 metrics (M1-M16), regression rules |
 | **Audit** | audit-logger, decision-tracer, explanation-gen | JSONL audit trail, decision trace, human-readable explanations |
 | **CLI Dashboard** | progress-bar, workflow-map, control-panel, agent-panel, impact-view | Real-time PDCA visualization on SessionStart |
 | **Multi-Feature** | batch-orchestrator, feature-manager | Parallel PDCA (max 3 concurrent features) |
