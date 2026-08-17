@@ -328,8 +328,10 @@ const CATEGORIES = {
       'regression/enh-466-473-permission-mode.test.js',
       // QA pipeline wiring — four silent breaks between qa-lead and the qa gate.
       'regression/qa-pipeline-wiring.test.js',
+      // QA follow-ups — the stdin handoff, QA_RETRY, and three agent/skill gaps.
+      'regression/qa-followups.test.js',
     ],
-    expected: 633,
+    expected: 660,
   },
   performance: {
     name: 'Performance Tests',

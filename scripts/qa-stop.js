@@ -20,16 +20,22 @@ Next steps:
 
 // v2.0.5: M5/M6 metrics collection with actual extraction
 try {
-  const { readStdinSync } = require('../lib/core/io');
+  const { readStdinSync, readHookText } = require('../lib/core/io');
   const mc = require('../lib/quality/metrics-collector');
   const { extractFeatureFromContext, getPdcaStatusFull } = require('../lib/pdca/status');
   const currentStatus = getPdcaStatusFull();
   const feature = extractFeatureFromContext({ currentStatus });
   const f = feature || 'unknown';
 
-  // Read QA agent output
+  /*
+   * Read qa-monitor's output, not our own. `message` is this file's guidance
+   * string; the M5/M6 patterns never matched it, so runtime error rate has
+   * always been recorded as 0 and p95 as its default — "no errors found" for
+   * every session, measured or not. `readStdinSync` was already imported here
+   * and never called.
+   */
   let qaOutput = '';
-  try { qaOutput = typeof message === 'string' ? message : ''; } catch (_) {}
+  try { qaOutput = readHookText(readStdinSync()); } catch (_) { qaOutput = ''; }
 
   // M5: Runtime Error Rate — extract from QA log analysis
   const errorRatePattern = /(Error|error)\s*(Rate|rate|비율)[^0-9]*(\d+\.?\d*)/i;

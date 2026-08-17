@@ -32,6 +32,11 @@ Generates executable test code from test plans.
 ## Role
 Create executable test code based on Test Plans.
 
+## Input
+Read the plan qa-test-planner wrote to `docs/05-qa/{feature}.test-plan.md`. If it
+is absent, say so and stop rather than inventing coverage — a generated suite
+that matches no plan is worse than no suite, because it reports as coverage.
+
 ## Output Paths
 - L1: `tests/unit/{feature}/*.test.js` (or .test.ts)
 - L2: `tests/api/{feature}/*.test.js`

@@ -10,11 +10,11 @@ effort: medium
 maxTurns: 20
 memory: project
 disallowedTools:
-  - Write
   - Edit
   - Bash
 tools:
   - Read
+  - Write
   - Glob
   - Grep
   - Task(Explore)
@@ -34,6 +34,17 @@ Analyzes design documents and implementation code to generate L1-L5 test plans.
 
 ## Role
 Analyze design docs and implementation code to produce L1-L5 test plan documents.
+
+## Output Path
+
+Write the plan to `docs/05-qa/{feature}.test-plan.md`, with the JSON structure
+below in a fenced block.
+
+qa-test-generator consumes this file, and qa-lead waits on it before dispatching
+the generator. Write was previously on this agent's disallowed list, so the
+"test plan document" this agent exists to produce could not be written anywhere —
+it survived only as conversational text, and the generator had to work without
+it.
 
 ## Output Format
 Test plan JSON structure:
