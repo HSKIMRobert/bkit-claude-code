@@ -22,7 +22,7 @@
 // so top-level return is valid.
 if (require.main !== module) { module.exports = {}; return; }
 
-const { readStdinSync, outputStopSurface } = require('../lib/core/io');
+const { readStdinSync, readHookText, outputStopSurface } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getBkitConfig } = require('../lib/core/config');
 const {
@@ -45,9 +45,18 @@ const {
 // Log execution start
 debugLog('Agent:gap-detector:Stop', 'Hook started');
 
-// Read conversation context from stdin
+/*
+ * Read the agent's REPORT, not the envelope it arrived in.
+ *
+ * `JSON.stringify(input)` turns the hook payload into text — hook_event_name,
+ * session_id, transcript_path, cwd — and every pattern below was then matched
+ * against that. None of them can appear there, so the match rate this hook
+ * exists to record has never been extractable. readHookText resolves the
+ * payload to the assistant's reported text via transcript_path, which is where
+ * "Overall Match Rate: 87%" actually is.
+ */
 const input = readStdinSync();
-const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+const inputText = readHookText(input);
 
 debugLog('Agent:gap-detector:Stop', 'Input received', {
   inputLength: inputText.length,
