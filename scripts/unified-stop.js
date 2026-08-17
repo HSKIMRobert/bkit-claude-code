@@ -392,7 +392,18 @@ if (feature && currentPhase) {
   try {
     const sm = getStateMachine();
     if (sm) {
-      const ctx = sm.createContext(feature);
+      /*
+       * loadContext, not createContext.
+       *
+       * createContext returns a blank context — matchRate 0, no qa fields at
+       * all — so every guard downstream evaluated against values this session
+       * had never measured. guardQaPass could not pass, guardQaMaxRetryReached
+       * could not release the qa -> act loop, and the recordQaResult action
+       * wrote the blanks back over real measurements. loadContext hydrates from
+       * pdca-status and quality-metrics; createContext stays as the fallback
+       * for a feature with no status entry yet.
+       */
+      const ctx = sm.loadContext(feature) || sm.createContext(feature);
 
       // Determine FSM event based on gate verdict + phase
       let event = null;

@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+> Version heading is provisional — the maintainer assigns the release number.
+
+### Fixed — QA pipeline wiring
+
+Four breaks between the QA agents and the qa quality gate. Each was silent: the
+QA phase printed "QA Phase completed" while the value it exists to produce never
+reached the gate. Found by reading the qa-lead → qa-phase-stop → gate-manager →
+state-machine path end to end rather than from a failing run, because none of
+these can produce a failing run — they produce a run that looks fine.
+
+- **QA metric collection crashed on its first line and swallowed the error.**
+  `readStdinSync()` returns the *parsed* hook payload — an object — and
+  `scripts/qa-phase-stop.js` assigned it to `qaOutput` and called `.match()` on
+  it. TypeError on M11, caught by the handler's own try/catch, and M11–M15 were
+  never written on any run since v2.1.1. Adds `readHookText()` to
+  `lib/core/io.js`, which resolves the payload to the assistant's reported text
+  via `transcript_path` (text blocks only — `thinking` and `tool_use` would
+  produce false metric hits) and always returns a string.
+
+- **The qa gate required a metric that no metric ID produced.** `gate-manager`'s
+  `qa` gate has listed `qaCriticalCount === 0` as a pass condition since v2.1.1,
+  but `METRIC_ID_TO_GATE_NAME` had no entry mapping to that name, and
+  `_evaluateCondition` treats an absent metric as unsatisfied. `passCount <
+  totalPass` therefore held on every run, so the gate could never return `pass`
+  and QA could not advance to Report regardless of test results — `retry` and
+  `fail` both map to `QA_FAIL`. Adds **M16 (QA Critical Count)** and collects it
+  in the qa Stop handler. The gate is unchanged; the missing piece was the
+  metric.
+
+- **The state machine was handed a blank context.** `scripts/unified-stop.js`
+  built its context with `createContext()`, which carries no QA fields at all,
+  so `guardQaPass` and `guardQaMaxRetryReached` both evaluated against
+  `undefined` — QA_PASS could not fire, and neither could the max-retry escape
+  hatch, leaving a feature able to loop `qa → act` indefinitely. The
+  `recordQaResult` action then wrote those blanks back to pdca-status as nulls,
+  erasing measurements. Switches to `loadContext()` (falling back to
+  `createContext`) and extends `loadContext` to hydrate the QA slice, reading
+  quality-metrics first and pdca-status second. Adds
+  `guardrails.loopBreaker.maxQaRetries` to `bkit.config.json` so the retry
+  ceiling is a real, editable setting rather than an inline default.
+
+- **Chrome MCP detection read an environment variable Claude Code never sets.**
+  Both `lib/qa/chrome-bridge.js` and a duplicate copy in
+  `lib/pdca/state-transitions.js` tested `process.env.MCP_SERVERS`, which is
+  always empty under Claude Code, so `chromeAvailable` was false on 100% of runs
+  and L3/L4/L5 were skipped every time — described in qa-lead's own docs as
+  normal fallback, which is how a permanently dark half of the test matrix
+  passed for a feature. Detection is now layered, most authoritative first: a
+  runtime probe qa-lead records in `.bkit/runtime/qa-capabilities.json` (only the
+  agent holds the Chrome MCP tools, so only the agent can observe whether they
+  answer), a `BKIT_CHROME_MCP=1|0` operator override, `MCP_SERVERS` for
+  back-compat, then MCP config files. The duplicate detector now delegates to the
+  bridge instead of drifting alongside it.
+
+Regression coverage: `test/regression/qa-pipeline-wiring.test.js` (23 TC),
+registered in `test/run-all.js`.
+
 ## [2.1.37] - 2026-08-15
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.

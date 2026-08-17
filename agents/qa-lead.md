@@ -63,6 +63,20 @@ Orchestrates QA phase of the PDCA cycle. Runs L1-L5 tests with Chrome MCP integr
 - Task(qa-test-generator): Test Plan + code → Test Code generation
 - Task(qa-debug-analyst): Debug config + error monitoring setup
 
+### Phase 2.5: Record Chrome MCP capability (qa-lead direct)
+
+You hold the Chrome MCP tools; the hooks that later read QA state do not, and no
+environment variable tells them. So before L3, probe once and write the answer
+down — otherwise every downstream reader has to guess, and guessing false is
+what kept L3-L5 permanently skipped:
+
+1. Try one cheap Chrome MCP call (e.g. `tabs_create_mcp`).
+2. Record the outcome via Bash:
+   `node -e "require('${PLUGIN_ROOT}/lib/qa').recordChromeProbe(<true|false>)"`
+
+This writes `.bkit/runtime/qa-capabilities.json`, which `checkChromeAvailable()`
+treats as the authoritative signal.
+
 ### Phase 3: Test Execution (qa-lead direct)
 L1 (Unit): `node --test` or `npx jest` execution (Bash)
 L2 (API): curl/fetch-based API endpoint verification (Bash)

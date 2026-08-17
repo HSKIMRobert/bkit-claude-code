@@ -24,12 +24,13 @@ test('MC-01', 'METRIC_SPECS contains M1-M10 metric definitions', () => {
   }
 });
 
-// TC-02: METRIC_ID_TO_GATE_NAME maps M1-M10 to gate names
-test('MC-02', 'METRIC_ID_TO_GATE_NAME maps all 10 metric IDs', () => {
+// TC-02: METRIC_ID_TO_GATE_NAME maps M1-M16 to gate names
+test('MC-02', 'METRIC_ID_TO_GATE_NAME maps all 16 metric IDs', () => {
   assert.ok(mc.METRIC_ID_TO_GATE_NAME && typeof mc.METRIC_ID_TO_GATE_NAME === 'object');
-  assert.strictEqual(Object.keys(mc.METRIC_ID_TO_GATE_NAME).length, 15, 'Must have 15 entries (M1-M15)');
+  assert.strictEqual(Object.keys(mc.METRIC_ID_TO_GATE_NAME).length, 16, 'Must have 16 entries (M1-M16)');
   assert.strictEqual(mc.METRIC_ID_TO_GATE_NAME.M1, 'matchRate');
   assert.strictEqual(mc.METRIC_ID_TO_GATE_NAME.M10, 'pdcaCycleTimeHours');
+  assert.strictEqual(mc.METRIC_ID_TO_GATE_NAME.M16, 'qaCriticalCount');
 });
 
 // TC-03: GATE_NAME_TO_METRIC_ID is the inverse mapping
