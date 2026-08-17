@@ -440,7 +440,16 @@ if (feature && currentPhase) {
       } else if (phase === 'do') {
         event = 'DO_COMPLETE';
       } else if (phase === 'act') {
-        event = 'ANALYZE_DONE';
+        /*
+         * A feature that arrived in act because QA rejected it owes QA another
+         * look. Mapping act to ANALYZE_DONE unconditionally sent it back into
+         * the act -> check loop instead, so `act -> qa` (QA_RETRY) — and the
+         * retry counter and initQaPhase hanging off it — were unreachable.
+         */
+        const actStatus = getPdcaStatusFull();
+        event = actStatus?.features?.[feature]?.qaRetryPending
+          ? 'QA_RETRY'
+          : 'ANALYZE_DONE';
       } else if (phase === 'report') {
         event = 'REPORT_DONE';
       }

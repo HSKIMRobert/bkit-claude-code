@@ -21,7 +21,7 @@ Next steps:
 
 // v2.0.5: Comprehensive metrics collection (M1, M2, M3, M7)
 try {
-  const { readStdinSync } = require('../lib/core/io');
+  const { readStdinSync, readHookText } = require('../lib/core/io');
   const mc = require('../lib/quality/metrics-collector');
   const { extractFeatureFromContext, getPdcaStatusFull } = require('../lib/pdca/status');
   const currentStatus = getPdcaStatusFull();
@@ -34,9 +34,17 @@ try {
     mc.collectMetric('M1', f, matchRate, 'code-analyzer');
   }
 
-  // Read agent output for metric extraction
+  /*
+   * Read the ANALYZER's output, not our own.
+   *
+   * `message` is the guidance string declared at the top of this file. Matching
+   * the M2/M3/M7 patterns against it can only ever fail, so every metric below
+   * has always been written at its hardcoded default — M2 at the 75 baseline
+   * regardless of what code-analyzer actually reported. `readStdinSync` was
+   * already imported here and never called.
+   */
   let agentOutput = '';
-  try { agentOutput = typeof message === 'string' ? message : ''; } catch (_) {}
+  try { agentOutput = readHookText(readStdinSync()); } catch (_) { agentOutput = ''; }
 
   // M2: Code Quality Score — extract from code-analyzer output
   const qualityPattern = /(Quality|quality)\s*(Score|score|점수)[^0-9]*(\d+)/i;

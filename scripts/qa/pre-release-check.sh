@@ -11,7 +11,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Where bkit's own scanner code lives. Always relative to this script.
+BKIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# What gets scanned. These are two different things, and conflating them was the
+# bug: SCAN_ROOT used to be BKIT_ROOT, so a user running this from their own
+# project got a report about bkit's source instead of their code — a clean report
+# that said nothing about the thing they were about to release.
+SCAN_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 FORMAT="console"
 SCANNER=""
@@ -20,12 +28,18 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --json) FORMAT="json"; shift ;;
     --scanner) SCANNER="$2"; shift 2 ;;
+    --root) SCAN_ROOT="$(cd "$2" && pwd)"; shift 2 ;;
+    --self) SCAN_ROOT="$BKIT_ROOT"; shift ;;
     --help|-h)
-      echo "Usage: $0 [--json] [--scanner NAME]"
+      echo "Usage: $0 [--json] [--scanner NAME] [--root DIR] [--self]"
+      echo ""
+      echo "Scans \$CLAUDE_PROJECT_DIR (or the current directory) by default."
       echo ""
       echo "Options:"
       echo "  --json           Output results as JSON"
       echo "  --scanner NAME   Run a specific scanner (dead-code, config-audit, completeness, shell-escape, wiring)"
+      echo "  --root DIR       Scan DIR instead of the default"
+      echo "  --self           Scan bkit's own source (what this script used to do unconditionally)"
       echo "  --help           Show this help"
       echo ""
       echo "Scanners:"
@@ -42,8 +56,8 @@ done
 
 if [ -n "$SCANNER" ]; then
   node -e "
-    const qa = require('${PROJECT_ROOT}/lib/qa');
-    qa.runScanner('${SCANNER}', { rootDir: '${PROJECT_ROOT}' })
+    const qa = require('${BKIT_ROOT}/lib/qa');
+    qa.runScanner('${SCANNER}', { rootDir: '${SCAN_ROOT}' })
       .then(r => {
         if ('${FORMAT}' === 'json') {
           console.log(JSON.stringify(r, null, 2));
@@ -56,13 +70,13 @@ if [ -n "$SCANNER" ]; then
   "
 else
   node -e "
-    const qa = require('${PROJECT_ROOT}/lib/qa');
-    qa.runAllScanners({ rootDir: '${PROJECT_ROOT}' })
+    const qa = require('${BKIT_ROOT}/lib/qa');
+    qa.runAllScanners({ rootDir: '${SCAN_ROOT}' })
       .then(r => {
         if ('${FORMAT}' === 'json') {
           console.log(JSON.stringify(r, null, 2));
         } else {
-          const reporter = require('${PROJECT_ROOT}/lib/qa/reporter');
+          const reporter = require('${BKIT_ROOT}/lib/qa/reporter');
           console.log(reporter.formatSummaryReport(r));
           for (const [name, result] of Object.entries(r.scanners)) {
             if (result.issues.length > 0) {

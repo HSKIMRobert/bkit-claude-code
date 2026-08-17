@@ -57,7 +57,11 @@ Before running L1 tests, execute the automated quality scanners to catch structu
 
 ### Steps
 
-1. Run `scripts/qa/pre-release-check.sh` via Bash
+1. Run `bash ${PLUGIN_ROOT}/scripts/qa/pre-release-check.sh` via Bash.
+   The path must be absolute: the script ships inside the plugin, not in the
+   user's project, so a relative `scripts/qa/...` resolves to nothing wherever
+   this skill actually runs. The script scans `$CLAUDE_PROJECT_DIR` (falling back
+   to the working directory) — pass `--root DIR` to point it elsewhere.
 2. Parse the output for CRITICAL / WARNING / INFO counts
 3. **If CRITICAL issues found**:
    - Report all CRITICAL issues with file paths and suggested fixes
@@ -80,6 +84,7 @@ Before running L1 tests, execute the automated quality scanners to catch structu
 | config-audit | Unreferenced config keys, hardcoded values, missing paths | CRITICAL / WARNING / INFO |
 | completeness | Missing agents, long descriptions, missing effort | CRITICAL / WARNING / INFO |
 | shell-escape | Bare $N in awk, unescaped backticks, unsafe heredocs | CRITICAL / WARNING |
+| wiring | Exported but never called functions | WARNING |
 
 ### QA Report Integration
 
@@ -92,6 +97,7 @@ When scanner results are available, include them in the QA report:
 - **Scanner**: config-audit — 0 CRITICAL, 0 WARNING, 2 INFO
 - **Scanner**: completeness — 0 CRITICAL, 0 WARNING, 1 INFO
 - **Scanner**: shell-escape — 0 CRITICAL, 0 WARNING, 0 INFO
+- **Scanner**: wiring — 0 CRITICAL, 1 WARNING, 0 INFO
 
 **Overall**: PASS (0 CRITICAL issues)
 ```

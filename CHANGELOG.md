@@ -64,6 +64,66 @@ these can produce a failing run — they produce a run that looks fine.
 Regression coverage: `test/regression/qa-pipeline-wiring.test.js` (23 TC),
 registered in `test/run-all.js`.
 
+### Fixed — QA follow-ups
+
+The rest of the same audit, plus one root cause that only surfaced while fixing
+the first four.
+
+- **No Stop handler had ever seen its hook payload.** `unified-stop.js` reads the
+  payload with `readStdinBounded`, which destroys stdin on resolve (Issue #139),
+  and then dispatches the per-agent handler with `require()` — same process,
+  stdin already drained. All six metric-collecting handlers are self-executing
+  and call `readStdinSync()` for themselves, so the parent saw the payload and
+  the child saw `{}`. Measured with a two-file harness, not inferred. This is
+  the reason no handler ever had a `transcript_path` to read, and it means the
+  C-1 fix above was necessary but not sufficient on its own. `lib/core/io.js`
+  now remembers the payload the process read and hands it to later readers; one
+  hook process handles one event, so there is no staleness to reason about.
+
+- **Two more handlers regexed their own guidance string.** `analysis-stop.js` and
+  `qa-stop.js` both `require` `readStdinSync` and never call it, matching their
+  metric patterns against the `message` constant declared at the top of the same
+  file. Those patterns cannot match it, so M2 was written at its 75 baseline and
+  M5 at 0 — "no errors found" — on every run regardless of what code-analyzer or
+  qa-monitor reported.
+
+- **`QA_RETRY` was defined but never emitted.** `act → qa` is the only route back
+  into QA after a failure, and `unified-stop` mapped the act phase to
+  `ANALYZE_DONE` unconditionally, so a QA failure rejoined the ordinary
+  `act → check` loop and never returned to the phase that rejected it. The
+  transition, its retry counter, and its `initQaPhase` action were all
+  unreachable. `QA_FAIL` now records the debt via a new `markQaRetryPending`
+  action and unified-stop pays it on the next act completion. Separately,
+  `initQaPhase` read `ctx.qaRetryCount || 0` and wrote the same value back — the
+  counter never moved, so `guardQaMaxRetryReached` could not fire however many
+  times a feature went round. It now advances on `QA_RETRY` and only on it.
+
+- **qa-lead never dispatched qa-monitor.** It is declared in the agent's tools and
+  named in its description as one of four coordinated agents, but no step called
+  it, so the QA phase reported test outcomes with no runtime log evidence behind
+  them. Added as Phase 3.5.
+
+- **qa-test-planner could not write the test plan it exists to produce.** `Write`
+  was on its `disallowedTools` list while its stated role was producing "test
+  plan documents", so the plan survived only as conversational text — and
+  qa-lead ran the planner and the generator concurrently anyway, leaving the
+  generator to write tests against a plan that did not exist yet. The planner now
+  writes `docs/05-qa/{feature}.test-plan.md`, the generator reads that path and
+  stops if it is missing, and qa-lead sequences the two. `Bash` stays denied.
+
+- **The pre-release scanner scanned bkit, not the caller's project.**
+  `pre-release-check.sh` set `PROJECT_ROOT` from its own location and used it for
+  both loading scanner code and choosing what to scan, so a user running it got a
+  report about bkit's source. Split into `BKIT_ROOT` (code) and `SCAN_ROOT`
+  (target, defaulting to `$CLAUDE_PROJECT_DIR`), with `--root DIR` and a `--self`
+  opt-in for the old behaviour. `skills/qa-phase/SKILL.md` invoked it by relative
+  path, which resolves to nothing where the skill actually runs — now
+  `${PLUGIN_ROOT}`-absolute — and documented four scanners where five ship;
+  `wiring` was missing from both the table and the report template.
+
+Regression coverage: `test/regression/qa-followups.test.js` (27 TC), registered
+in `test/run-all.js`.
+
 ## [2.1.37] - 2026-08-15
 
 > **One-Liner (EN)**: A Claude Code plugin that verifies AI-generated code against its own design specs.

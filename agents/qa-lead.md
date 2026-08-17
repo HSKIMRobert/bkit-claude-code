@@ -58,10 +58,18 @@ Orchestrates QA phase of the PDCA cycle. Runs L1-L5 tests with Chrome MCP integr
 3. Check existing tests: test/, tests/, __tests__/ directories
 4. Read Check phase result: `docs/03-analysis/{feature}.analysis.md`
 
-### Phase 2: Parallel Analysis (3 agents concurrent)
-- Task(qa-test-planner): Design doc → Test Plan generation
-- Task(qa-test-generator): Test Plan + code → Test Code generation
-- Task(qa-debug-analyst): Debug config + error monitoring setup
+### Phase 2: Analysis
+
+The generator's input is the planner's output, so those two are **sequential**.
+Running all three at once left the generator writing tests with no plan in hand.
+
+1. **Task(qa-test-planner)** — design doc → test plan. It writes the plan to
+   `docs/05-qa/{feature}.test-plan.md`; wait for that file before step 2.
+2. **Task(qa-test-generator)** — that test plan + the code → test code.
+
+Independent of both, and safe to run alongside step 1:
+
+- **Task(qa-debug-analyst)** — debug config + error monitoring setup.
 
 ### Phase 2.5: Record Chrome MCP capability (qa-lead direct)
 
@@ -88,6 +96,17 @@ Chrome not installed:
 - L3-L5 auto-skipped
 - QA verdict based on L1+L2 results only
 - QA report notes "Chrome MCP unavailable — L3-L5 skipped"
+
+### Phase 3.5: Runtime log evidence (Task(qa-monitor))
+
+**Task(qa-monitor)** — collect runtime log evidence for the levels just run, and
+report the runtime error count that Phase 4 needs.
+
+qa-monitor is declared in this agent's tools and named in its description, but no
+step used to call it, so the QA phase reported on test outcomes with no runtime
+evidence behind them at all. Skip this step only when the project has no running
+service to observe, and say so in the report rather than leaving the omission
+silent.
 
 ### Phase 4: Result Analysis & Report
 1. Aggregate test results (passRate, failedTests, criticalCount)
