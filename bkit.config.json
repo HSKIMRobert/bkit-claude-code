@@ -195,6 +195,7 @@
     "destructiveDetection": true,
     "loopBreaker": {
       "maxPdcaIterations": 5,
+      "maxQaRetries": 3,
       "maxSameFileEdits": 10,
       "maxAgentRecursion": 3,
       "cooldownMs": 60000
