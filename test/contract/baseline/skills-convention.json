@@ -327,7 +327,9 @@
         "hasSKILLmd": true,
         "frontmatterName": "plan-plus",
         "frontmatterModel": null,
-        "handlerReferences": []
+        "handlerReferences": [
+          "scripts/plan-plus-stop.js"
+        ]
       }
     },
     {
