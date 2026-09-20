@@ -18,7 +18,7 @@
 // so top-level return is valid.
 if (require.main !== module) { module.exports = {}; return; }
 
-const { readStdinSync, outputStopSurface, outputStopAllow } = require('../lib/core/io');
+const { readStdinSync, readHookText, outputStopSurface, outputStopAllow } = require('../lib/core/io');
 const { debugLog } = require('../lib/core/debug');
 const { getPdcaStatusFull, updatePdcaStatus, extractFeatureFromContext } = require('../lib/pdca/status');
 const { buildNextActionQuestion, formatAskUserQuestion } = require('../lib/pdca/automation');
@@ -35,7 +35,20 @@ try {
   process.exit(0);
 }
 
-const inputText = typeof input === 'string' ? input : JSON.stringify(input);
+/*
+ * Read the skill's OUTPUT, not the envelope it arrived in (Issue #156).
+ *
+ * The Stop payload never carries the assistant's answer — `hook_event_name`,
+ * `session_id`, `transcript_path`, `cwd` and nothing else — so
+ * `JSON.stringify(input)` produced a string with no feature name and no document
+ * path in it. The feature then resolved to whatever `primaryFeature` held, which
+ * in a project's first feature is nothing, and this handler exited without
+ * recording the phase it exists to record. `readHookText` reads the trailing
+ * assistant text from the transcript, which is where the Phase 6 output naming
+ * `docs/01-plan/features/{feature}.plan.md` actually is. The other five Stop
+ * handlers were already converted; this one was missed.
+ */
+const inputText = readHookText(input);
 const currentStatus = getPdcaStatusFull();
 const feature = extractFeatureFromContext({ agentOutput: inputText, currentStatus });
 

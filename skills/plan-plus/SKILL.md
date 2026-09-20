@@ -25,7 +25,7 @@ imports:
   - ${PLUGIN_ROOT}/templates/plan-plus.template.md
 next-skill: pdca design
 pdca-phase: plan
-task-template: "[Plan Plus] {feature}"
+task-template: "[Plan] {feature}"
 ---
 
 # Plan Plus — Brainstorming-Enhanced PDCA Planning
@@ -82,7 +82,11 @@ Before asking any questions, explore the current project state:
 1. Read CLAUDE.md, package.json, pom.xml, etc. for project information
 2. Check recent 5 git commits (understand current work direction)
 3. Check existing `docs/01-plan/` documents (prevent duplication)
-4. Check `.bkit-memory.json` (check ongoing PDCA status)
+4. Check ongoing PDCA status — `getPdcaStatusView()` in `lib/pdca/status.js`.
+   It reads `.bkit/state/pdca-status.json` and fills in any feature whose phase
+   is only evidenced by its documents. `.bkit-memory.json` is NOT this store:
+   after migration it is `.bkit/state/memory.json`, which holds the 9-phase
+   pipeline status and nothing about PDCA phase.
 
 > Share exploration results briefly: "I've reviewed the current project state: ..."
 
@@ -171,9 +175,15 @@ Generate the Plan document using `plan-plus.template.md` with results from Phase
 
 **Output Path**: `docs/01-plan/features/{feature}.plan.md`
 
-After document generation, update PDCA status:
-- Create Task: `[Plan] {feature}`
-- Update .bkit-memory.json: phase = "plan"
+After document generation, the Stop hook records the phase: `scripts/plan-plus-stop.js`
+writes `phase = "plan"` to `.bkit/state/pdca-status.json` and creates the Task
+chain (`lib/task/creator.js`, which names each Task `<icon> [Plan] {feature}`).
+Do not write the phase by hand, and do not write it to `.bkit-memory.json` —
+that file is the pipeline store, not the PDCA one.
+
+State the document path in your closing output. The hook recovers the feature
+name from it, and without it the phase is recorded against whatever feature was
+current before.
 
 ### Phase 6: Next Steps
 

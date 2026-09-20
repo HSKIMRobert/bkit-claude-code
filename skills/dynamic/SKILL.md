@@ -41,7 +41,11 @@ task-template: "[Init-Dynamic] {feature}"
 3. Create CLAUDE.md (Level: Dynamic specified)
 4. Create docs/ folder structure
 5. src/lib/bkend.ts client template
-6. Initialize .bkit-memory.json
+6. Initialize the pipeline store — `writeBkitMemory()` in `lib/pdca/status.js`,
+   which writes `.bkit/state/memory.json` (the migrated path of `.bkit-memory.json`).
+   This holds the project level and the 9-phase `pipelineStatus`, read by
+   `scripts/phase5-design-stop.js`, `phase6-ui-stop.js` and `phase9-deploy-stop.js`.
+   It is NOT where the PDCA phase lives — that is `.bkit/state/pdca-status.json`.
 
 ### guide (Development Guide)
 - bkend.ai auth/data configuration guide
