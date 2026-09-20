@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.39] - 2026-09-20
+
+### Fixed — a finished phase that `/pdca status` could not see (#156)
+
+`/plan-plus` and five other phases recorded nothing in a project whose first
+feature was the one being recorded, and `/pdca status` then showed no phase for
+work that had just completed.
+
+- **Six Stop handlers passed a field nothing read.** `plan-plus-stop`,
+  `pdca-skill-stop`, `qa-stop`, `analysis-stop`, `iterator-stop` and
+  `qa-phase-stop` all call `extractFeatureFromContext({ agentOutput, currentStatus })`,
+  and the function read neither: it fell through to `primaryFeature`, which is
+  empty before any feature is registered. The handler exited without writing.
+  Where a previous feature existed the failure was worse than silence — the phase
+  attached to that other feature. It now recovers the feature from the document
+  path the phase names in its output, matched against the project's own
+  `pdca.docPaths.*` templates, and uses `currentStatus` when it is handed one.
+- **`plan-plus-stop.js` scanned the envelope instead of the output.** It built its
+  text with `JSON.stringify(input)`, and a Stop payload carries `hook_event_name`,
+  `session_id`, `transcript_path` and `cwd` — never the assistant's answer. So
+  there was no document path in the string to recover a feature from. It now uses
+  `readHookText(input)`, which reads the trailing assistant text from the
+  transcript; the other five handlers had already been converted and this one was
+  missed.
+- **The phase is now readable from the documents.** `lib/pdca/status-derive.js`
+  adds `getPdcaStatusView()`: the stored `pdca-status.json` with any feature whose
+  phase is evidenced only by its documents filled in, each marked `source:
+  'documents'` or `'status-file'`. A plan document means the plan phase happened,
+  whoever did or did not record it, so a lost write no longer erases the progress
+  surface. Read-only and never ahead of a recorded phase — `do` produces code
+  rather than a document, so a feature recorded at `do` is not pulled back.
+  `/pdca status`, `/pdca next` and `/btw` read through it.
+- **Documentation pointed at the wrong store.** `skills/plan-plus/SKILL.md` told
+  the model to read and write the PDCA phase in `.bkit-memory.json`. That file
+  migrates to `.bkit/state/memory.json`, which holds the project level and the
+  9-phase `pipelineStatus` read by `phase5-design-stop.js`,
+  `phase6-ui-stop.js` and `phase9-deploy-stop.js` — a different store from
+  `pdca-status.json`. The plan-plus instructions now name the Stop handler that
+  records the phase, and `starter`, `dynamic`, `enterprise` and `btw` say what
+  `memory.json` is for, so the two are not conflated again.
+- **`task-template` no longer contradicts the Task that is created.**
+  `skills/plan-plus/SKILL.md` declared `[Plan Plus] {feature}` while the runtime
+  creates `[Plan] {feature}` (`lib/task/creator.js`), which is what
+  `/pdca design` looks for when it closes the predecessor Task and resolves
+  `blockedBy`. The frontmatter now matches. The field itself is read by
+  `orchestrateSkillPre`, which has no non-test caller — that, and the same
+  mismatch in the other skills, is left for its own change.
+
+### Fixed — a warning on every session start (#155)
+
+- **`hooks/hooks.json` no longer carries `$schema`.** The URL it named 404s —
+  SchemaStore carries `claude-code-settings`, `-plugin-manifest`, `-marketplace`,
+  `-keybindings` and `-launch`, and no hooks schema — so it bought no editor
+  completion, while Claude Code up to 2.1.268 reported it as an unknown key once
+  per session for every bkit user. 2.1.276 accepts the key, so updating Claude
+  Code also stops the warning. The contract test that required the field now pins
+  the loader's whole accepted set instead (`$schema`, `description`, `hooks`,
+  `modules`, `surface`), which is the invariant that matters.
+- The `once` note in that report is not acted on: running `session-start.js` on
+  every `SessionStart` is the intended behaviour, and whether `once` is honoured
+  on a command object is unverified here.
+
 ## [2.1.38] - 2026-08-17
 
 ### Fixed — QA pipeline wiring

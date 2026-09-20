@@ -36,9 +36,18 @@ const hookEvents = Object.keys(hooksJson.hooks);
 // T01-T03: hooks.json structure
 // ---------------------------------------------------------------------------
 
-test('HIS-01', 'hooks.json has valid $schema field', () => {
-  assert.ok(hooksJson.$schema, 'Missing $schema');
-  assert.ok(hooksJson.$schema.includes('claude-code-hooks'), '$schema should reference claude-code-hooks');
+// Issue #155: `$schema` was removed rather than kept. The URL it named
+// (`json.schemastore.org/claude-code-hooks.json`) 404s — SchemaStore carries
+// claude-code-settings/-plugin-manifest/-marketplace/-keybindings/-launch and no
+// hooks schema — so it bought no editor validation, and Claude Code up to 2.1.268
+// reported it as an unknown key on every session start. 2.1.276 accepts it
+// (allow-list read out of the binary: $schema, description, hooks, modules,
+// surface), so what this pins is the set, not the one key.
+const CC_TOP_LEVEL_KEYS = new Set(['$schema', 'description', 'hooks', 'modules', 'surface']);
+
+test('HIS-01', 'hooks.json carries no top-level key Claude Code would warn about', () => {
+  const unknown = Object.keys(hooksJson).filter((k) => !CC_TOP_LEVEL_KEYS.has(k));
+  assert.equal(unknown.length, 0, `Unknown top-level keys: ${unknown.join(', ')}`);
 });
 
 test('HIS-02', 'hooks.json has description field', () => {
