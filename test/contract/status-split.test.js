@@ -14,7 +14,7 @@ function test(name, fn) {
 
 // ==================== Facade ====================
 const facade = require('../../lib/pdca/status');
-test('facade exports 25 items', () => assert.strictEqual(Object.keys(facade).length, 25));
+test('facade exports 28 items', () => assert.strictEqual(Object.keys(facade).length, 28));
 
 // Core daily-use API
 const CORE_API = [
@@ -51,7 +51,7 @@ const cleanup = require('../../lib/pdca/status-cleanup');
 
 // v2.1.16 hardening: status-core exports grew 17 → 19 (added shouldUpdate +
 // appendHistoryEntry helpers as part of v2.1.15 #89 6-Layer Defense refactor).
-test('status-core exports 19 functions', () => assert.strictEqual(Object.keys(core).length, 19));
+test('status-core exports 20 functions', () => assert.strictEqual(Object.keys(core).length, 20));
 test('status-migration exports 3 functions', () => assert.strictEqual(Object.keys(migration).length, 3));
 test('status-cleanup exports 5 functions', () => assert.strictEqual(Object.keys(cleanup).length, 5));
 

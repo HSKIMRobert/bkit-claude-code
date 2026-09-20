@@ -39,7 +39,7 @@ allowed-tools:
      "suggestion": "{user input}",
      "context": {
        "file": "{current working file if identifiable}",
-       "pdcaPhase": "{current PDCA phase from .bkit-memory.json or null}",
+       "pdcaPhase": "{current PDCA phase from getPdcaStatusView() or null}",
        "feature": "{current feature or null}"
      },
      "category": "auto-detect",
@@ -158,7 +158,10 @@ Initialize with this structure if file does not exist:
 
 ## Integration Points
 
-- **PDCA Context**: Reads `.bkit-memory.json` for current phase/feature
+- **PDCA Context**: Reads the phase and feature through `getPdcaStatusView()`
+  (`lib/pdca/status.js`), which covers a phase that only its documents evidence.
+  `.bkit/state/memory.json` — the migrated `.bkit-memory.json` — carries the
+  9-phase pipeline status, not the PDCA phase.
 - **skill-create**: `/btw promote` triggers skill-create workflow
 - **skill-needs-extractor**: `/btw analyze` results feed into gap analysis
 - **CTO Team**: Phase transition triggers btw summary (see below)

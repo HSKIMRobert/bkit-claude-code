@@ -1003,8 +1003,13 @@ group('A10-hooks/config/workflow/i18n', () => {
     bkitCfg = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'bkit.config.json'), 'utf8'));
   } catch (_e) {}
 
-  tc('A10-1 hooks.json schema declared', () => {
-    assert(hooks.$schema);
+  // Issue #155: `$schema` was removed — its URL 404s, and Claude Code up to
+  // 2.1.268 reported it as an unknown top-level key once per session. What is
+  // worth asserting is that no key sits outside the loader's accepted set
+  // (`$schema`, `description`, `hooks`, `modules`, `surface` as of 2.1.276).
+  tc('A10-1 hooks.json declares no key Claude Code would warn about', () => {
+    const allowed = new Set(['$schema', 'description', 'hooks', 'modules', 'surface']);
+    assert.deepEqual(Object.keys(hooks).filter((k) => !allowed.has(k)), []);
     assert(hooks.hooks);
   });
 

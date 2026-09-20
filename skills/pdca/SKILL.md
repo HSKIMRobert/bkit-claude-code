@@ -485,11 +485,18 @@ Select features to cleanup:
 
 ### status (Status Check)
 
-1. Read `.bkit/state/pdca-status.json` (the live state-of-truth; via the
-   `lib/pdca/status-core.js` API). Note: `.bkit-memory.json` is a deprecated
-   v1.6.0 legacy path that no lib module reads or writes.
+1. Read the status through `getPdcaStatusView()` (`lib/pdca/status.js`), never
+   the file alone. It returns the stored `.bkit/state/pdca-status.json` with any
+   feature whose phase is evidenced only by its documents filled in, and marks
+   each feature's `source` as `status-file` or `documents`.
+   `.bkit-memory.json` is a deprecated v1.6.0 legacy path that no lib module
+   reads or writes; the migrated `.bkit/state/memory.json` holds the 9-phase
+   pipeline status, which is a different thing from the PDCA phase.
 2. Display current feature, PDCA phase, Task status
 3. Visualize progress
+4. For any feature whose `source` is `documents`, add one line:
+   `phase read from documents — no run recorded it`. Do not present it as a
+   recorded phase, and do not write it to the status file from here.
 
 **Output Example**:
 ```
@@ -505,7 +512,8 @@ Iteration: 2/5
 
 ### next (Next Phase)
 
-1. Check current PDCA phase
+1. Check current PDCA phase — through `getPdcaStatusView()`, for the reason
+   given under `status` above
 2. Suggest next phase guide and commands
 3. Confirm with user via AskUserQuestion
 

@@ -47,7 +47,11 @@ task-template: "[Init-Enterprise] {feature}"
 3. Create CLAUDE.md (Level: Enterprise specified)
 4. docs/ 5-category structure
 5. infra/terraform/, infra/k8s/ base templates
-6. Initialize .bkit-memory.json
+6. Initialize the pipeline store — `writeBkitMemory()` in `lib/pdca/status.js`,
+   which writes `.bkit/state/memory.json` (the migrated path of `.bkit-memory.json`).
+   This holds the project level and the 9-phase `pipelineStatus`, read by
+   the pipeline Stop hooks for phases 5, 6 and 9.
+   It is NOT where the PDCA phase lives — that is `.bkit/state/pdca-status.json`.
 
 ### guide (Development Guide)
 - AI Native 10-Day development cycle
