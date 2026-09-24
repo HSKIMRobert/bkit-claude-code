@@ -62,11 +62,13 @@ Phase 0: Context Exploration (automatic)
     ↓
 Phase 1: Intent Discovery (1 question at a time)
     ↓
-Phase 2: Alternatives Exploration (2-3 approaches)
+Phase 1.5: Premise Challenge (forcing questions, agreed premises)
     ↓
-Phase 3: YAGNI Review (multiSelect verification)
+Phase 2: Alternatives Exploration (2-3 approaches, incl. "do nothing")
     ↓
-Phase 4: Incremental Design Validation (section-by-section)
+Phase 3: Scope Mode + YAGNI Review (multiSelect verification)
+    ↓
+Phase 4: Incremental Design Validation (section-by-section, failure map)
     ↓
 Phase 5: Plan Document Generation (plan-plus.template.md)
     ↓
@@ -115,9 +117,50 @@ Conflicts with existing systems, performance requirements, technical constraints
 > **Important**: Minimize questions. Clear features need only Q1-Q2.
 > Only proceed to Q3-Q4 for ambiguous features.
 
+### Phase 1.5: Premise Challenge
+
+Phase 1 records what the user wants. This phase tests whether it is worth
+building in that shape. Ask one forcing question at a time with
+`AskUserQuestion`, and push on vague answers once before moving on.
+
+| # | Forcing question | A strong answer names |
+|---|------------------|----------------------|
+| F1 | **Demand** — Who would be genuinely upset if this did not exist next month? | A specific person or role, not a segment |
+| F2 | **Status quo** — What do those users do today to get this done, even badly? | The current workaround and what it costs them |
+| F3 | **Wedge** — What is the smallest version that someone would use this week? | One flow, not a feature list |
+| F4 | **Do nothing** — What happens if we build nothing? | A concrete cost, or an admission that there is none |
+
+Routing — ask only what the feature needs:
+- New product or user-facing capability: F1-F4
+- Internal tool or refactor: F2, F4
+- Bug fix or small change: skip this phase and say so
+
+**Stance rules**
+- Take a position on every answer and state what evidence would change it.
+  Do not reply with neutral filler ("That could work", "Interesting approach").
+- Enthusiasm is not evidence of demand; a workaround the user already pays for is.
+- If the user wants to move on, ask the single most important remaining question,
+  then proceed. Do not ask a third time.
+
+Close the phase by printing the agreed premises as a numbered list and asking
+the user to confirm them:
+
+```
+PREMISES
+1. {who needs this, and why now}
+2. {what they do today}
+3. {the smallest useful version}
+```
+
+If the user rejects a premise, revise it before Phase 2 — alternatives built on
+a rejected premise are wasted work. Record the confirmed premises in the Plan
+document's "Premise Challenge" section.
+
 ### Phase 2: Alternatives Exploration (Brainstorming Core)
 
-**Always propose 2-3 approaches** with trade-offs for each.
+**Always propose 2-3 approaches** with trade-offs for each. When Phase 1.5 ran,
+one of them may be "do nothing / use the existing workaround" if F4 showed the
+cost of inaction is low.
 
 Format:
 ```
@@ -139,9 +182,22 @@ Format:
 > Present the recommended approach first with clear reasoning.
 > Use AskUserQuestion to let the user choose.
 
-### Phase 3: YAGNI Review (Brainstorming Core)
+### Phase 3: Scope Mode + YAGNI Review (Brainstorming Core)
 
-Perform a YAGNI (You Ain't Gonna Need It) review on the selected approach:
+First pick a scope mode for the selected approach. Recommend one, then let the
+user confirm with `AskUserQuestion`:
+
+| Mode | When to recommend | What it changes |
+|------|-------------------|-----------------|
+| **Expand** | Greenfield work where a small addition multiplies value | Propose up to 3 additions, each high value for low effort |
+| **Selective** | A new capability on an existing product | Hold the core, offer additions one at a time |
+| **Hold** | A fix, or a plan that is already well sized | No additions; challenge anything touching more than ~8 files or adding a service |
+| **Reduce** | The plan spans more than ~15 files or several subsystems | Cut to the Phase 1.5 wedge and defer the rest |
+
+Every proposed addition gets its own decision: add now, defer (record in
+3.2 Deferred), or drop. Record the mode in the Plan document.
+
+Then perform a YAGNI (You Ain't Gonna Need It) review on the selected approach:
 
 Use AskUserQuestion with `multiSelect: true`:
 "Select only what is essential for the first version:"
@@ -158,6 +214,19 @@ Present the design section by section, getting approval after each:
 1. Architecture overview → "Does this direction look right?"
 2. Key components/modules → "Does this structure look right?"
 3. Data flow → "Does this flow look right?"
+4. Failure map → "Is anything here unacceptable to ship?"
+
+For the failure map, list each new entry point (endpoint, command, job, UI
+action) and trace what happens when its input is empty, invalid, or its
+dependency fails:
+
+| Entry point | What can go wrong | Handled? | What the user sees |
+|-------------|-------------------|:--------:|--------------------|
+| {entry} | {failure} | Yes/No | {message, retry, silent} |
+
+Any row with "No" and a silent outcome must either get a handling decision or be
+listed as an accepted risk in section 7. Keep this short for small features —
+the point is that no failure is silent by accident.
 
 > If the user says "no" to any section, revise only that section and re-present.
 
@@ -167,8 +236,10 @@ Generate the Plan document using `plan-plus.template.md` with results from Phase
 
 **Additional sections** (not in standard plan.template.md):
 - **User Intent Discovery** — Core problem, target users, success criteria from Phase 1
+- **Premise Challenge** — Forcing-question answers and confirmed premises from Phase 1.5
 - **Alternatives Explored** — Approaches compared in Phase 2
-- **YAGNI Review** — Included/deferred/removed items from Phase 3
+- **YAGNI Review** — Scope mode and included/deferred/removed items from Phase 3
+- **Failure Map** — Entry-point failure table from Phase 4 (in section 8)
 - **Brainstorming Log** — Key decisions from Phases 1-4
 - **Executive Summary** -- Auto-synthesize 4-perspective summary (Problem/Solution/Function UX Effect/Core Value) from Phases 1-4 results. Place at document top, before numbered sections.
 - **Executive Summary Response** -- MANDATORY: After generating the Plan document, also output the Executive Summary table in your response so the user sees the summary immediately without opening the file.
@@ -204,6 +275,9 @@ Next step: /pdca design {feature}
 | Incremental validation | Brainstorming | Section-by-section approval in Phase 4 |
 | HARD-GATE | Brainstorming | No code before approval (entire process) |
 | Context first | Brainstorming | Automatic exploration in Phase 0 |
+| Challenge the premise | gstack `/office-hours` | Forcing questions and confirmed premises in Phase 1.5 |
+| Choose a scope mode | gstack `/plan-ceo-review` | Expand / Selective / Hold / Reduce in Phase 3 |
+| No silent failures | gstack `/plan-ceo-review` | Failure map in Phase 4 |
 
 ## Integration with PDCA
 
