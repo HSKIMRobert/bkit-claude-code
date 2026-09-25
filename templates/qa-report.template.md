@@ -29,13 +29,40 @@ variables:
 | L4 | UX Flow Test | | | |
 | L5 | Data Flow Test | | | |
 
+### 1.1 Scope
+
+<!-- Diff-aware mapping: changed files → pages/endpoints exercised. List pages given only a smoke check. -->
+
+| Changed file | Page / endpoint | Coverage |
+|--------------|-----------------|----------|
+| | | Full / Smoke / Not tested |
+
+### 1.2 Health Score (informational)
+
+> **Health Score**: {score}/100 {provisional if any category untested}
+
+| Category | Weight | Score | Issues |
+|----------|:------:|:-----:|--------|
+| Functional | 20 | | |
+| Console | 15 | | |
+| UX | 15 | | |
+| Accessibility | 15 | | |
+| Visual | 10 | | |
+| Links / navigation | 10 | | |
+| Performance | 10 | | |
+| Content | 5 | | |
+
 ## 2. Failed Tests
 
 <!-- List each failed test with error details -->
 
-## 3. Critical Issues
+## 3. Issues (fix order)
 
-<!-- Critical failures requiring immediate fix -->
+<!-- Exploratory and scripted findings, critical first. Every issue needs reproduction steps and evidence. -->
+
+| ID | Severity | Page | Reproduction steps | Evidence | Fix status |
+|----|----------|------|--------------------|----------|------------|
+| QA-001 | critical/high/medium/low | | | console / network / screenshot | open / verified / not verified |
 
 ## 4. Debug Analysis
 

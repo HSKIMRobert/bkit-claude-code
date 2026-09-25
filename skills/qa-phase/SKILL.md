@@ -112,6 +112,24 @@ When scanner results are available, include them in the QA report:
 | L4 | UX Flow Test | Chrome MCP | Yes |
 | L5 | Data Flow Test | Chrome MCP + Bash | Yes |
 
+## Browser QA Depth (L3-L4)
+
+qa-lead adds three things on top of the scripted L3-L4 scenarios. The full
+procedure is in `agents/qa-lead.md`:
+
+- **Diff-aware scope** — changed files are mapped to the pages and endpoints
+  they serve, and those pages are tested first.
+- **Exploratory pass** — each priority page is checked for forms, empty/error
+  states, navigation, and console output after every action.
+- **Health Score** — a weighted 0-100 summary of the exploratory findings,
+  reported next to the gate metrics. It is informational; the QA gate
+  (`qaPassRate`, `qaCriticalCount`, `runtimeErrorCount`) still decides the
+  verdict.
+
+On QA_FAIL, issues are handed to Act in fix order with reproduction steps. Act
+fixes one issue at a time, re-verifies it, and adds a regression test. It stops
+to ask when fixes start spreading to unrelated files or breaking passing tests.
+
 ## Fallback
 
 Chrome MCP unavailable:

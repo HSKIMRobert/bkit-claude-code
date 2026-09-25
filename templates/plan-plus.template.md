@@ -57,6 +57,23 @@ variables:
 |------------|---------|--------|
 | {Constraint} | {Details} | High/Medium/Low |
 
+### 1.5 Premise Challenge
+
+> From Plan Plus Phase 1.5. Write "Skipped — {reason}" for bug fixes and small changes.
+
+| # | Question | Answer | Evidence strength |
+|---|----------|--------|:-----------------:|
+| F1 | Demand — who would be upset if this did not exist? | {answer} | Strong/Weak/None |
+| F2 | Status quo — what do they do today? | {answer} | Strong/Weak/None |
+| F3 | Wedge — smallest version used this week? | {answer} | Strong/Weak/None |
+| F4 | Do nothing — cost of building nothing? | {answer} | Strong/Weak/None |
+
+**Confirmed premises**
+
+1. {premise 1}
+2. {premise 2}
+3. {premise 3}
+
 ---
 
 ## 2. Alternatives Explored
@@ -89,6 +106,8 @@ variables:
 ---
 
 ## 3. YAGNI Review
+
+**Scope mode**: {Expand / Selective / Hold / Reduce} — {one-line reason}
 
 ### 3.1 Included (v1 Must-Have)
 
@@ -197,6 +216,14 @@ variables:
 {Data flow diagram}
 ```
 
+### 8.5 Failure Map
+
+> From Plan Plus Phase 4. Every "No" with a silent outcome needs a decision or a row in section 7.
+
+| Entry point | What can go wrong | Handled? | What the user sees |
+|-------------|-------------------|:--------:|--------------------|
+| {entry} | {failure} | Yes/No | {message / retry / silent} |
+
 ---
 
 ## 9. Convention Prerequisites
@@ -224,6 +251,7 @@ variables:
 | Phase | Question | Answer | Decision |
 |-------|----------|--------|----------|
 | Intent | {Question summary} | {Answer summary} | {Decision} |
+| Premise | {Forcing question} | {Answer summary} | {Premise kept/revised} |
 | Alternatives | {Compared items} | {Selection} | {Rationale} |
 | YAGNI | {Reviewed items} | {Include/Exclude} | {Reason} |
 

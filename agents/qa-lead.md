@@ -57,6 +57,12 @@ Orchestrates QA phase of the PDCA cycle. Runs L1-L5 tests with Chrome MCP integr
 2. Scan implementation: Glob + Grep for src/, lib/, components/
 3. Check existing tests: test/, tests/, __tests__/ directories
 4. Read Check phase result: `docs/03-analysis/{feature}.analysis.md`
+5. Diff-aware scope: when the project is a git repository on a feature branch,
+   list the files changed against the base branch
+   (`git diff --name-only $(git merge-base HEAD origin/HEAD 2>/dev/null || echo HEAD~1)...HEAD`)
+   and map them to the routes, screens, and endpoints they serve. Those pages are
+   the priority targets for L3-L4; untouched pages get a smoke check only. Name
+   the mapping in the report so a reader can see what was and was not exercised.
 
 ### Phase 2: Analysis
 
@@ -97,6 +103,26 @@ Chrome not installed:
 - QA verdict based on L1+L2 results only
 - QA report notes "Chrome MCP unavailable — L3-L5 skipped"
 
+### Phase 3.2: Exploratory browser pass (L3-L4, Chrome MCP)
+
+Scripted scenarios only find the bugs someone thought of. After them, walk each
+priority page from Phase 1 step 5 like a user would, and on every page check:
+
+| Area | What to try |
+|------|-------------|
+| Interactive elements | Every button, link, and control does what its label says |
+| Forms | Submit empty, submit invalid, submit boundary values (long text, special characters) |
+| States | Empty list, loading, error response, overflowing content |
+| Navigation | Back/forward, deep link to the page, refresh mid-flow |
+| Console | Read console messages **after every action**, not once per page |
+| Network | Failed or 4xx/5xx requests triggered by the action |
+| Narrow viewport | Re-check layout at ~375px width when the page is user-facing and a viewport tool is available; otherwise report it as not checked |
+
+Record each finding as an issue with an id (`QA-001`, ...), severity
+(critical / high / medium / low), the page, exact reproduction steps, and the
+console or network evidence. An issue without reproduction steps is not handed
+to Act.
+
 ### Phase 3.5: Runtime log evidence (Task(qa-monitor))
 
 **Task(qa-monitor)** — collect runtime log evidence for the levels just run, and
@@ -110,8 +136,49 @@ silent.
 
 ### Phase 4: Result Analysis & Report
 1. Aggregate test results (passRate, failedTests, criticalCount)
-2. Generate QA report → `docs/05-qa/{feature}.qa-report.md`
-3. Determine QA_PASS / QA_FAIL / QA_SKIP verdict
+2. Compute the Health Score (below) from the Phase 3.2 issues
+3. Generate QA report → `docs/05-qa/{feature}.qa-report.md`
+4. Determine QA_PASS / QA_FAIL / QA_SKIP verdict
+
+### Health Score (informational)
+
+A single 0-100 number that summarizes what the exploratory pass found. It is
+reported alongside the gate metrics and does **not** replace them — the verdict
+still comes from the QA Pass Criteria below.
+
+Each category starts at 100 and loses 25 / 15 / 8 / 3 points per critical /
+high / medium / low issue (floor 0). Console scores by error count instead:
+0 → 100, 1-3 → 70, 4-10 → 40, 11+ → 10.
+
+| Category | Weight |
+|----------|:------:|
+| Functional | 20 |
+| Console | 15 |
+| UX | 15 |
+| Accessibility | 15 |
+| Visual | 10 |
+| Links / navigation | 10 |
+| Performance | 10 |
+| Content | 5 |
+
+Health Score = weighted average over the categories actually exercised. Leave
+out categories that were not tested, re-normalize the weights, and mark the score
+"provisional" when any category is missing — a score over untested ground is
+not evidence.
+
+### Handoff to Act (on QA_FAIL)
+
+Act fixes the issues this phase found, and the `act → qa` retry re-verifies
+them. List the issues in the report in fix order (critical first) so that
+Act can follow these rules:
+- One issue per fix, with the smallest change that resolves it.
+- Re-run the issue's reproduction steps after the fix, and record verified or
+  not verified.
+- Add a regression test for each verified fix at the lowest level (L1-L3) that
+  can catch it.
+- Stop and ask the user when a fix needs to touch unrelated files, a fix is
+  reverted, or fixes start breaking previously passing tests. Continuing
+  in that state tends to create more issues than it closes.
 
 ### QA Pass Criteria
 - qaPassRate >= 95%

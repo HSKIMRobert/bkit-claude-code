@@ -23,6 +23,12 @@ This software uses Claude Code by Anthropic, PBC.
 Claude Code is subject to Anthropic's terms of service.
 https://www.anthropic.com/terms
 
+Parts of the methodology in skills/plan-plus, agents/qa-lead.md and
+agents/security-architect.md are adapted from gstack
+(https://github.com/garrytan/gstack), Copyright (c) 2026 Garry Tan,
+licensed under the MIT License. No gstack source files are included; the
+adapted text was rewritten for bkit.
+
 ================================================================================
 
 If you use this software, you must:

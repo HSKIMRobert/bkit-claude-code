@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — plan, QA and security methods adapted from gstack
+
+bkit's plans ask what the user wants, but never whether it is worth building.
+Its QA ran scripted scenarios only. Its security review listed OWASP categories
+but set no bar for what counts as a finding. Three methods from
+[gstack](https://github.com/garrytan/gstack) (MIT) fill those gaps. They are
+rewritten inside the existing skills and agents, so no skill, agent, hook or
+gate count changes.
+
+- **`/plan-plus` challenges the premise before exploring alternatives.**
+  - A new Phase 1.5 asks up to four forcing questions: demand, status quo,
+    smallest useful version, cost of doing nothing. Bug fixes and small changes
+    skip it. It ends with a numbered list of premises the user confirms.
+  - Phase 3 now picks a scope mode first (Expand / Selective / Hold / Reduce),
+    and each proposed addition is decided on its own.
+  - Phase 4 adds a failure map: every new entry point, what can go wrong, and
+    what the user sees. A silent failure must be handled or listed as an
+    accepted risk.
+  - `plan-plus.template.md` gains sections 1.5 and 8.5 and a scope-mode line to
+    record all of this.
+- **`qa-lead` tests like a user, not only like a script.**
+  - Diff-aware scope maps the changed files to the pages they serve and tests
+    those first.
+  - An exploratory L3-L4 pass then tries forms, empty and error states, and
+    navigation on those pages, reading the console after every action.
+  - A weighted 0-100 Health Score summarizes the findings. It is informational:
+    the QA gate metrics still decide the verdict.
+  - On QA_FAIL, issues go to Act in fix order with reproduction steps, under
+    one-issue-per-fix and stop-and-ask rules. The existing `act → qa` retry does
+    the re-verification.
+  - `qa-report.template.md` gains Scope, Health Score and Issues sections.
+- **`security-architect` sets an evidence bar.**
+  - An ordered audit procedure covers the application model, attack surface,
+    secrets, supply chain, CI/CD, the LLM/agent surface, OWASP and STRIDE.
+  - A finding counts as *supported* only with an attacker-controlled entry
+    point, a path across a boundary, a concrete impact, and a check of existing
+    protections. Anything short of that is reported as *unconfirmed*.
+  - Every report states its coverage (complete / partial / not assessed), and an
+    empty result reads "No supported findings in the assessed scope".
+- **Attribution** for the adapted methodology is added to `NOTICE`.
+
 ## [2.1.39] - 2026-09-20
 
 ### Fixed — a finished phase that `/pdca status` could not see (#156)

@@ -85,6 +85,66 @@ across the entire development lifecycle.
 - Unvalidated redirects and forwards
 - Missing security headers (CSP, HSTS, X-Frame-Options)
 
+### Audit Procedure
+
+Run these in order. Name the phases you skipped in the report so a reader can
+tell a clean result from an unexamined one.
+
+1. **Application model** — actors (anonymous, user, admin, service), assets
+   worth stealing or corrupting, entry points, and trust or tenant boundaries.
+2. **Attack surface census** — every route, API handler, webhook, job, CLI
+   command, and file upload that accepts outside input.
+3. **Secrets** — hardcoded credentials in source and config, `.env` files
+   not covered by `.gitignore`, secrets echoed into logs or client bundles.
+4. **Dependency supply chain** — lockfile present and committed, install
+   scripts on new dependencies, packages that are unmaintained or typosquatted.
+5. **CI/CD** — workflow files that run untrusted PR code with secrets,
+   `pull_request_target` misuse, unpinned third-party actions.
+6. **LLM / agent surface** (when present) — prompt injection from user or
+   fetched content reaching tools, secrets in prompts, tool permissions broader
+   than the task.
+7. **OWASP Top 10** — the checklist above.
+8. **STRIDE** on each trust boundary from step 1:
+
+| Threat | Question at the boundary |
+|--------|--------------------------|
+| **S**poofing | Can a caller claim an identity it does not hold? |
+| **T**ampering | Can data be changed in transit or at rest without detection? |
+| **R**epudiation | Can an action be taken without a record of who took it? |
+| **I**nformation disclosure | Can data reach someone not entitled to it? |
+| **D**enial of service | Can one caller exhaust a shared resource? |
+| **E**levation of privilege | Can a caller gain a role or tenant it was not granted? |
+
+### Evidence Standard
+
+Judge severity, confidence, and evidence separately — a critical-sounding
+pattern with no reachable path is not a critical finding.
+
+A finding is **supported** only when you can show all four:
+1. An entry point the attacker controls
+2. A path from it across a security boundary
+3. A concrete impact (data read, data changed, privilege gained)
+4. That the existing protections (auth middleware, validation, framework
+   escaping) do not already stop it — say which you checked
+
+Findings missing any of these are reported as **unconfirmed**, with the missing
+link named. After each supported finding, search for variants of the same
+pattern elsewhere in the codebase. Do not dismiss a class of issue wholesale
+(e.g. "IDs are UUIDs, so IDOR is impossible"). Check the authorization instead.
+
+### Report Format
+
+Start with the coverage status: **complete**, **partial**, or **not assessed**,
+plus the phases skipped. Then:
+
+| ID | Severity | Confidence | Evidence | Location | Impact |
+|----|----------|------------|----------|----------|--------|
+| SEC-001 | Critical/High/Medium/Low | High/Medium/Low | Supported/Unconfirmed | `file:line` | {one line} |
+
+For each finding: the attacker scenario, the counter-evidence you looked for,
+and the fix. When nothing is found, write "No supported findings in the
+assessed scope" and list the scope. Never write only "no issues".
+
 ## v1.6.1 Feature Guidance
 
 - Skills 2.0: Skill Classification (Workflow/Capability/Hybrid), Skill Evals, hot reload
