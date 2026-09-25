@@ -1,8 +1,8 @@
 {
   "_comment": "Evidence from a real `claude -p --plugin-dir` run. Regenerate with `node test/qa-harness-full-live.js --layer hooks --record` whenever hooks.json changes. This is verified evidence re-verified on change, NOT a live session run by CI.",
-  "recordedAt": "2026-09-20T03:03:54.260Z",
-  "claudeVersion": "2.1.277 (Claude Code)",
-  "hooksJsonSha256": "fdc45af0e4884f1d20ede797977c79c8f4cc8bacf6df666115f4cfc9193d3ac6",
+  "recordedAt": "2026-09-25T11:59:11.994Z",
+  "claudeVersion": "2.1.282 (Claude Code)",
+  "hooksJsonSha256": "4be08f01c25bc173956c4d08cbaf5b17a994ba61f7d7cce52dfad3a929ce4706",
   "observedEvents": [
     "ConfigChange",
     "InstructionsLoaded",
