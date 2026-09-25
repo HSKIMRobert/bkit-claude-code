@@ -1,6 +1,8 @@
 # Skills Overview
 
 > 44 Skills defined in bkit (v2.1.13)
+> **v2.1.40**: Method release — skill count unchanged (44). Two skill definitions changed. `plan-plus` gained Phase 1.5 Premise Challenge (up to four forcing questions, routed by feature type, skipped for bug fixes, closing on a numbered list of premises the user confirms), a Phase 3 scope mode (Expand / Selective / Hold / Reduce) chosen before the YAGNI review, and a Phase 4 failure map; `qa-phase` documents the diff-aware scope, the exploratory pass and the Health Score that `agents/qa-lead.md` specifies in full. No trigger change. The QA gate is untouched: `qaPassRate`, critical count and runtime error count still decide the verdict, so the Health Score cannot turn a passing project red. Adapted from gstack (MIT); attribution in `NOTICE`. CC recommended: v2.1.220.
+
 > **v2.1.39**: QA measurement release — skill count unchanged (44). `qa-phase` is the one skill definition that changed: it invoked `scripts/qa/pre-release-check.sh` by a relative path that resolves to nothing where the skill runs, and documented four scanners where five ship. The script now scans `$CLAUDE_PROJECT_DIR` rather than bkit's own source. CC recommended: v2.1.220.
 >
 > **v2.1.37**: Permission-mode awareness release — skill count unchanged (44). No skill definition or trigger change. Under `--dangerously-skip-permissions`, `dontAsk` or `acceptEdits`, bkit no longer raises confirmation prompts that nobody can answer; critical refusals are unaffected in every mode. CC recommended: v2.1.220.

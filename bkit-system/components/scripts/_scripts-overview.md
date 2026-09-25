@@ -2,6 +2,8 @@
 
 > 51 Node.js Scripts used by bkit hooks (v2.1.13)
 >
+> **v2.1.40**: Method release — script count unchanged (62 top-level `scripts/*.js`). No script added, removed or edited: this release changes prompt and template text only (`skills/plan-plus`, `skills/qa-phase`, `agents/qa-lead.md`, `agents/security-architect.md`, two templates). The hook live-run evidence in `test/contract/host-integration/last-live-run.json` was re-recorded against Claude Code 2.1.282 because the version bump edited `hooks/hooks.json`; observed events and tool coverage are identical to the v2.1.39 recording. CC recommended: v2.1.220.
+
 > **v2.1.39**: QA measurement release — script count unchanged. No script added or removed; six Stop handlers changed. `unified-stop.js` reads the payload with a reader that destroys stdin and then dispatches handlers with `require()` in the same process, so every self-executing handler read `{}` — `lib/core/io.js` now hands the payload it already read to the later reader, and `readHookText()` resolves it to the assistant's reported text via `transcript_path`. `qa-phase-stop.js` had been calling `.match()` on a parsed object. CC recommended: v2.1.220.
 >
 > **v2.1.37**: Permission-mode awareness release — script count unchanged (62 top-level `scripts/*.js`). `unified-bash-pre.js`, `pre-write.js` and `permission-request-handler.js` now read the host's `permission_mode`; the QA guard's private rule table was deleted in favour of the shared Destructive Detector. One lib module was added (`lib/domain/policy/permission-mode-policy.js`), so lib/ is 199. CC recommended: v2.1.220.
