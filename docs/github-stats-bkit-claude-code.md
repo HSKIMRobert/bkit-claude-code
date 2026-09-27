@@ -8,7 +8,7 @@
   Output language: English (per user request 2026-06-30; docs/ default is Korean).
 -->
 
-* **Repository**: [popup-studio-ai/bkit-claude-code](https://github.com/popup-studio-ai/bkit-claude-code)
+* **Repository**: [ww-w-ai/bkit-claude-code](https://github.com/ww-w-ai/bkit-claude-code)
 * **Report date**: 2026-08-07
 * **Data through**: 2026-08-06 (GitHub Traffic API has a 1-day delay)
 * **Last push**: 2026-07-28

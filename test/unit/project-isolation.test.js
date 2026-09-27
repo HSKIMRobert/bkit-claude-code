@@ -5,7 +5,7 @@
  * 10 TC | Cross-project restore guard + globalCache namespace
  *
  * @version bkit v2.0.1
- * @see https://github.com/popup-studio-ai/bkit-claude-code/issues/48
+ * @see https://github.com/ww-w-ai/bkit-claude-code/issues/48
  */
 
 const path = require('path');

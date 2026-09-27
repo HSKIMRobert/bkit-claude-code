@@ -491,7 +491,7 @@ PM Team agents (5) use the existing hook infrastructure:
 bkit v2.1.11 uses `command` type hooks exclusively (21 hook events / 24 blocks).
 CC 2.1.0 adds `type: "http"`, `type: "prompt"`, and `type: "agent"` hook types — bkit may adopt these in future versions.
 
-### v2.0.4 Path Quoting Fix ([#53](https://github.com/popup-studio-ai/bkit-claude-code/issues/53))
+### v2.0.4 Path Quoting Fix ([#53](https://github.com/ww-w-ai/bkit-claude-code/issues/53))
 
 All hook commands now properly quote `${CLAUDE_PLUGIN_ROOT}` paths with double-quotes to prevent bash syntax errors when the path contains special characters (parentheses, spaces, etc.). This is critical for Windows users whose username may contain parentheses (e.g., `John(JohnDoe)`).
 

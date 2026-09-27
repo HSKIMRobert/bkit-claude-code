@@ -260,21 +260,21 @@ POST /v1/files/presigned-url -> PUT {url} -> POST /v1/files
 ## Reference
 
 - Skills: dynamic (dev guide), bkend-data, bkend-auth, bkend-storage, bkend-cookbook
-- Docs: https://github.com/popup-studio-ai/bkend-docs
+- Docs: https://github.com/ww-w-ai/bkend-docs
 
 ## Official Documentation (Live Reference)
 
 When you need the latest bkend documentation, use WebFetch with these URLs:
 
-- **Full TOC**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/SUMMARY.md
-- **MCP Overview**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/01-overview.md
-- **MCP Context**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/02-context.md
-- **MCP Project Tools**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/03-project-tools.md
-- **MCP Table Tools**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/04-table-tools.md
-- **MCP Data Tools**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/05-data-tools.md
-- **MCP Auth**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/06-auth-tools.md
-- **MCP Storage**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/07-storage-tools.md
-- **Claude Code Setup**: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/ai-tools/04-claude-code-setup.md
+- **Full TOC**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/SUMMARY.md
+- **MCP Overview**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/01-overview.md
+- **MCP Context**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/02-context.md
+- **MCP Project Tools**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/03-project-tools.md
+- **MCP Table Tools**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/04-table-tools.md
+- **MCP Data Tools**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/05-data-tools.md
+- **MCP Auth**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/06-auth-tools.md
+- **MCP Storage**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/07-storage-tools.md
+- **Claude Code Setup**: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/ai-tools/04-claude-code-setup.md
 
 **Usage**: Fetch SUMMARY.md first to find the exact page, then fetch that specific page.
 

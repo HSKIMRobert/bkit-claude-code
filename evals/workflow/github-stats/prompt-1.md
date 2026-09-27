@@ -3,7 +3,7 @@
 ## Scenario
 
 The user wants to refresh the cumulative GitHub usage statistics for the
-`popup-studio-ai/bkit-claude-code` repository and update the report.
+`ww-w-ai/bkit-claude-code` repository and update the report.
 
 Representative user utterances (trigger keywords the skill must intercept):
 

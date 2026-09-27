@@ -73,7 +73,7 @@ hookSpecificOutput) is preserved so `/rename` and status updates still flow.
 
 ### Related Issues
 
-- [bkit Issue #81](https://github.com/popup-studio-ai/bkit-claude-code/issues/81) — SessionStart 12KB re-injection
+- [bkit Issue #81](https://github.com/ww-w-ai/bkit-claude-code/issues/81) — SessionStart 12KB re-injection
 - [CC Issue #14281](https://github.com/anthropics/claude-code/issues/14281) — additionalContext duplicate (CLOSED)
 - [CC Issue #15174](https://github.com/anthropics/claude-code/issues/15174) — `matcher: "compact"` inject failure (CLOSED duplicate)
 - [CC Issue #17407](https://github.com/anthropics/claude-code/issues/17407) — Phantom Reads (`<persisted-output>` canonical term)

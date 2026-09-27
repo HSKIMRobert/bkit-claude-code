@@ -418,4 +418,4 @@ The key insight: **Specification quality determines AI output quality**. By enfo
 ---
 
 *bkit - Vibecoding Kit for AI-Native Development*
-*POPUP STUDIO PTE. LTD. - https://popupstudio.ai*
+*DubDubDub Corp. - https://ww-w.ai*

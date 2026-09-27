@@ -1885,7 +1885,7 @@ CLAUDE_CODE_DEBUG=hooks claude
 - [Claude Code Official Documentation](https://code.claude.com/docs/en/settings)
 - [Claude Code Skills Guide](https://code.claude.com/docs/en/skills)
 - [Agent Skills Open Standard](https://agentskills.io)
-- [bkit GitHub Repository](https://github.com/popup-studio-ai/bkit-claude-code)
+- [bkit GitHub Repository](https://github.com/ww-w-ai/bkit-claude-code)
 
 ---
 
@@ -1915,10 +1915,10 @@ When redistributing bkit or derivative works, include:
 
 ```
 bkit - Vibecoding Kit
-Copyright 2024-2026 POPUP STUDIO PTE. LTD.
+Copyright 2024-2026 DubDubDub Corp.
 
-This product includes software developed by POPUP STUDIO PTE. LTD.
-https://github.com/popup-studio-ai/bkit-claude-code
+This product includes software developed by DubDubDub Corp.
+https://github.com/ww-w-ai/bkit-claude-code
 
 Licensed under the Apache License, Version 2.0
 ```
@@ -1939,8 +1939,8 @@ If you create a plugin based on bkit (e.g., "acme-dev-kit"), add to your `plugin
   "license": "Apache-2.0",
   "attribution": {
     "basedOn": "bkit Vibecoding Kit",
-    "originalAuthor": "POPUP STUDIO PTE. LTD.",
-    "originalRepository": "https://github.com/popup-studio-ai/bkit-claude-code"
+    "originalAuthor": "DubDubDub Corp.",
+    "originalRepository": "https://github.com/ww-w-ai/bkit-claude-code"
   }
 }
 ```
@@ -1952,8 +1952,8 @@ ACME Dev Kit
 Copyright 2026 ACME Corporation
 
 This product is based on bkit Vibecoding Kit.
-Original work Copyright 2024-2026 POPUP STUDIO PTE. LTD.
-https://github.com/popup-studio-ai/bkit-claude-code
+Original work Copyright 2024-2026 DubDubDub Corp.
+https://github.com/ww-w-ai/bkit-claude-code
 
 Licensed under the Apache License, Version 2.0
 http://www.apache.org/licenses/LICENSE-2.0
@@ -1974,8 +1974,8 @@ For full license terms, see the [LICENSE](LICENSE) file.
 - [Claude Code Official Documentation](https://code.claude.com/docs/en/settings)
 - [Claude Code Skills Guide](https://code.claude.com/docs/en/skills)
 - [Agent Skills Open Standard](https://agentskills.io)
-- [bkit GitHub Repository](https://github.com/popup-studio-ai/bkit-claude-code)
+- [bkit GitHub Repository](https://github.com/ww-w-ai/bkit-claude-code)
 
 ---
 
-*This guide is part of the bkit Vibecoding Kit. For questions or contributions, visit our [GitHub repository](https://github.com/popup-studio-ai/bkit-claude-code).*
+*This guide is part of the bkit Vibecoding Kit. For questions or contributions, visit our [GitHub repository](https://github.com/ww-w-ai/bkit-claude-code).*

@@ -77,7 +77,7 @@ test('DP-06: git pushd (not actually push) → isPush=false', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 const upstreamExec = () => 'git@github.com:anthropics/claude-code.git\n';
-const forkExec = () => 'git@github.com:popup-studio-ai/bkit-claude-code.git\n';
+const forkExec = () => 'git@github.com:ww-w-ai/bkit-claude-code.git\n';
 const missingExec = () => { throw new Error('fatal: no such remote'); };
 
 test('CR-01: upstream remote (anthropics) → kind=upstream', () => {

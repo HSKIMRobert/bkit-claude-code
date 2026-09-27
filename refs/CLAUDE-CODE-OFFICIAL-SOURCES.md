@@ -275,5 +275,5 @@ hooks: hooks.json
 
 ---
 
-*Document maintained by POPUP STUDIO PTE. LTD.*
-*https://popupstudio.ai*
+*Document maintained by DubDubDub Corp.*
+*https://ww-w.ai*

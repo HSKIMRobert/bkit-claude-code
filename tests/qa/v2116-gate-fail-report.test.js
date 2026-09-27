@@ -5,7 +5,7 @@
  * but with AC-by-AC TC mapping. Local-only (.gitignore tests/qa/*).
  *
  * Master Plan: docs/01-plan/features/v2116-issue-fixes.master-plan.md §11.4
- * Issue: https://github.com/popup-studio-ai/bkit-claude-code/issues/93
+ * Issue: https://github.com/ww-w-ai/bkit-claude-code/issues/93
  * Run:   node tests/qa/v2116-gate-fail-report.test.js
  */
 

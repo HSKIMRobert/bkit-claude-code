@@ -30,7 +30,7 @@
 
 set -euo pipefail
 
-REPO="popup-studio-ai/bkit-claude-code"
+REPO="ww-w-ai/bkit-claude-code"
 BRANCH="main"
 DRY_RUN=true
 

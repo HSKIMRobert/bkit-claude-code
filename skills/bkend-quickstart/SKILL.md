@@ -137,8 +137,8 @@ https://console.bkend.ai
 ## Official Documentation (Live Reference)
 
 For the latest bkend documentation, use WebFetch:
-- Quick Start: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/getting-started/02-quick-start.md
-- Core Concepts: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/getting-started/03-core-concepts.md
-- Claude Code Setup: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/ai-tools/04-claude-code-setup.md
-- MCP Overview: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/01-overview.md
-- Full TOC: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/SUMMARY.md
+- Quick Start: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/getting-started/02-quick-start.md
+- Core Concepts: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/getting-started/03-core-concepts.md
+- Claude Code Setup: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/ai-tools/04-claude-code-setup.md
+- MCP Overview: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/01-overview.md
+- Full TOC: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/SUMMARY.md

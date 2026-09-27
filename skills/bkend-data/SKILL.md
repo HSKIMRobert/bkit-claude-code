@@ -133,7 +133,7 @@ Use `get_operation_schema` to get any tool's input/output schema.
 ## Official Documentation (Live Reference)
 
 For the latest database documentation, use WebFetch:
-- MCP Data Tools: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/05-data-tools.md
-- MCP Table Tools: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/mcp/04-table-tools.md
-- Database Guide: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/en/database/01-overview.md
-- Full TOC: https://raw.githubusercontent.com/popup-studio-ai/bkend-docs/main/SUMMARY.md
+- MCP Data Tools: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/05-data-tools.md
+- MCP Table Tools: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/mcp/04-table-tools.md
+- Database Guide: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/en/database/01-overview.md
+- Full TOC: https://raw.githubusercontent.com/ww-w-ai/bkend-docs/main/SUMMARY.md

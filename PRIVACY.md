@@ -51,7 +51,7 @@ endpoint yourself:
   network requests at all.
 - **When you set that variable**, bkit posts OTLP spans describing PDCA phase
   transitions, quality-gate results, and token counts to the endpoint *you*
-  chose — typically a collector you run. bkit never sends data to POPUP STUDIO
+  chose — typically a collector you run. bkit never sends data to DubDubDub Corp.
   or any third party.
 - The payload carries workflow metadata (phase names, gate scores, durations),
   not your source code, prompts, or model responses.
@@ -83,7 +83,7 @@ bkit is fully open source under the Apache 2.0 license. You can verify every cla
 3. **Review agent definitions** in `agents/` — no external endpoints
 4. **Check dependencies** — bkit has zero third-party runtime dependencies
 
-Repository: [github.com/popup-studio-ai/bkit-claude-code](https://github.com/popup-studio-ai/bkit-claude-code)
+Repository: [github.com/ww-w-ai/bkit-claude-code](https://github.com/ww-w-ai/bkit-claude-code)
 
 ## Changes to This Policy
 
@@ -93,5 +93,5 @@ If this policy changes, the update will be reflected in this file with a new dat
 
 For questions about this privacy policy or the bkit plugin:
 
-- **GitHub Issues:** [github.com/popup-studio-ai/bkit-claude-code/issues](https://github.com/popup-studio-ai/bkit-claude-code/issues)
-- **Organization:** Popup Studio AI
+- **GitHub Issues:** [github.com/ww-w-ai/bkit-claude-code/issues](https://github.com/ww-w-ai/bkit-claude-code/issues)
+- **Organization:** DubDubDub Corp.

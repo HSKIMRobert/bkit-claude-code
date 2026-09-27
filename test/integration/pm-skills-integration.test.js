@@ -5,7 +5,7 @@
  * 50 TC | PM Agent frameworks 9→43, PDCA checkpoints, btw team, code-analyzer confidence
  *
  * @version bkit v1.7.0 (PR #50)
- * @see https://github.com/popup-studio-ai/bkit-claude-code/pull/50
+ * @see https://github.com/ww-w-ai/bkit-claude-code/pull/50
  */
 
 const fs = require('fs');
