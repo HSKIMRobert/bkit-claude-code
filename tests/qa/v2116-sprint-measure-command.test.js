@@ -8,7 +8,7 @@
  * is the tracked canonical regression source. This file is local-only.
  *
  * Master Plan: docs/01-plan/features/v2116-issue-fixes.master-plan.md §11.3
- * Issue: https://github.com/popup-studio-ai/bkit-claude-code/issues/94
+ * Issue: https://github.com/ww-w-ai/bkit-claude-code/issues/94
  * Run:   node tests/qa/v2116-sprint-measure-command.test.js
  */
 

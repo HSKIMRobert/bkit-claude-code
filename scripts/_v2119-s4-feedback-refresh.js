@@ -20,7 +20,7 @@ try { auditLogger = require(path.join(ROOT, 'lib/audit/audit-logger.js')); }
 catch (_) { auditLogger = { writeAuditLog: () => {} }; }
 
 function parseArgs(argv) {
-  const out = { windowDays: tracker.DEFAULT_WINDOW_DAYS, dryRun: false, owner: 'popup-studio-ai', repo: 'bkit-claude-code' };
+  const out = { windowDays: tracker.DEFAULT_WINDOW_DAYS, dryRun: false, owner: 'ww-w-ai', repo: 'bkit-claude-code' };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--window-days') {
       const n = parseInt(argv[++i], 10);

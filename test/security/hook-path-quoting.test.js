@@ -6,7 +6,7 @@
  * to prevent bash syntax errors with special characters in paths.
  *
  * @version bkit v2.0.4
- * @see https://github.com/popup-studio-ai/bkit-claude-code/issues/53
+ * @see https://github.com/ww-w-ai/bkit-claude-code/issues/53
  */
 
 const fs = require('fs');

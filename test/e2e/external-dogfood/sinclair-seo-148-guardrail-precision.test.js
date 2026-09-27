@@ -28,7 +28,7 @@
  * ("G-013 appears to want the same deleteTargetIsBroad() treatment"). Asking is
  * not blocking; the deny is what made unattended runs stall.
  *
- * Reference: https://github.com/popup-studio-ai/bkit-claude-code/issues/148
+ * Reference: https://github.com/ww-w-ai/bkit-claude-code/issues/148
  * Reference: docs/01-plan/features/v2136-guardrail-precision.master-plan.en.md
  */
 'use strict';

@@ -33,7 +33,7 @@
  * reads the JSON it writes. Slower than a unit test. It is the only kind that
  * could have caught any of the above.
  *
- * Reference: https://github.com/popup-studio-ai/bkit-claude-code/issues/148
+ * Reference: https://github.com/ww-w-ai/bkit-claude-code/issues/148
  */
 'use strict';
 

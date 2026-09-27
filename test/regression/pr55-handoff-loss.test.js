@@ -5,7 +5,7 @@
  * 15 TC | Backward compatibility, session-guide.js integrity, template structure
  *
  * @version bkit v2.0.5 (PR #55)
- * @see https://github.com/popup-studio-ai/bkit-claude-code/pull/55
+ * @see https://github.com/ww-w-ai/bkit-claude-code/pull/55
  */
 
 const fs = require('fs');

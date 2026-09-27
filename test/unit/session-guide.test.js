@@ -5,7 +5,7 @@
  * 35 TC | Context Anchor extraction, module analysis, session planning, scope filtering
  *
  * @version bkit v2.0.5 (PR #55)
- * @see https://github.com/popup-studio-ai/bkit-claude-code/pull/55
+ * @see https://github.com/ww-w-ai/bkit-claude-code/pull/55
  */
 
 const path = require('path');

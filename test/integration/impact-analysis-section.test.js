@@ -5,7 +5,7 @@
  * 25 TC | Plan template Section 6 (Impact Analysis), section renumbering, content validation
  *
  * @version bkit v2.0.2 (PR #51)
- * @see https://github.com/popup-studio-ai/bkit-claude-code/pull/51
+ * @see https://github.com/ww-w-ai/bkit-claude-code/pull/51
  */
 
 const fs = require('fs');

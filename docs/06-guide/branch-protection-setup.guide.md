@@ -38,7 +38,7 @@ v2.1.17 PR #97에서 Detection/Recovery/Governance/Evolution 4축 close 후에�
 
 - `gh` CLI 설치 (https://cli.github.com/)
 - `jq` 설치 (`brew install jq` / `apt install jq`)
-- `popup-studio-ai/bkit-claude-code` repo에 **admin 권한** 보유 GitHub account
+- `ww-w-ai/bkit-claude-code` repo에 **admin 권한** 보유 GitHub account
 - `gh auth login`으로 admin account active
 
 ```bash
@@ -46,7 +46,7 @@ v2.1.17 PR #97에서 Detection/Recovery/Governance/Evolution 4축 close 후에�
 gh auth status
 
 # admin role 확인
-gh api /repos/popup-studio-ai/bkit-claude-code/collaborators/$(gh api user --jq .login)/permission \
+gh api /repos/ww-w-ai/bkit-claude-code/collaborators/$(gh api user --jq .login)/permission \
   --jq .permission
 # expected: "admin"
 ```
@@ -67,7 +67,7 @@ bash scripts/setup-branch-protection.sh --dry-run
 
 ```
 [setup-branch-protection] Active gh user: kay-popup
-[setup-branch-protection] Target: popup-studio-ai/bkit-claude-code / main
+[setup-branch-protection] Target: ww-w-ai/bkit-claude-code / main
 
 [dry-run] Would PUT /repos/.../branches/main/protection with payload:
 {
@@ -93,7 +93,7 @@ bash scripts/setup-branch-protection.sh --apply
 ### 3.3 검증
 
 ```bash
-gh api /repos/popup-studio-ai/bkit-claude-code/branches/main/protection \
+gh api /repos/ww-w-ai/bkit-claude-code/branches/main/protection \
   --jq '.required_status_checks'
 ```
 
@@ -150,7 +150,7 @@ gh pr merge <pr-num> --admin --squash
 ## 7. 제거 방법 (필요 시)
 
 ```bash
-gh api -X DELETE /repos/popup-studio-ai/bkit-claude-code/branches/main/protection
+gh api -X DELETE /repos/ww-w-ai/bkit-claude-code/branches/main/protection
 ```
 
 다시 활성화하려면 `--apply` 재실행.

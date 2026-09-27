@@ -50,7 +50,7 @@ repo:anthropics/claude-code is:issue "/config" ".claude/" write created:>2026-04
 
 ### 2.2 bkit 사용자 모니터링
 
-**Repo**: `https://github.com/popup-studio-ai/bkit-claude-code` (private 또는 public)
+**Repo**: `https://github.com/ww-w-ai/bkit-claude-code` (private 또는 public)
 
 **Issue 템플릿 권장 라벨**:
 - `cc-regression` — CC 업그레이드 후 발생한 회귀

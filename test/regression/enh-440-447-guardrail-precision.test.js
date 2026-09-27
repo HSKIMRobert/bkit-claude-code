@@ -24,7 +24,7 @@
  * The controls caught it before it left the working tree.
  *
  * Reference: docs/01-plan/features/v2136-guardrail-precision.master-plan.en.md
- * Reference: https://github.com/popup-studio-ai/bkit-claude-code/issues/148
+ * Reference: https://github.com/ww-w-ai/bkit-claude-code/issues/148
  */
 'use strict';
 

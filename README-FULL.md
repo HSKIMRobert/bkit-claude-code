@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.143+-purple.svg)](https://code.claude.com)
 [![Version](https://img.shields.io/badge/Version-2.1.21-green.svg)](CHANGELOG.md)
-[![Author](https://img.shields.io/badge/Author-POPUP%20STUDIO-orange.svg)](https://popupstudio.ai)
+[![Author](https://img.shields.io/badge/Author-DubDubDub%20Corp.-orange.svg)](https://ww-w.ai)
 
 > **Requirement**: bkit requires Claude Code **v2.1.143 or later** (the strict plugin-manifest path recognizes the official `displayName` field only from v2.1.143). On older Claude Code you will see `Validation errors: Unrecognized key: "displayName"` during `claude plugin install`. Run `npm install -g @anthropic-ai/claude-code@latest` to upgrade, or see [`docs/06-guide/cc-compatibility.guide.md`](docs/06-guide/cc-compatibility.guide.md).
 
@@ -786,7 +786,7 @@ node evals/runner.js --benchmark
 
 ```bash
 # Step 1: Add bkit marketplace
-/plugin marketplace add popup-studio-ai/bkit-claude-code
+/plugin marketplace add ww-w-ai/bkit-claude-code
 
 # Step 2: Install bkit plugin
 /plugin install bkit
@@ -867,10 +867,10 @@ Trigger keywords work in any language regardless of the reply setting.
 | | |
 |---|---|
 | **License** | Apache 2.0 · [LICENSE](LICENSE) · [NOTICE](NOTICE) (required for redistribution) |
-| **Copyright** | 2024–2026 POPUP STUDIO PTE. LTD. |
+| **Copyright** | 2024–2026 DubDubDub Corp. |
 | **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) — `main` requires admin merge + PR review |
-| **Issues** | [GitHub Issues](https://github.com/popup-studio-ai/bkit-claude-code/issues) |
-| **Email** | `contact@popupstudio.ai` |
+| **Issues** | [GitHub Issues](https://github.com/ww-w-ai/bkit-claude-code/issues) |
+| **Email** | `biz@ww-w.ai` |
 
 ### Release history
 
@@ -878,4 +878,4 @@ bkit follows [Semantic Versioning](https://semver.org/). **All release notes liv
 
 ---
 
-Made with AI by [POPUP STUDIO](https://popupstudio.ai)
+Made with AI by [DubDubDub Corp.](https://ww-w.ai)
